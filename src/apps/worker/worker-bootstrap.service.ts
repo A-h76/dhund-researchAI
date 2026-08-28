@@ -1,5 +1,5 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
-import { QUEUE_SERVICE, QueueService } from '../../l0/queue/queue.port';
+import { QUEUE_SERVICE, QueueService } from '../../l0/ports';
 
 @Injectable()
 export class WorkerBootstrapService implements OnModuleInit {

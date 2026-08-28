@@ -30,12 +30,20 @@ jobs:
       - name: Unit and static tests
         run: npm run test:ci
 
+      - name: L0 integration tests (Testcontainers)
+        run: npm run test:integration
+
       - name: Build Docker image
         run: docker build -t dhund-research-ai:ci .
 
       - name: Worker smoke — no listening TCP port
         run: |
-          docker run -d --name dhund-worker-smoke dhund-research-ai:ci --role=worker
+          docker network create dhund-smoke || true
+          docker run -d --name dhund-redis-smoke --network dhund-smoke redis:7-alpine
+          sleep 2
+          docker run -d --name dhund-worker-smoke --network dhund-smoke \
+            -e REDIS_URL=redis://dhund-redis-smoke:6379 \
+            dhund-research-ai:ci --role=worker
           sleep 3
           PID=$(docker inspect -f '{{.State.Pid}}' dhund-worker-smoke)
           LISTENERS=$(sudo ss -ltnp | grep "pid=${PID}," || true)
@@ -44,7 +52,8 @@ jobs:
             echo "$LISTENERS"
             exit 1
           fi
-          docker rm -f dhund-worker-smoke
+          docker rm -f dhund-worker-smoke dhund-redis-smoke
+          docker network rm dhund-smoke || true
 
       - name: API smoke — HTTP listener
         run: |
