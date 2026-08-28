@@ -51,6 +51,7 @@ Copy `.env.example` to `.env` for non-Docker local runs.
 npm run typecheck
 npm run lint
 npm test
+npm run test:integration   # requires Docker; Postgres, Redis, MinIO via Testcontainers
 ```
 
 ## Layering
@@ -58,8 +59,10 @@ npm test
 Source is organized L0 → L5:
 
 ```
-src/l0/              # ports + adapters (vendor SDKs only here)
-src/platform/        # L1
+src/l0/
+  ports/       # infrastructure interfaces (domain imports these only)
+  adapters/    # vendor SDK implementations (prisma, redis, bullmq, s3-compatible, env, resend)
+src/platform/  # L1
 src/iam/             # L2
 src/projects/        # L3
 src/ingestion/       # L4
