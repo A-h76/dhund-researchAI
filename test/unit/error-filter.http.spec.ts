@@ -6,6 +6,11 @@ import { DomainError, notFound, passwordRejected } from '../../src/platform/erro
 import { ErrorCode } from '../../src/platform/errors/error-codes';
 import { GlobalExceptionFilter } from '../../src/platform/errors/global-exception.filter';
 import { CORRELATION_ID_HEADER } from '../../src/platform/errors/error-envelope';
+import {
+  correlationExpressMiddleware,
+  LoggerModule,
+  PlatformLogger,
+} from '../../src/platform/logging';
 import { ApiAppModule } from '../../src/apps/api/api-app.module';
 import { WorkerAppModule } from '../../src/apps/worker/worker-app.module';
 import { QUEUE_SERVICE } from '../../src/l0/ports';
@@ -99,6 +104,7 @@ class ErrorProbeController {
 }
 
 @Module({
+  imports: [LoggerModule],
   controllers: [ErrorProbeController],
   providers: [{ provide: APP_FILTER, useClass: GlobalExceptionFilter }],
 })
@@ -110,14 +116,20 @@ interface HttpResult {
   raw: string;
 }
 
-async function startProbe(): Promise<{ app: INestApplication; baseUrl: string }> {
+async function startProbe(): Promise<{
+  app: INestApplication;
+  baseUrl: string;
+  logger: PlatformLogger;
+}> {
   const moduleRef = await Test.createTestingModule({
     imports: [ErrorProbeModule],
   }).compile();
   const app = moduleRef.createNestApplication();
+  const logger = moduleRef.get(PlatformLogger);
+  app.use(correlationExpressMiddleware);
   app.useLogger(false);
   await app.listen(0, '127.0.0.1');
-  return { app, baseUrl: await app.getUrl() };
+  return { app, baseUrl: await app.getUrl(), logger };
 }
 
 async function getJson(
@@ -135,20 +147,21 @@ async function getJson(
 }
 
 function capturedLogs(spy: jest.SpyInstance): string {
-  return spy.mock.calls.map((args) => args.map(String).join(' ')).join('\n');
+  return spy.mock.calls.map((call) => JSON.stringify(call[0])).join('\n');
 }
 
 describe('global exception filter HTTP contract', () => {
   let app: INestApplication;
   let baseUrl: string;
+  let logger: PlatformLogger;
   let logSpy: jest.SpyInstance;
 
   beforeAll(async () => {
-    ({ app, baseUrl } = await startProbe());
+    ({ app, baseUrl, logger } = await startProbe());
   });
 
   beforeEach(() => {
-    logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    logSpy = jest.spyOn(logger, 'error').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -157,6 +170,16 @@ describe('global exception filter HTTP contract', () => {
 
   afterAll(async () => {
     await app.close();
+  });
+
+  it('echoes x-correlation-id on error responses', async () => {
+    const response = await fetch(`${baseUrl}/probe/not-found`, {
+      headers: { [CORRELATION_ID_HEADER]: 'cor-error-header-1' },
+    });
+
+    expect(response.headers.get(CORRELATION_ID_HEADER)).toBe('cor-error-header-1');
+    const body = (await response.json()) as Record<string, unknown>;
+    expect(body.correlationId).toBe('cor-error-header-1');
   });
 
   it('returns the 4xx envelope for DomainError not_found without existence details', async () => {
@@ -307,7 +330,9 @@ describe('filter registration and existing role behavior', () => {
   });
 
   it('keeps the DHB-23 API root contract and applies the envelope to unknown routes', async () => {
-    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    const logSpy = jest
+      .spyOn(PlatformLogger.prototype, 'error')
+      .mockImplementation(() => undefined);
     const moduleRef = await Test.createTestingModule({
       imports: [ApiAppModule],
     }).compile();
@@ -319,14 +344,18 @@ describe('filter registration and existing role behavior', () => {
     try {
       const root = await fetch(`${baseUrl}/`);
       expect(root.status).toBe(200);
+      expect(root.headers.get(CORRELATION_ID_HEADER)).toEqual(expect.any(String));
       expect(await root.json()).toEqual({ status: 'ok' });
 
-      const missing = await fetch(`${baseUrl}/__dhb25-missing`);
+      const missing = await fetch(`${baseUrl}/__dhb25-missing`, {
+        headers: { [CORRELATION_ID_HEADER]: 'cor-success-header-1' },
+      });
       const body = (await missing.json()) as Record<string, unknown>;
       expect(missing.status).toBe(404);
+      expect(missing.headers.get(CORRELATION_ID_HEADER)).toBe('cor-success-header-1');
       expect(body.code).toBe(ErrorCode.NotFound);
       expect(body.message).toEqual(expect.any(String));
-      expect(body.correlationId).toEqual(expect.any(String));
+      expect(body.correlationId).toBe('cor-success-header-1');
       expect(body.details).toBeUndefined();
     } finally {
       logSpy.mockRestore();

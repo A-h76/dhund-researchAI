@@ -1,8 +1,10 @@
 import { NestFactory } from '@nestjs/core';
+import { Logger } from 'nestjs-pino';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ApiAppModule } from './apps/api/api-app.module';
 import { WorkerAppModule } from './apps/worker/worker-app.module';
+import { PlatformLogger } from './platform/logging';
 import { parseRole, RuntimeRole } from './platform/runtime/role';
 
 function readVersion(): string {
@@ -16,28 +18,37 @@ function readVersion(): string {
   }
 }
 
-function logBoot(role: RuntimeRole, version: string, port?: number): void {
-  const line = {
-    msg: 'boot',
+async function logBoot(
+  logger: PlatformLogger,
+  role: RuntimeRole,
+  version: string,
+  port?: number,
+): Promise<void> {
+  logger.info({
+    module: 'boot',
+    message: 'boot',
     role,
     version,
     ...(port !== undefined ? { port } : {}),
-  };
-  console.log(JSON.stringify(line));
+  });
 }
 
 async function bootstrapApi(version: string): Promise<void> {
   const app = await NestFactory.create(ApiAppModule, { bufferLogs: true });
+  app.useLogger(app.get(Logger));
+  const platformLogger = app.get(PlatformLogger);
   const port = Number(process.env.PORT ?? 3000);
   await app.listen(port);
-  logBoot(RuntimeRole.Api, version, port);
+  await logBoot(platformLogger, RuntimeRole.Api, version, port);
 }
 
 async function bootstrapWorker(version: string): Promise<void> {
   const app = await NestFactory.createApplicationContext(WorkerAppModule, {
     bufferLogs: true,
   });
-  logBoot(RuntimeRole.Worker, version);
+  app.useLogger(app.get(Logger));
+  const platformLogger = app.get(PlatformLogger);
+  await logBoot(platformLogger, RuntimeRole.Worker, version);
 
   const shutdown = async (): Promise<void> => {
     await app.close();

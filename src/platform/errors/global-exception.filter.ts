@@ -6,6 +6,10 @@ import {
   type ExceptionFilter,
 } from '@nestjs/common';
 import {
+  getCorrelationId,
+  PlatformLogger,
+} from '../logging';
+import {
   clientMessageFor,
   ErrorCode,
   httpStatusFor,
@@ -35,6 +39,8 @@ interface HttpResponseLike {
 @Injectable()
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
+  constructor(private readonly logger: PlatformLogger) {}
+
   catch(exception: unknown, host: ArgumentsHost): void {
     if (host.getType() !== 'http') {
       return;
@@ -43,17 +49,17 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const request = ctx.getRequest<HttpRequestLike>();
     const response = ctx.getResponse<HttpResponseLike>();
-    const correlationId = resolveCorrelationId(
-      readCorrelationHeader(request.headers),
-    );
+    const correlationId =
+      getCorrelationId() ??
+      resolveCorrelationId(readCorrelationHeader(request.headers));
     const mapped = mapException(exception);
     const envelope = toEnvelope(mapped, correlationId);
 
-    logError({
+    this.logger.error({
+      module: mapped.module,
+      message: 'http.error',
       code: mapped.code,
       status: mapped.status,
-      correlationId,
-      module: mapped.module,
       detail: mapped.serverDetail,
     });
 
@@ -264,23 +270,3 @@ function isRetryAfterSeconds(
   return typeof value === 'number' && Number.isFinite(value) && value >= 0;
 }
 
-function logError(entry: {
-  code: ErrorCode;
-  status: number;
-  correlationId: string;
-  module: string;
-  detail: unknown;
-}): void {
-  console.log(
-    JSON.stringify({
-      timestamp: new Date().toISOString(),
-      level: 'error',
-      msg: 'http.error',
-      code: entry.code,
-      status: entry.status,
-      correlationId: entry.correlationId,
-      module: entry.module,
-      detail: entry.detail,
-    }),
-  );
-}

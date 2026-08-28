@@ -1,0 +1,70 @@
+import { Queue } from 'bullmq';
+import Redis from 'ioredis';
+import { Test } from '@nestjs/testing';
+import { GenericContainer, Wait } from 'testcontainers';
+import { BullmqQueueAdapter } from '../../src/l0/adapters/bullmq/bullmq-queue.adapter';
+import { QUEUE_SERVICE } from '../../src/l0/ports';
+import { runWithCorrelationId } from '../../src/platform/logging/correlation-context';
+import { JobEnqueueService } from '../../src/platform/logging/job-enqueue.service';
+import { assertValidJobPayload } from '../../src/platform/logging/job-payload';
+import { LoggerModule } from '../../src/platform/logging/logger.module';
+
+const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
+
+(integrationEnabled ? describe : describe.skip)(
+  'job payload threading (integration)',
+  () => {
+    jest.setTimeout(180_000);
+
+    it('enqueues a payload carrying the same correlationId from ALS', async () => {
+      const redis = await new GenericContainer('redis:7-alpine')
+        .withExposedPorts(6379)
+        .withWaitStrategy(Wait.forLogMessage('Ready to accept connections'))
+        .start();
+
+      const redisUrl = `redis://${redis.getHost()}:${redis.getMappedPort(6379)}`;
+      process.env.REDIS_URL = redisUrl;
+
+      const adapter = new BullmqQueueAdapter();
+      await adapter.connect('integration-correlation');
+
+      const moduleRef = await Test.createTestingModule({
+        imports: [LoggerModule],
+      })
+        .overrideProvider(QUEUE_SERVICE)
+        .useValue(adapter)
+        .compile();
+
+      const enqueue = moduleRef.get(JobEnqueueService);
+      const correlationId = 'cor-integration-thread-1';
+      let jobId = '';
+
+      await runWithCorrelationId(correlationId, async () => {
+        jobId = await enqueue.enqueue('research.run', {
+          orgId: 'org-integration-1',
+          projectId: 'proj-integration-1',
+          kind: 'integration-probe',
+        });
+      });
+
+      const connection = new Redis(redisUrl, { maxRetriesPerRequest: null });
+      const queue = new Queue('research.run', { connection });
+      const job = await queue.getJob(jobId);
+
+      expect(job).toBeDefined();
+      assertValidJobPayload(job?.data);
+      expect(job?.data).toEqual({
+        correlationId,
+        orgId: 'org-integration-1',
+        projectId: 'proj-integration-1',
+        kind: 'integration-probe',
+      });
+
+      await queue.close();
+      await connection.quit();
+      await adapter.disconnect('integration-correlation');
+      await moduleRef.close();
+      await redis.stop();
+    });
+  },
+);

@@ -20,7 +20,7 @@ export type {
 } from './error-codes';
 export type { ErrorEnvelope } from './error-envelope';
 export { CORRELATION_ID_HEADER } from './error-envelope';
-export { resolveCorrelationId } from './correlation-id';
+export { readCorrelationHeader, resolveCorrelationId } from './correlation-id';
 export {
   containsForbiddenLeak,
   containsSensitiveKey,

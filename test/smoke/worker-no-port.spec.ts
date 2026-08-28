@@ -23,7 +23,7 @@ function waitForBoot(proc: ReturnType<typeof spawn>, timeoutMs = 10_000): Promis
 
     const onData = (chunk: Buffer): void => {
       const text = chunk.toString();
-      if (text.includes('"msg":"boot"') && text.includes('"role":"worker"')) {
+      if (text.includes('"message":"boot"') && text.includes('"role":"worker"')) {
         clearTimeout(timer);
         proc.stdout?.off('data', onData);
         proc.stderr?.off('data', onData);
