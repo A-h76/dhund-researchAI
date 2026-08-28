@@ -11,6 +11,9 @@ import {
   LoggerModule,
   PlatformLogger,
 } from '../../src/platform/logging';
+import { BootstrapValidationService } from '../../src/platform/config';
+import { installTestAppConfig } from '../fixtures/app-config.fixture';
+import { resetAppConfigForTests } from '../../src/platform/config';
 import { ApiAppModule } from '../../src/apps/api/api-app.module';
 import { WorkerAppModule } from '../../src/apps/worker/worker-app.module';
 import { QUEUE_SERVICE } from '../../src/l0/ports';
@@ -157,7 +160,13 @@ describe('global exception filter HTTP contract', () => {
   let logSpy: jest.SpyInstance;
 
   beforeAll(async () => {
+    installTestAppConfig();
     ({ app, baseUrl, logger } = await startProbe());
+  });
+
+  afterAll(async () => {
+    await app.close();
+    resetAppConfigForTests();
   });
 
   beforeEach(() => {
@@ -166,10 +175,6 @@ describe('global exception filter HTTP contract', () => {
 
   afterEach(() => {
     logSpy.mockRestore();
-  });
-
-  afterAll(async () => {
-    await app.close();
   });
 
   it('echoes x-correlation-id on error responses', async () => {
@@ -316,6 +321,17 @@ describe('filter registration and existing role behavior', () => {
     ping: jest.fn().mockResolvedValue(true),
     addJob: jest.fn().mockResolvedValue('job-1'),
   };
+  const mockBootstrapValidation = {
+    onApplicationBootstrap: jest.fn().mockResolvedValue(undefined),
+  };
+
+  beforeAll(() => {
+    installTestAppConfig();
+  });
+
+  afterAll(() => {
+    resetAppConfigForTests();
+  });
 
   it('does not register the global filter on the worker application', async () => {
     const moduleRef = await Test.createTestingModule({
@@ -323,6 +339,8 @@ describe('filter registration and existing role behavior', () => {
     })
       .overrideProvider(QUEUE_SERVICE)
       .useValue(mockQueueService)
+      .overrideProvider(BootstrapValidationService)
+      .useValue(mockBootstrapValidation)
       .compile();
 
     expect(() => moduleRef.get(APP_FILTER)).toThrow();
@@ -335,7 +353,10 @@ describe('filter registration and existing role behavior', () => {
       .mockImplementation(() => undefined);
     const moduleRef = await Test.createTestingModule({
       imports: [ApiAppModule],
-    }).compile();
+    })
+      .overrideProvider(BootstrapValidationService)
+      .useValue(mockBootstrapValidation)
+      .compile();
     const app = moduleRef.createNestApplication();
     app.useLogger(false);
     await app.listen(0, '127.0.0.1');

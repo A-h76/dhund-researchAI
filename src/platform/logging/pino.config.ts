@@ -34,9 +34,9 @@ const LOGGER_REDACT_PATHS: readonly string[] = [
   '*.model',
 ];
 
-export function createPinoOptions(): LoggerOptions {
+export function createPinoOptions(logLevel = 'info'): LoggerOptions {
   return {
-    level: process.env.LOG_LEVEL ?? 'info',
+    level: logLevel,
     messageKey: 'message',
     timestamp: () => `,"timestamp":"${new Date().toISOString()}"`,
     redact: {

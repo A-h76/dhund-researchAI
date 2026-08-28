@@ -1,11 +1,11 @@
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
-import { QUEUE_SERVICE, QueueService } from '../../l0/ports';
+import { Injectable } from '@nestjs/common';
+import { ProcessorRegistry } from './processor-registry';
 
 @Injectable()
-export class WorkerBootstrapService implements OnModuleInit {
-  constructor(@Inject(QUEUE_SERVICE) private readonly queue: QueueService) {}
+export class WorkerBootstrapService {
+  constructor(private readonly processors: ProcessorRegistry) {}
 
-  async onModuleInit(): Promise<void> {
-    await this.queue.ping();
+  hasRegisteredProcessors(): boolean {
+    return this.processors.hasProcessors();
   }
 }

@@ -4,10 +4,12 @@ import { Test } from '@nestjs/testing';
 import { GenericContainer, Wait } from 'testcontainers';
 import { BullmqQueueAdapter } from '../../src/l0/adapters/bullmq/bullmq-queue.adapter';
 import { QUEUE_SERVICE } from '../../src/l0/ports';
+import type { L0ConnectionConfig } from '../../src/l0/ports/connection-config.port';
 import { runWithCorrelationId } from '../../src/platform/logging/correlation-context';
 import { JobEnqueueService } from '../../src/platform/logging/job-enqueue.service';
 import { assertValidJobPayload } from '../../src/platform/logging/job-payload';
 import { LoggerModule } from '../../src/platform/logging/logger.module';
+import { installTestAppConfig } from '../fixtures/app-config.fixture';
 
 const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
 
@@ -23,9 +25,17 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
         .start();
 
       const redisUrl = `redis://${redis.getHost()}:${redis.getMappedPort(6379)}`;
-      process.env.REDIS_URL = redisUrl;
+      installTestAppConfig({
+        databaseUrl: 'postgres://localhost:5432/dhund',
+        redisUrl,
+        logLevel: 'silent',
+      });
 
-      const adapter = new BullmqQueueAdapter();
+      const connectionConfig: L0ConnectionConfig = {
+        databaseUrl: 'postgres://localhost:5432/dhund',
+        redisUrl,
+      };
+      const adapter = new BullmqQueueAdapter(connectionConfig);
       await adapter.connect('integration-correlation');
 
       const moduleRef = await Test.createTestingModule({

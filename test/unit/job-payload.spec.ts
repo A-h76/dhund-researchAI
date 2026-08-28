@@ -7,6 +7,8 @@ import {
 } from '../../src/platform/logging/job-payload';
 import { runWithCorrelationId } from '../../src/platform/logging/correlation-context';
 import { QUEUE_SERVICE } from '../../src/l0/ports';
+import { installTestAppConfig } from '../fixtures/app-config.fixture';
+import { resetAppConfigForTests } from '../../src/platform/config';
 
 describe('job payload contract', () => {
   const mockQueueService = {
@@ -15,6 +17,14 @@ describe('job payload contract', () => {
     ping: jest.fn(),
     addJob: jest.fn().mockResolvedValue('job-123'),
   };
+
+  beforeAll(() => {
+    installTestAppConfig();
+  });
+
+  afterAll(() => {
+    resetAppConfigForTests();
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();

@@ -1,5 +1,9 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
 import Redis from 'ioredis';
+import {
+  L0_CONNECTION_CONFIG,
+  type L0ConnectionConfig,
+} from '../../ports/connection-config.port';
 import { logAdapterLifecycle } from '../adapter-logger';
 import { buildNamespacedCacheKey } from './cache-key.util';
 import { L0ConnectionError, L0OperationError } from '../../ports/errors';
@@ -8,6 +12,10 @@ import type { CacheService } from '../../ports/cache.port';
 @Injectable()
 export class RedisCacheAdapter implements CacheService, OnModuleDestroy {
   private client: Redis | null = null;
+
+  constructor(
+    @Inject(L0_CONNECTION_CONFIG) private readonly connectionConfig: L0ConnectionConfig,
+  ) {}
 
   async onModuleDestroy(): Promise<void> {
     await this.disconnect();
@@ -18,13 +26,10 @@ export class RedisCacheAdapter implements CacheService, OnModuleDestroy {
       return;
     }
 
-    const redisUrl = process.env.REDIS_URL;
-    if (!redisUrl) {
-      throw new L0ConnectionError('REDIS_URL is not configured');
-    }
-
     try {
-      this.client = new Redis(redisUrl, { maxRetriesPerRequest: null });
+      this.client = new Redis(this.connectionConfig.redisUrl, {
+        maxRetriesPerRequest: null,
+      });
       await this.client.ping();
       logAdapterLifecycle('cache', 'connect', correlationId);
     } catch (error) {
@@ -44,6 +49,17 @@ export class RedisCacheAdapter implements CacheService, OnModuleDestroy {
       logAdapterLifecycle('cache', 'disconnect', correlationId);
     } catch (error) {
       throw new L0ConnectionError('Cache disconnect failed', error);
+    }
+  }
+
+  async ping(): Promise<boolean> {
+    const client = await this.requireClient();
+
+    try {
+      const response = await client.ping();
+      return response === 'PONG';
+    } catch (error) {
+      throw new L0OperationError('Cache ping failed', error);
     }
   }
 

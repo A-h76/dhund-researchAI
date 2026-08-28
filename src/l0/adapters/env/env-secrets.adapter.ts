@@ -7,4 +7,8 @@ export class EnvSecretsAdapter implements SecretsService {
     const value = process.env[name];
     return value && value.length > 0 ? value : undefined;
   }
+
+  listSecretKeys(): readonly string[] {
+    return Object.keys(process.env);
+  }
 }
