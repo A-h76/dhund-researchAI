@@ -3,13 +3,16 @@ import { join } from 'node:path';
 import { GenericContainer, Wait } from 'testcontainers';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import { HealthController } from '../../src/apps/api/health.controller';
-import { ConfigModule } from '../../src/platform/config';
+import { BootstrapModule, BootstrapValidationService } from '../../src/platform/config';
 import { Test } from '@nestjs/testing';
 import { installTestAppConfig } from '../fixtures/app-config.fixture';
 import { correlationExpressMiddleware } from '../../src/platform/logging';
 
 const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
 const ROOT = join(__dirname, '..', '..');
+const mockBootstrapValidation = {
+  onApplicationBootstrap: jest.fn().mockResolvedValue(undefined),
+};
 
 (integrationEnabled ? describe : describe.skip)(
   'readiness integration',
@@ -33,9 +36,12 @@ const ROOT = join(__dirname, '..', '..');
       });
 
       const moduleRef = await Test.createTestingModule({
-        imports: [ConfigModule],
+        imports: [BootstrapModule],
         controllers: [HealthController],
-      }).compile();
+      })
+        .overrideProvider(BootstrapValidationService)
+        .useValue(mockBootstrapValidation)
+        .compile();
 
       const app = moduleRef.createNestApplication();
       app.use(correlationExpressMiddleware);
@@ -93,9 +99,12 @@ const ROOT = join(__dirname, '..', '..');
       });
 
       const moduleRef = await Test.createTestingModule({
-        imports: [ConfigModule],
+        imports: [BootstrapModule],
         controllers: [HealthController],
-      }).compile();
+      })
+        .overrideProvider(BootstrapValidationService)
+        .useValue(mockBootstrapValidation)
+        .compile();
 
       const app = moduleRef.createNestApplication();
       app.use(correlationExpressMiddleware);
