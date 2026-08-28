@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit and static tests
+        run: npm run test:ci
+
+      - name: Build Docker image
+        run: docker build -t dhund-research-ai:ci .
+
+      - name: Worker smoke — no listening TCP port
+        run: |
+          docker run -d --name dhund-worker-smoke dhund-research-ai:ci --role=worker
+          sleep 3
+          PID=$(docker inspect -f '{{.State.Pid}}' dhund-worker-smoke)
+          LISTENERS=$(sudo ss -ltnp | grep "pid=${PID}," || true)
+          if [ -n "$LISTENERS" ]; then
+            echo "Worker has listening TCP sockets:"
+            echo "$LISTENERS"
+            exit 1
+          fi
+          docker rm -f dhund-worker-smoke
+
+      - name: API smoke — HTTP listener
+        run: |
+          docker run -d --name dhund-api-smoke -p 3000:3000 dhund-research-ai:ci --role=api
+          sleep 3
+          curl -fsS http://localhost:3000/
+          docker rm -f dhund-api-smoke

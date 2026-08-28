@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2022",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@l0/*": ["src/l0/*"],
+      "@platform/*": ["src/platform/*"],
+      "@iam/*": ["src/iam/*"],
+      "@projects/*": ["src/projects/*"],
+      "@ingestion/*": ["src/ingestion/*"],
+      "@retrieval/*": ["src/retrieval/*"],
+      "@evidence/*": ["src/evidence/*"],
+      "@orchestration/*": ["src/orchestration/*"],
+      "@ai/*": ["src/ai/*"]
+    }
+  },
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "dist", "test/fixtures"]
+}
