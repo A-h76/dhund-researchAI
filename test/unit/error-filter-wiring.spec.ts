@@ -13,8 +13,10 @@ describe('error filter module wiring', () => {
 
     expect(api).toContain('GlobalExceptionFilter');
     expect(api).toContain('APP_FILTER');
+    expect(api).toContain('CorrelationMiddleware');
     expect(worker).not.toContain('GlobalExceptionFilter');
     expect(worker).not.toContain('APP_FILTER');
+    expect(worker).not.toContain('CorrelationMiddleware');
   });
 
   it('keeps worker bootstrap HTTP-free', () => {
