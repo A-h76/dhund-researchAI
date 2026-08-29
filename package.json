@@ -11,7 +11,7 @@
     "start:worker": "node dist/main.js --role=worker",
     "start:dev:api": "nest start --watch -- --role=api",
     "start:dev:worker": "nest start --watch -- --role=worker",
-    "lint": "eslint \"{src,test}/**/*.ts\" --ignore-pattern test/fixtures/**",
+    "lint": "eslint \"src/**/*.ts\" \"test/unit/**/*.ts\" \"test/integration/**/*.ts\" \"test/static/**/*.ts\" \"test/eslint/**/*.ts\" \"test/smoke/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "postinstall": "prisma generate",
     "test": "jest",

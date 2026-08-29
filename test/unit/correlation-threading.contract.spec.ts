@@ -2,6 +2,7 @@ import { Controller, Get, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { QUEUE_SERVICE } from '../../src/l0/ports';
+import { resetAppConfigForTests } from '../../src/platform/config';
 import {
   consumeJobPayload,
   correlationExpressMiddleware,
@@ -11,6 +12,7 @@ import {
   PlatformLogger,
 } from '../../src/platform/logging';
 import { CORRELATION_ID_HEADER } from '../../src/platform/errors/error-envelope';
+import { installTestAppConfig } from '../fixtures/app-config.fixture';
 
 @Controller('thread')
 class ThreadProbeController {
@@ -49,6 +51,7 @@ describe('correlation threading contract (HTTP → log → job → execution)', 
   };
 
   beforeAll(async () => {
+    installTestAppConfig();
     writer = new InMemoryExecutionRecordWriter();
     const moduleRef = await Test.createTestingModule({
       imports: [ThreadProbeModule],
@@ -67,6 +70,7 @@ describe('correlation threading contract (HTTP → log → job → execution)', 
 
   afterAll(async () => {
     await app.close();
+    resetAppConfigForTests();
   });
 
   beforeEach(() => {

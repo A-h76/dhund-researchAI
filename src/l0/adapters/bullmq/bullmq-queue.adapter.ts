@@ -1,6 +1,10 @@
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import Redis from 'ioredis';
+import {
+  L0_CONNECTION_CONFIG,
+  type L0ConnectionConfig,
+} from '../../ports/connection-config.port';
 import { logAdapterLifecycle } from '../adapter-logger';
 import { L0ConnectionError, L0OperationError } from '../../ports/errors';
 import type { QueueService } from '../../ports/queue.port';
@@ -9,6 +13,10 @@ import type { QueueService } from '../../ports/queue.port';
 export class BullmqQueueAdapter implements QueueService, OnModuleDestroy {
   private connection: Redis | null = null;
   private readonly queues = new Map<string, Queue>();
+
+  constructor(
+    @Inject(L0_CONNECTION_CONFIG) private readonly connectionConfig: L0ConnectionConfig,
+  ) {}
 
   async onModuleDestroy(): Promise<void> {
     await this.disconnect();
@@ -19,13 +27,10 @@ export class BullmqQueueAdapter implements QueueService, OnModuleDestroy {
       return;
     }
 
-    const redisUrl = process.env.REDIS_URL;
-    if (!redisUrl) {
-      throw new L0ConnectionError('REDIS_URL is not configured');
-    }
-
     try {
-      this.connection = new Redis(redisUrl, { maxRetriesPerRequest: null });
+      this.connection = new Redis(this.connectionConfig.redisUrl, {
+        maxRetriesPerRequest: null,
+      });
       await this.connection.ping();
       logAdapterLifecycle('queue', 'connect', correlationId);
     } catch (error) {

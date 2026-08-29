@@ -3,6 +3,7 @@ import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import { PrismaDatabaseAdapter } from '../../src/l0/adapters/prisma/prisma-database.adapter';
 import { RedisCacheAdapter } from '../../src/l0/adapters/redis/redis-cache.adapter';
 import { S3ObjectStorageAdapter } from '../../src/l0/adapters/s3-compatible/s3-object-storage.adapter';
+import type { L0ConnectionConfig } from '../../src/l0/ports/connection-config.port';
 
 const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
 
@@ -12,9 +13,12 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
   it('connects to Postgres via Prisma adapter', async () => {
     const postgres = await new PostgreSqlContainer('postgres:16-alpine').start();
 
-    process.env.DATABASE_URL = postgres.getConnectionUri();
+    const connectionConfig: L0ConnectionConfig = {
+      databaseUrl: postgres.getConnectionUri(),
+      redisUrl: 'redis://localhost:6379',
+    };
 
-    const adapter = new PrismaDatabaseAdapter();
+    const adapter = new PrismaDatabaseAdapter(connectionConfig);
     await expect(adapter.connect('test-correlation')).resolves.toBeUndefined();
     await expect(adapter.ping()).resolves.toBe(true);
     await adapter.disconnect('test-correlation');
@@ -28,10 +32,14 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
       .withWaitStrategy(Wait.forLogMessage('Ready to accept connections'))
       .start();
 
-    process.env.REDIS_URL = `redis://${redis.getHost()}:${redis.getMappedPort(6379)}`;
+    const connectionConfig: L0ConnectionConfig = {
+      databaseUrl: 'postgres://localhost:5432/dhund',
+      redisUrl: `redis://${redis.getHost()}:${redis.getMappedPort(6379)}`,
+    };
 
-    const adapter = new RedisCacheAdapter();
+    const adapter = new RedisCacheAdapter(connectionConfig);
     await adapter.connect('test-correlation');
+    await expect(adapter.ping()).resolves.toBe(true);
     await adapter.set('org-a', 'token', 'value-1');
     await expect(adapter.get('org-a', 'token')).resolves.toBe('value-1');
     await expect(adapter.get('org-b', 'token')).resolves.toBeNull();
@@ -52,13 +60,19 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
       .start();
 
     const endpoint = `http://${minio.getHost()}:${minio.getMappedPort(9000)}`;
-    process.env.S3_ENDPOINT = endpoint;
-    process.env.S3_REGION = 'us-east-1';
-    process.env.S3_ACCESS_KEY_ID = 'minioadmin';
-    process.env.S3_SECRET_ACCESS_KEY = 'minioadmin';
-    process.env.S3_BUCKET = 'dhund-test';
+    const connectionConfig: L0ConnectionConfig = {
+      databaseUrl: 'postgres://localhost:5432/dhund',
+      redisUrl: 'redis://localhost:6379',
+      s3: {
+        endpoint,
+        region: 'us-east-1',
+        accessKeyId: 'minioadmin',
+        secretAccessKey: 'minioadmin',
+        bucket: 'dhund-test',
+      },
+    };
 
-    const adapter = new S3ObjectStorageAdapter();
+    const adapter = new S3ObjectStorageAdapter(connectionConfig);
     await adapter.connect('test-correlation');
 
     const key = adapter.generateObjectKey('org1', 'proj1', 'docs', 'doc1', 'test.txt');

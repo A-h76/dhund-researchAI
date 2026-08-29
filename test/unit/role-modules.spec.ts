@@ -2,6 +2,11 @@ import { Test } from '@nestjs/testing';
 import { ApiAppModule } from '../../src/apps/api/api-app.module';
 import { WorkerAppModule } from '../../src/apps/worker/worker-app.module';
 import { QUEUE_SERVICE } from '../../src/l0/ports';
+import {
+  BootstrapValidationService,
+  resetAppConfigForTests,
+} from '../../src/platform/config';
+import { installTestAppConfig } from '../fixtures/app-config.fixture';
 
 const mockQueueService = {
   connect: jest.fn().mockResolvedValue(undefined),
@@ -10,11 +15,26 @@ const mockQueueService = {
   addJob: jest.fn().mockResolvedValue('job-1'),
 };
 
+const mockBootstrapValidation = {
+  onApplicationBootstrap: jest.fn().mockResolvedValue(undefined),
+};
+
 describe('role module selection', () => {
+  beforeAll(() => {
+    installTestAppConfig();
+  });
+
+  afterAll(() => {
+    resetAppConfigForTests();
+  });
+
   it('api module compiles with HTTP controller', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [ApiAppModule],
-    }).compile();
+    })
+      .overrideProvider(BootstrapValidationService)
+      .useValue(mockBootstrapValidation)
+      .compile();
 
     expect(moduleRef.get(ApiAppModule)).toBeDefined();
     await moduleRef.close();
@@ -26,6 +46,8 @@ describe('role module selection', () => {
     })
       .overrideProvider(QUEUE_SERVICE)
       .useValue(mockQueueService)
+      .overrideProvider(BootstrapValidationService)
+      .useValue(mockBootstrapValidation)
       .compile();
 
     expect(moduleRef.get(WorkerAppModule)).toBeDefined();

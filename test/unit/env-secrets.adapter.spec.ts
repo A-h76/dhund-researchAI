@@ -22,4 +22,10 @@ describe('EnvSecretsAdapter', () => {
     const adapter = new EnvSecretsAdapter();
     expect(adapter.getSecret('TEST_SECRET_KEY')).toBeUndefined();
   });
+
+  it('lists secret keys from the environment', () => {
+    process.env.TEST_SECRET_KEY = 'local-test-value';
+    const adapter = new EnvSecretsAdapter();
+    expect(adapter.listSecretKeys()).toContain('TEST_SECRET_KEY');
+  });
 });
