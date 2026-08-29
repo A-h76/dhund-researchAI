@@ -55,7 +55,7 @@ describe('no PHI / clinical identifier columns (GAP-CAT-A-01 / P-e)', () => {
       })
       .filter((n): n is number => n !== null);
 
-    expect(numbered.every((n) => n <= 5)).toBe(true);
-    expect(numbered).toEqual(expect.arrayContaining([1, 2, 3, 4, 5]));
+    expect(numbered.every((n) => n <= 11)).toBe(true);
+    expect(numbered).toEqual(expect.arrayContaining([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]));
   });
 });
