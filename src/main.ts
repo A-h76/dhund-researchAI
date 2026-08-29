@@ -65,7 +65,7 @@ async function bootstrapApi(version: string): Promise<void> {
   await app.init();
   const platformLogger = app.get(PlatformLogger);
   const { port } = getAppConfig();
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   await logBoot(platformLogger, RuntimeRole.Api, version, port);
 }
 

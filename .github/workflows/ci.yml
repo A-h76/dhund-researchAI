@@ -63,14 +63,32 @@ jobs:
             -p 5432:5432 \
             postgres:16-alpine
           docker run -d --name dhund-redis-api-smoke --network dhund-api-smoke redis:7-alpine
-          sleep 5
+          for i in $(seq 1 30); do
+            if docker exec dhund-postgres-api-smoke pg_isready -U postgres >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
           DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/dhund npx prisma migrate deploy
           docker run -d --name dhund-api-smoke --network dhund-api-smoke -p 3000:3000 \
             -e DATABASE_URL=postgresql://postgres:postgres@dhund-postgres-api-smoke:5432/dhund \
             -e REDIS_URL=redis://dhund-redis-api-smoke:6379 \
             dhund-research-ai:ci --role=api
-          sleep 5
-          curl -fsS http://localhost:3000/
-          curl -fsS http://localhost:3000/health
+          ready=0
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3000/health >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo "API smoke failed; container status and logs:"
+            docker ps -a --filter name=dhund-api-smoke
+            docker logs dhund-api-smoke || true
+            exit 1
+          fi
+          curl -fsS http://127.0.0.1:3000/
+          curl -fsS http://127.0.0.1:3000/health
           docker rm -f dhund-api-smoke dhund-redis-api-smoke dhund-postgres-api-smoke
           docker network rm dhund-api-smoke || true
