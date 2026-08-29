@@ -16,10 +16,10 @@ CREATE TABLE "upload_sessions" (
 
     CONSTRAINT "upload_sessions_pkey" PRIMARY KEY ("id"),
     CONSTRAINT "upload_sessions_storage_key_key" UNIQUE ("storage_key"),
+    -- Null bytes in filename are rejected by PostgreSQL TEXT encoding (PG15+); no chr(0) CHECK needed.
     CONSTRAINT "chk_upload_filename" CHECK (
         length("filename") <= 255
         AND "filename" NOT LIKE '%/%'
-        AND position(chr(0) in "filename") = 0
     ),
     CONSTRAINT "upload_sessions_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "projects"("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "upload_sessions_org_id_fkey" FOREIGN KEY ("org_id") REFERENCES "organizations"("id") ON DELETE RESTRICT ON UPDATE CASCADE,

@@ -10,11 +10,17 @@ const ROOT = join(__dirname, '..', '..');
 const MIGRATIONS_ROOT = join(ROOT, 'prisma', 'migrations');
 
 function isUniqueViolation(error: unknown): boolean {
-  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-    return true;
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === 'P2002') {
+      return true;
+    }
+    if (error.code === 'P2010') {
+      const msg = error.message;
+      return /23505|unique|duplicate key|already exists/i.test(msg);
+    }
   }
   const msg = error instanceof Error ? error.message : String(error);
-  return /unique|duplicate key/i.test(msg);
+  return /23505|unique|duplicate key|already exists|SqlState\(E23505\)/i.test(msg);
 }
 
 function isCheckViolation(error: unknown): boolean {
