@@ -28,7 +28,10 @@ export class RedisCacheAdapter implements CacheService, OnModuleDestroy {
 
     try {
       this.client = new Redis(this.connectionConfig.redisUrl, {
-        maxRetriesPerRequest: null,
+        connectTimeout: 2_000,
+        commandTimeout: 2_000,
+        maxRetriesPerRequest: 1,
+        enableOfflineQueue: false,
       });
       await this.client.ping();
       logAdapterLifecycle('cache', 'connect', correlationId);
