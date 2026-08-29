@@ -8,15 +8,390 @@
 // - jsonb where Design Master specifies jsonb
 //
 // PersistenceConventionFixture is a DHB-28 harness table only — not a product domain model.
+//
+// DHB-29: product schema foundation (migrations 001–005).
+// Documented PK exception: stripe_events.id is Stripe's event id (TEXT), not UUIDv7.
+// Partial unique indexes and CHECK constraints live in migration SQL (Prisma cannot express them).
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector, pg_trgm, citext]
 }
+
+// --- Phase 2 §1 enums ---
+
+enum OrgKind {
+  PERSONAL
+  TEAM
+
+  @@map("org_kind")
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+  BILLING
+
+  @@map("org_role")
+}
+
+enum ProjectRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+
+  @@map("project_role")
+}
+
+enum UploadSessionStatus {
+  issued
+  uploaded
+  consumed
+  expired
+  failed
+
+  @@map("upload_session_status")
+}
+
+enum DocumentStatus {
+  queued
+  processing
+  completed
+  failed
+  partial
+  cancelled
+  stale
+
+  @@map("document_status")
+}
+
+enum DocumentBlockType {
+  heading
+  paragraph
+  list
+  table_row
+  table_cell
+  figure
+  caption
+  equation
+  reference
+
+  @@map("document_block_type")
+}
+
+enum EmbeddingStatus {
+  pending
+  ok
+  failed
+
+  @@map("embedding_status")
+}
+
+enum SourceType {
+  document
+  external_record
+
+  @@map("source_type")
+}
+
+enum EvidenceStance {
+  supports
+  contradicts
+  neutral
+  unresolved
+
+  @@map("evidence_stance")
+}
+
+enum EvidenceType {
+  body_grounded
+  metadata_only
+
+  @@map("evidence_type")
+}
+
+enum ExtractionMethod {
+  deterministic
+  llm
+  human
+
+  @@map("extraction_method")
+}
+
+enum AiCapability {
+  EMBED
+  CHAT
+  RERANK
+  AUTOCOMPLETE
+  EXTRACT_CELL
+  SCREENING
+  STANCE
+  SYNTHESIS
+  OCR
+
+  @@map("ai_capability")
+}
+
+enum AiStatus {
+  pending
+  ok
+  failed
+
+  @@map("ai_status")
+}
+
+enum AiMethod {
+  llm
+  deterministic
+
+  @@map("ai_method")
+}
+
+enum ResearchRunPreset {
+  deep_research
+  extraction_matrix
+  chat
+  custom
+
+  @@map("research_run_preset")
+}
+
+enum ResearchRunState {
+  CREATED
+  PLANNING
+  RUNNING
+  PAUSED_BUDGET
+  PAUSED_MANUAL
+  COMPLETING
+  COMPLETED
+  COMPLETED_PARTIAL
+  FAILED
+  CANCELLED
+
+  @@map("research_run_state")
+}
+
+enum ResearchStepState {
+  PENDING
+  READY
+  DISPATCHED
+  RUNNING
+  SUCCEEDED
+  FAILED
+  DEFERRED
+  CANCELLED
+
+  @@map("research_step_state")
+}
+
+enum ExtractionRunState {
+  pending
+  running
+  completed
+  completed_partial
+  failed
+  cancelled
+
+  @@map("extraction_run_state")
+}
+
+enum ExtractionCellStatus {
+  pending
+  running
+  ok
+  failed
+  skipped
+
+  @@map("extraction_cell_status")
+}
+
+enum ScreeningDecisionKind {
+  include
+  exclude
+  unresolved
+
+  @@map("screening_decision_kind")
+}
+
+enum CanonicalWorkType {
+  article
+  preprint
+  chapter
+  book
+
+  @@map("canonical_work_type")
+}
+
+enum IdentifierScheme {
+  doi
+  pmid
+  arxiv
+  isbn
+  s2_id
+
+  @@map("identifier_scheme")
+}
+
+enum WorkRelationshipType {
+  is_preprint_of
+  is_journal_version_of
+  is_erratum_to
+  is_correction_of
+  is_retracted_by
+  retracts
+  is_translation_of
+  cites
+  cited_by
+
+  @@map("work_relationship_type")
+}
+
+enum MergeMatchType {
+  exact_doi
+  corroborated_pmid_arxiv
+  fuzzy_title
+
+  @@map("merge_match_type")
+}
+
+enum MergeStatus {
+  pending
+  merged
+  rejected
+
+  @@map("merge_status")
+}
+
+enum ExternalRecordType {
+  web_page
+  zotero_item
+
+  @@map("external_record_type")
+}
+
+enum DiscoveryStatus {
+  pending_admission
+  admitted
+  rejected
+  expired
+
+  @@map("discovery_status")
+}
+
+enum StripeEventStatus {
+  received
+  processed
+  processing_failed
+
+  @@map("stripe_event_status")
+}
+
+enum UsageMetric {
+  ai_tokens
+  ai_cost_micros
+  documents
+  storage_bytes
+  seats
+
+  @@map("usage_metric")
+}
+
+enum ActorType {
+  user
+  system
+  service
+
+  @@map("actor_type")
+}
+
+enum ResearchArtifactType {
+  extraction_matrix
+  deep_research_report
+  synthesis
+  consensus
+
+  @@map("research_artifact_type")
+}
+
+enum ExtractionColumnType {
+  TEXT
+  LONG_TEXT
+  NUMBER
+  BOOLEAN
+  DATE
+  ENUM
+  MULTI_ENUM
+  RANGE
+  ENTITY
+  CITATION
+
+  @@map("extraction_column_type")
+}
+
+enum ImportSessionState {
+  CREATED
+  PARSING
+  ADMITTING
+  COMPLETED
+  PARTIAL
+  FAILED
+  CANCELLED
+
+  @@map("import_session_state")
+}
+
+enum MessageRole {
+  user
+  assistant
+  system
+
+  @@map("message_role")
+}
+
+enum MessageStatus {
+  pending
+  streaming
+  complete
+  failed
+  cancelled
+
+  @@map("message_status")
+}
+
+enum WritingStatus {
+  draft
+  in_review
+  final
+  archived
+
+  @@map("writing_status")
+}
+
+enum WritingType {
+  manuscript
+  review
+  protocol
+  note
+
+  @@map("writing_type")
+}
+
+enum AuthTokenPurpose {
+  email_verification
+  password_reset
+
+  @@map("auth_token_purpose")
+}
+
+// --- DHB-28 harness ---
 
 model PersistenceConventionFixture {
   id         String   @id @db.Uuid
@@ -26,4 +401,227 @@ model PersistenceConventionFixture {
   costMicros BigInt   @map("cost_micros")
 
   @@map("_persistence_convention_fixture")
+}
+
+// --- 003 iam ---
+
+model User {
+  id              String    @id @db.Uuid
+  email           String?   @unique(map: "users_email_key") @db.Citext
+  emailVerifiedAt DateTime? @map("email_verified_at") @db.Timestamptz(3)
+  displayName     String    @map("display_name")
+  sessionVersion  Int       @default(1) @map("session_version")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  credential          Credential?
+  sessions            Session[]
+  refreshTokenFamilies RefreshTokenFamily[]
+  totpSecret          TotpSecret?
+  mfaRecoveryCodes    MfaRecoveryCode[]
+  authTokens          AuthToken[]
+  ownedOrganizations  Organization[]        @relation("OrganizationOwner")
+  orgMemberships      OrgMembership[]
+  projectMemberships  ProjectMembership[]
+
+  @@map("users")
+}
+
+model Credential {
+  id           String   @id @db.Uuid
+  userId       String   @unique(map: "credentials_user_id_key") @map("user_id") @db.Uuid
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("credentials")
+}
+
+model Session {
+  id                String    @id @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  deviceFingerprint String?   @map("device_fingerprint")
+  issuedAt          DateTime  @map("issued_at") @db.Timestamptz(3)
+  revokedAt         DateTime? @map("revoked_at") @db.Timestamptz(3)
+  sessionVersion    Int       @map("session_version")
+
+  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenFamilies RefreshTokenFamily[]
+
+  @@map("sessions")
+}
+
+model RefreshTokenFamily {
+  id               String    @id @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  sessionId        String    @map("session_id") @db.Uuid
+  currentTokenHash String    @unique(map: "refresh_token_families_current_token_hash_key") @map("current_token_hash")
+  issuedAt         DateTime  @map("issued_at") @db.Timestamptz(3)
+  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(3)
+  revokedReason    String?   @map("revoked_reason")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_token_families")
+}
+
+model TotpSecret {
+  id               String    @id @db.Uuid
+  userId           String    @unique(map: "totp_secrets_user_id_key") @map("user_id") @db.Uuid
+  secretCiphertext Bytes     @map("secret_ciphertext")
+  enabledAt        DateTime? @map("enabled_at") @db.Timestamptz(3)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("totp_secrets")
+}
+
+model MfaRecoveryCode {
+  id         String    @id @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  codeHash   String    @map("code_hash")
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, codeHash], map: "mfa_recovery_codes_user_id_code_hash_key")
+  @@map("mfa_recovery_codes")
+}
+
+model AuthToken {
+  id         String           @id @db.Uuid
+  userId     String           @map("user_id") @db.Uuid
+  purpose    AuthTokenPurpose
+  tokenHash  String           @unique(map: "uq_auth_tokens_hash") @map("token_hash")
+  expiresAt  DateTime         @map("expires_at") @db.Timestamptz(3)
+  consumedAt DateTime?        @map("consumed_at") @db.Timestamptz(3)
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("auth_tokens")
+}
+
+// --- 004 tenancy ---
+
+model Organization {
+  id          String    @id @db.Uuid
+  kind        OrgKind
+  name        String
+  ownerUserId String?   @map("owner_user_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  owner              User?            @relation("OrganizationOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  memberships        OrgMembership[]
+  projects           Project[]
+  subscriptions      Subscription[]
+  usageCounters      UsageCounter[]
+
+  @@map("organizations")
+}
+
+model OrgMembership {
+  id        String    @id @db.Uuid
+  orgId     String    @map("org_id") @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  role      OrgRole
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@map("org_memberships")
+}
+
+model Project {
+  id        String    @id @db.Uuid
+  orgId     String    @map("org_id") @db.Uuid
+  name      String
+  settings  Json      @default("{}") @db.JsonB
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  organization Organization         @relation(fields: [orgId], references: [id], onDelete: Restrict)
+  memberships  ProjectMembership[]
+
+  @@map("projects")
+}
+
+model ProjectMembership {
+  id        String      @id @db.Uuid
+  projectId String      @map("project_id") @db.Uuid
+  userId    String      @map("user_id") @db.Uuid
+  role      ProjectRole
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  revokedAt DateTime?   @map("revoked_at") @db.Timestamptz(3)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@map("project_memberships")
+}
+
+// --- 005 billing ---
+
+model Subscription {
+  id                   String   @id @db.Uuid
+  orgId                String   @map("org_id") @db.Uuid
+  stripeSubscriptionId String   @unique(map: "subscriptions_stripe_subscription_id_key") @map("stripe_subscription_id")
+  planCode             String   @map("plan_code")
+  status               String
+  periodStart          DateTime @map("period_start") @db.Timestamptz(3)
+  periodEnd            DateTime @map("period_end") @db.Timestamptz(3)
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Restrict)
+
+  @@map("subscriptions")
+}
+
+model UsageCounter {
+  id          String      @id @db.Uuid
+  orgId       String      @map("org_id") @db.Uuid
+  period      String
+  periodStart DateTime    @map("period_start") @db.Timestamptz(3)
+  periodEnd   DateTime    @map("period_end") @db.Timestamptz(3)
+  metric      UsageMetric
+  value       BigInt      @default(0)
+  updatedAt   DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, period, metric], map: "usage_counters_org_id_period_metric_key")
+  @@map("usage_counters")
+}
+
+/// Stripe webhook replay ledger. PK is Stripe's event id (TEXT) — not UUIDv7.
+model StripeEvent {
+  id          String            @id
+  type        String
+  payload     Json              @db.JsonB
+  receivedAt  DateTime          @default(now()) @map("received_at") @db.Timestamptz(3)
+  processedAt DateTime?         @map("processed_at") @db.Timestamptz(3)
+  status      StripeEventStatus @default(received)
+
+  @@map("stripe_events")
+}
+
+model IdempotencyRecord {
+  id                 String   @id @db.Uuid
+  scope              String
+  key                String
+  requestFingerprint String   @map("request_fingerprint")
+  responseHash       String?  @map("response_hash")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([scope, key], map: "idempotency_records_scope_key_key")
+  @@map("idempotency_records")
 }
