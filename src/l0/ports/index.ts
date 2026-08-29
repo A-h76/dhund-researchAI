@@ -4,6 +4,7 @@ export * from './database.port';
 export * from './email.port';
 export * from './errors';
 export * from './object-storage.port';
+export * from './query-observer.port';
 export * from './queue.port';
 export * from './secrets.port';
 export * from './tokens';

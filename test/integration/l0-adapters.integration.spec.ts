@@ -16,6 +16,7 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
     const connectionConfig: L0ConnectionConfig = {
       databaseUrl: postgres.getConnectionUri(),
       redisUrl: 'redis://localhost:6379',
+      databasePoolSize: 10,
     };
 
     const adapter = new PrismaDatabaseAdapter(connectionConfig);
@@ -35,6 +36,7 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
     const connectionConfig: L0ConnectionConfig = {
       databaseUrl: 'postgres://localhost:5432/dhund',
       redisUrl: `redis://${redis.getHost()}:${redis.getMappedPort(6379)}`,
+      databasePoolSize: 10,
     };
 
     const adapter = new RedisCacheAdapter(connectionConfig);
@@ -63,6 +65,7 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
     const connectionConfig: L0ConnectionConfig = {
       databaseUrl: 'postgres://localhost:5432/dhund',
       redisUrl: 'redis://localhost:6379',
+      databasePoolSize: 10,
       s3: {
         endpoint,
         region: 'us-east-1',

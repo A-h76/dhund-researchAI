@@ -33,6 +33,27 @@ jobs:
       - name: L0 integration tests (Testcontainers)
         run: npm run test:integration
 
+      - name: Prisma migration gate (disposable Postgres)
+        run: |
+          docker network create dhund-migrate-gate || true
+          docker run -d --name dhund-postgres-migrate-gate --network dhund-migrate-gate \
+            -e POSTGRES_PASSWORD=postgres -e POSTGRES_USER=postgres -e POSTGRES_DB=dhund \
+            -p 5433:5432 \
+            postgres:16-alpine
+          for i in $(seq 1 30); do
+            if docker exec dhund-postgres-migrate-gate pg_isready -U postgres >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          echo "First migrate deploy:"
+          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5433/dhund npx prisma migrate deploy
+          echo "Second migrate deploy (must be no-op):"
+          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5433/dhund npx prisma migrate deploy
+          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5433/dhund npx prisma migrate status
+          docker rm -f dhund-postgres-migrate-gate
+          docker network rm dhund-migrate-gate || true
+
       - name: Build Docker image
         run: docker build -t dhund-research-ai:ci .
 

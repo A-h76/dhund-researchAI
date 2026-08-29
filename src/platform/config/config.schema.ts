@@ -52,6 +52,27 @@ export function parseEmbeddingDimension(value: string | undefined): number {
   return parsed;
 }
 
+/** Default Prisma connection pool size when DATABASE_POOL_SIZE is unset. */
+export const DEFAULT_DATABASE_POOL_SIZE = 10;
+export const MIN_DATABASE_POOL_SIZE = 1;
+export const MAX_DATABASE_POOL_SIZE = 100;
+
+export function parseDatabasePoolSize(value: string | undefined): number {
+  const raw = value ?? String(DEFAULT_DATABASE_POOL_SIZE);
+  const parsed = Number(raw);
+  if (
+    !Number.isInteger(parsed) ||
+    parsed < MIN_DATABASE_POOL_SIZE ||
+    parsed > MAX_DATABASE_POOL_SIZE
+  ) {
+    throw new ConfigValidationError(
+      `DATABASE_POOL_SIZE must be an integer between ${MIN_DATABASE_POOL_SIZE} and ${MAX_DATABASE_POOL_SIZE}`,
+    );
+  }
+
+  return parsed;
+}
+
 export function parseFeatureFlags(
   secrets: SecretsService,
 ): Readonly<Record<string, boolean>> {

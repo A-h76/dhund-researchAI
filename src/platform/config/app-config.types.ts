@@ -7,6 +7,7 @@ export interface AppConfig {
   readonly port: number;
   readonly logLevel: string;
   readonly databaseUrl: string;
+  readonly databasePoolSize: number;
   readonly redisUrl: string;
   readonly embeddingDimension: number;
   readonly s3?: {

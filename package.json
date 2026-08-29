@@ -17,6 +17,7 @@
     "test": "jest",
     "test:ci": "jest --ci --coverage --forceExit",
     "test:integration": "cross-env RUN_INTEGRATION_TESTS=true jest --config jest.integration.config.ts --runInBand --forceExit",
+    "test:migrate": "cross-env RUN_INTEGRATION_TESTS=true jest --config jest.integration.config.ts --runInBand --forceExit --testPathPattern=migrate-gate",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
