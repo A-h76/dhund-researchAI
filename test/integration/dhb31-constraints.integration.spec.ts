@@ -219,7 +219,7 @@ async function expectRejectsAppendOnly(fn: () => Promise<unknown>): Promise<void
         const dir = readdirSync(MIGRATIONS_ROOT)
           .filter((n) => statSync(join(MIGRATIONS_ROOT, n)).isDirectory())
           .find((d) => d.includes('_006_'));
-        const sql = readFileSync(join(MIGRATIONS_ROOT, dir!), 'utf8')
+        const sql = readFileSync(join(MIGRATIONS_ROOT, dir!, 'migration.sql'), 'utf8')
           .replace(/--[^\n]*/g, '')
           .toLowerCase();
         expect(sql).not.toMatch(/research_run_id/);

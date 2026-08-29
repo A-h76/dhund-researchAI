@@ -63,11 +63,12 @@ const ROOT = join(__dirname, '..', '..');
         const projectId = generateId();
         const orgId = generateId();
         const userId = generateId();
+        const userEmail = `fts-${userId}@example.com`;
         const storageKey = `fts-test/${chunkId}`;
 
         await prisma.$executeRaw`
-          INSERT INTO users (id, display_name, created_at)
-          VALUES (${userId}::uuid, 'FTS User', NOW())
+          INSERT INTO users (id, email, display_name, created_at)
+          VALUES (${userId}::uuid, ${userEmail}, 'FTS User', NOW())
         `;
         await prisma.$executeRaw`
           INSERT INTO organizations (id, kind, name, owner_user_id, created_at)
