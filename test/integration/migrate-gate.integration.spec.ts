@@ -6,7 +6,7 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
 const ROOT = join(__dirname, '..', '..');
 
 (integrationEnabled ? describe : describe.skip)(
-  'prisma migrate gate (DHB-28)',
+  'prisma migrate gate (DHB-28 / DHB-31)',
   () => {
     jest.setTimeout(180_000);
 

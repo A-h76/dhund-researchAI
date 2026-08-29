@@ -12,6 +12,16 @@ function migrationDirs(): string[] {
     .sort();
 }
 
+function dhb30MigrationNumbers(): number[] {
+  return migrationDirs()
+    .map((name) => {
+      const m = name.match(/_(\d{3})_/);
+      return m ? Number(m[1]) : null;
+    })
+    .filter((n): n is number => n !== null && n >= 6 && n <= 11)
+    .sort((a, b) => a - b);
+}
+
 describe('DHB-30 migration ordering hazards', () => {
   it('applies 006 before 011 in migration directory order', () => {
     const dirs = migrationDirs();
@@ -32,14 +42,41 @@ describe('DHB-30 migration ordering hazards', () => {
     expect(sql).not.toMatch(/research_run_id/);
   });
 
-  it('does not create migrations beyond 011 in this block', () => {
-    const numbered = migrationDirs()
+  it('includes migrations 006–011 exactly once in the DHB-30 block', () => {
+    expect(dhb30MigrationNumbers()).toEqual([6, 7, 8, 9, 10, 11]);
+  });
+
+  it('DHB-30 SQL in 006–011 does not reference tables owned by later migration blocks', () => {
+    const laterTables = [
+      'research_runs',
+      'extraction_schemas',
+      'screening_criteria',
+      'outbox',
+      'writings',
+      'conversations',
+      'library_folders',
+      'connector_cache',
+    ];
+
+    for (const dir of migrationDirs().filter((d) => /_00[6-9]_|_01[01]_/.test(d))) {
+      const sql = readFileSync(join(MIGRATIONS_ROOT, dir, 'migration.sql'), 'utf8')
+        .replace(/--[^\n]*/g, '')
+        .toLowerCase();
+      for (const table of laterTables) {
+        expect(sql).not.toMatch(new RegExp(`\\b${table}\\b`));
+      }
+    }
+  });
+
+  it('does not fail when migrations 012+ exist elsewhere in the repository', () => {
+    const allNumbers = migrationDirs()
       .map((name) => {
         const m = name.match(/_(\d{3})_/);
         return m ? Number(m[1]) : null;
       })
       .filter((n): n is number => n !== null);
 
-    expect(numbered.every((n) => n <= 11)).toBe(true);
+    expect(allNumbers.some((n) => n >= 12)).toBe(true);
+    expect(dhb30MigrationNumbers()).toEqual([6, 7, 8, 9, 10, 11]);
   });
 });

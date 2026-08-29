@@ -41,21 +41,4 @@ describe('no PHI / clinical identifier columns (GAP-CAT-A-01 / P-e)', () => {
 
     expect(hits).toEqual([]);
   });
-
-  it('does not create migrations beyond 005 in this block', () => {
-    const dirs = readdirSync(MIGRATIONS_ROOT).filter((name) => {
-      const full = join(MIGRATIONS_ROOT, name);
-      return statSync(full).isDirectory() && /_\d{3}_/.test(name);
-    });
-
-    const numbered = dirs
-      .map((name) => {
-        const m = name.match(/_(\d{3})_/);
-        return m ? Number(m[1]) : null;
-      })
-      .filter((n): n is number => n !== null);
-
-    expect(numbered.every((n) => n <= 11)).toBe(true);
-    expect(numbered).toEqual(expect.arrayContaining([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]));
-  });
 });

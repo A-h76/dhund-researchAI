@@ -11,6 +11,7 @@
 //
 // DHB-29: product schema foundation (migrations 001–005).
 // DHB-30: ai ledger, identity, external, ingestion, embeddings, evidence (migrations 006–011).
+// DHB-31: orchestration, extraction, screening, platform, FTS, writing, conversations, library, connectors (012–020).
 // Documented PK exception: stripe_events.id is Stripe's event id (TEXT), not UUIDv7.
 // Partial unique indexes and CHECK constraints live in migration SQL (Prisma cannot express them).
 
@@ -426,6 +427,13 @@ model User {
   projectMemberships   ProjectMembership[]
   uploadSessions       UploadSession[]
   mergeReviews         MergeCandidate[]
+  researchRunsInitiated ResearchRun[]
+  screeningCriteriaCreated ScreeningCriteria[]
+  screeningDecisions   ScreeningDecision[]
+  writingsCreated      Writing[]
+  writingVersionsCreated WritingVersion[]
+  conversationsCreated Conversation[]
+  importSessionsInitiated ReferenceManagerImportSession[]
 
   @@map("users")
 }
@@ -528,6 +536,7 @@ model Organization {
   documents          Document[]
   uploadSessions     UploadSession[]
   aiExecutions       AiExecution[]
+  researchRuns       ResearchRun[]
 
   @@map("organizations")
 }
@@ -562,6 +571,15 @@ model Project {
   discoveryCandidates DiscoveryCandidate[]
   sources             Source[]
   aiExecutions        AiExecution[]
+  researchRuns        ResearchRun[]
+  extractionSchemas   ExtractionSchema[]
+  screeningCriteria   ScreeningCriteria[]
+  screeningDecisions  ScreeningDecision[]
+  writings            Writing[]
+  conversations       Conversation[]
+  libraryFolders      LibraryFolder[]
+  libraryItems        LibraryItem[]
+  importSessions      ReferenceManagerImportSession[]
 
   @@map("projects")
 }
@@ -644,6 +662,7 @@ model AiExecution {
   id               String       @id @db.Uuid
   orgId            String       @map("org_id") @db.Uuid
   projectId        String?      @map("project_id") @db.Uuid
+  researchRunId    String?      @map("research_run_id") @db.Uuid
   capability       AiCapability
   provider         String
   model            String
@@ -658,10 +677,14 @@ model AiExecution {
   correlationId    String       @map("correlation_id")
   createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  organization Organization          @relation(fields: [orgId], references: [id], onDelete: Restrict)
-  project      Project?              @relation(fields: [projectId], references: [id], onDelete: Restrict)
-  attempts     AiExecutionAttempt[]
-  evidence     Evidence[]
+  organization     Organization          @relation(fields: [orgId], references: [id], onDelete: Restrict)
+  project          Project?              @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  researchRun      ResearchRun?          @relation(fields: [researchRunId], references: [id], onDelete: Restrict)
+  attempts         AiExecutionAttempt[]
+  evidence         Evidence[]
+  extractionCells  ExtractionCell[]
+  screeningDecisions ScreeningDecision[]
+  messages         Message[]
 
   @@map("ai_executions")
 }
@@ -795,6 +818,7 @@ model ExternalRecord {
   rightsSnapshot      RightsSnapshot           @relation(fields: [rightsSnapshotId], references: [id], onDelete: Restrict)
   snapshots           ExternalRecordSnapshot[]
   sources             Source[]
+  libraryItems        LibraryItem[]
 
   @@map("external_records")
 }
@@ -878,6 +902,8 @@ model Document {
   rightsSnapshot RightsSnapshot? @relation(fields: [rightsSnapshotId], references: [id], onDelete: Restrict)
   versions       DocumentVersion[]
   sources        Source[]
+  extractionCells ExtractionCell[]
+  libraryItems   LibraryItem[]
 
   @@unique([projectId, storageKey], map: "uq_documents_storage_key")
   @@map("documents")
@@ -944,6 +970,7 @@ model Chunk {
   blockIds          String[] @map("block_ids") @db.Uuid
   contentHash       String   @map("content_hash")
   chunkerVersion    String   @map("chunker_version")
+  text              String
 
   documentVersion DocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Cascade)
   embeddings        ChunkEmbedding[]
@@ -984,8 +1011,9 @@ model Source {
   project        Project         @relation(fields: [projectId], references: [id], onDelete: Restrict)
   document       Document?       @relation(fields: [documentId], references: [id], onDelete: Restrict)
   externalRecord ExternalRecord? @relation(fields: [externalRecordId], references: [id], onDelete: Restrict)
-  evidence       Evidence[]
-  citations      Citation[]      @relation("CitationSource")
+  evidence           Evidence[]
+  citations          Citation[]          @relation("CitationSource")
+  screeningDecisions ScreeningDecision[]
 
   @@map("sources")
 }
@@ -1011,8 +1039,10 @@ model Evidence {
   aiExecution  AiExecution?        @relation(fields: [aiExecutionId], references: [id], onDelete: Restrict)
   supersededBy Evidence?           @relation("EvidenceSupersession", fields: [supersededById], references: [id], onDelete: Restrict)
   supersedes   Evidence[]          @relation("EvidenceSupersession")
-  claimLinks   EvidenceClaimLink[]
-  citations    Citation[]          @relation("CitationEvidence")
+  claimLinks              EvidenceClaimLink[]
+  citations               Citation[]                 @relation("CitationEvidence")
+  writingSentenceBindings WritingSentenceBinding[]
+  messageEvidenceBindings MessageEvidenceBinding[]
 
   @@map("evidence")
 }
@@ -1089,6 +1119,399 @@ model Citation {
 
   resolvesToEvidence Evidence? @relation("CitationEvidence", fields: [resolvesToEvidenceId], references: [id], onDelete: Restrict)
   resolvesToSource   Source?   @relation("CitationSource", fields: [resolvesToSourceId], references: [id], onDelete: Restrict)
+  writing            Writing?  @relation(fields: [writingId], references: [id], onDelete: Restrict)
 
   @@map("citations")
+}
+
+// --- 012 orchestration ---
+
+model ResearchRun {
+  id              String            @id @db.Uuid
+  orgId           String            @map("org_id") @db.Uuid
+  projectId       String            @map("project_id") @db.Uuid
+  initiatedBy     String            @map("initiated_by") @db.Uuid
+  preset          ResearchRunPreset
+  customDag       Json?             @map("custom_dag") @db.JsonB
+  state           ResearchRunState  @default(CREATED)
+  reservedMicros  BigInt            @map("reserved_micros")
+  consumedMicros  BigInt            @default(0) @map("consumed_micros")
+  coverage        Json              @default("{}") @db.JsonB
+  version         Int               @default(0)
+  idempotencyKey  String            @map("idempotency_key")
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  startedAt       DateTime?         @map("started_at") @db.Timestamptz(3)
+  terminalAt      DateTime?         @map("terminal_at") @db.Timestamptz(3)
+
+  organization      Organization       @relation(fields: [orgId], references: [id], onDelete: Restrict)
+  project           Project            @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  initiator         User               @relation(fields: [initiatedBy], references: [id], onDelete: Restrict)
+  steps             ResearchRunStep[]
+  artifacts         ResearchArtifact[]
+  aiExecutions      AiExecution[]
+  extractionRun     ExtractionRun?
+  screeningCriteria ScreeningCriteria[]
+  screeningDecisions ScreeningDecision[]
+
+  @@unique([projectId, idempotencyKey], map: "research_runs_project_id_idempotency_key_key")
+  @@map("research_runs")
+}
+
+model ResearchRunStep {
+  id                String            @id @db.Uuid
+  runId             String            @map("run_id") @db.Uuid
+  stepType          String            @map("step_type")
+  dependsOnStepIds  String[]          @default([]) @map("depends_on_step_ids") @db.Uuid
+  inputFingerprint  String            @map("input_fingerprint")
+  stepVersion       String            @map("step_version")
+  state             ResearchStepState @default(PENDING)
+  attemptCount      Int               @default(0) @map("attempt_count")
+  heartbeatAt       DateTime?         @map("heartbeat_at") @db.Timestamptz(3)
+  resultRef         String?           @map("result_ref")
+  priorityScore     Decimal?          @map("priority_score") @db.Decimal
+  version           Int               @default(0)
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  run ResearchRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, stepType, inputFingerprint, stepVersion], map: "research_run_steps_run_id_step_type_input_fingerprint_step__key")
+  @@map("research_run_steps")
+}
+
+model ResearchArtifact {
+  id                   String               @id @db.Uuid
+  runId                String               @map("run_id") @db.Uuid
+  type                 ResearchArtifactType
+  coverageSnapshot     Json                 @map("coverage_snapshot") @db.JsonB
+  coverageSnapshotHash String               @map("coverage_snapshot_hash")
+  generatedAt          DateTime             @map("generated_at") @db.Timestamptz(3)
+  storageKey           String?              @map("storage_key")
+  stale                Boolean              @default(false)
+
+  run ResearchRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, type, coverageSnapshotHash], map: "research_artifacts_run_id_type_coverage_snapshot_hash_key")
+  @@map("research_artifacts")
+}
+
+// --- 013 extraction ---
+
+model ExtractionSchema {
+  id        String   @id @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  name      String
+  columns   Json     @db.JsonB
+  version   Int
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  extractionRuns ExtractionRun[]
+
+  @@unique([projectId, name, version], map: "extraction_schemas_project_id_name_version_key")
+  @@map("extraction_schemas")
+}
+
+model ExtractionRun {
+  id            String             @id @db.Uuid
+  runId         String             @unique(map: "extraction_runs_run_id_key") @map("run_id") @db.Uuid
+  schemaId      String             @map("schema_id") @db.Uuid
+  schemaVersion Int                @map("schema_version")
+  documentIds   String[]           @map("document_ids") @db.Uuid
+  state         ExtractionRunState @default(pending)
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  researchRun ResearchRun      @relation(fields: [runId], references: [id], onDelete: Restrict)
+  schema      ExtractionSchema @relation(fields: [schemaId], references: [id], onDelete: Restrict)
+  cells       ExtractionCell[]
+
+  @@map("extraction_runs")
+}
+
+model ExtractionCell {
+  id              String               @id @db.Uuid
+  extractionRunId String               @map("extraction_run_id") @db.Uuid
+  documentId      String               @map("document_id") @db.Uuid
+  columnKey       String               @map("column_key")
+  value           Json?                @db.JsonB
+  evidenceLocator Json?                @map("evidence_locator") @db.JsonB
+  aiExecutionId   String?              @map("ai_execution_id") @db.Uuid
+  confidence      Decimal?             @db.Decimal
+  method          ExtractionMethod
+  status          ExtractionCellStatus @default(pending)
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  extractionRun ExtractionRun @relation(fields: [extractionRunId], references: [id], onDelete: Cascade)
+  document      Document      @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  aiExecution   AiExecution?  @relation(fields: [aiExecutionId], references: [id], onDelete: Restrict)
+
+  @@unique([extractionRunId, documentId, columnKey], map: "extraction_cells_extraction_run_id_document_id_column_key_key")
+  @@map("extraction_cells")
+}
+
+// --- 014 screening ---
+
+model ScreeningCriteria {
+  id          String   @id @db.Uuid
+  projectId   String   @map("project_id") @db.Uuid
+  runId       String?  @map("run_id") @db.Uuid
+  definition  Json     @db.JsonB
+  version     Int
+  createdBy   String   @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  project   Project            @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  run       ResearchRun?       @relation(fields: [runId], references: [id], onDelete: Restrict)
+  creator   User               @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  decisions ScreeningDecision[]
+
+  @@unique([projectId, version], map: "screening_criteria_project_id_version_key")
+  @@map("screening_criteria")
+}
+
+model ScreeningDecision {
+  id                      String                @id @db.Uuid
+  projectId               String                @map("project_id") @db.Uuid
+  runId                   String?               @map("run_id") @db.Uuid
+  sourceId                String                @map("source_id") @db.Uuid
+  decision                ScreeningDecisionKind
+  reason                  String?
+  criteriaId              String?               @map("criteria_id") @db.Uuid
+  criteriaVersion         Int?                  @map("criteria_version")
+  method                  ExtractionMethod
+  aiExecutionId           String?               @map("ai_execution_id") @db.Uuid
+  confidence              Decimal?              @db.Decimal
+  evidenceLocator         Json?                 @map("evidence_locator") @db.JsonB
+  decidedBy               String                @map("decided_by") @db.Uuid
+  decidedAt               DateTime              @map("decided_at") @db.Timestamptz(3)
+  supersededByDecisionId  String?               @map("superseded_by_decision_id") @db.Uuid
+
+  project      Project            @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  run          ResearchRun?       @relation(fields: [runId], references: [id], onDelete: Restrict)
+  source       Source             @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  criteria     ScreeningCriteria? @relation(fields: [criteriaId], references: [id], onDelete: Restrict)
+  aiExecution  AiExecution?       @relation(fields: [aiExecutionId], references: [id], onDelete: Restrict)
+  decider      User               @relation(fields: [decidedBy], references: [id], onDelete: Restrict)
+  supersededBy ScreeningDecision? @relation("ScreeningSupersession", fields: [supersededByDecisionId], references: [id], onDelete: Restrict)
+  supersedes   ScreeningDecision[] @relation("ScreeningSupersession")
+
+  @@unique([runId, sourceId, criteriaVersion], map: "screening_decisions_run_id_source_id_criteria_version_key")
+  @@map("screening_decisions")
+}
+
+// --- 015 platform ---
+
+model Outbox {
+  id             String    @id @db.Uuid
+  aggregateType  String    @map("aggregate_type")
+  aggregateId    String    @map("aggregate_id") @db.Uuid
+  eventType      String    @map("event_type")
+  schemaVersion  Int       @default(1) @map("schema_version")
+  payload        Json      @db.JsonB
+  correlationId  String    @map("correlation_id")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  relayedAt      DateTime? @map("relayed_at") @db.Timestamptz(3)
+  attemptCount   Int       @default(0) @map("attempt_count")
+
+  @@map("outbox")
+}
+
+model AuditEvent {
+  id            String    @id @db.Uuid
+  actorType     ActorType @map("actor_type")
+  actorId       String?   @map("actor_id") @db.Uuid
+  action        String
+  scope         Json      @db.JsonB
+  beforeRef     String?   @map("before_ref")
+  afterRef      String?   @map("after_ref")
+  correlationId String    @map("correlation_id")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@map("audit_events")
+}
+
+// --- 017 writing ---
+
+model Writing {
+  id               String        @id @db.Uuid
+  projectId        String        @map("project_id") @db.Uuid
+  title            String
+  type             WritingType
+  status           WritingStatus @default(draft)
+  currentVersionId String?       @unique @map("current_version_id") @db.Uuid
+  createdBy        String        @map("created_by") @db.Uuid
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt        DateTime?     @map("deleted_at") @db.Timestamptz(3)
+
+  project        Project                  @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  creator        User                     @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  currentVersion WritingVersion?          @relation("WritingCurrentVersion", fields: [currentVersionId], references: [id], onDelete: Restrict)
+  versions       WritingVersion[]         @relation("WritingVersions")
+  sentenceBindings WritingSentenceBinding[]
+  citations      Citation[]
+
+  @@map("writings")
+}
+
+model WritingVersion {
+  id          String   @id @db.Uuid
+  writingId   String   @map("writing_id") @db.Uuid
+  versionNo   Int      @map("version_no")
+  contentRef  String   @map("content_ref")
+  createdBy   String   @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  writing            Writing                  @relation("WritingVersions", fields: [writingId], references: [id], onDelete: Cascade)
+  creator            User                     @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  currentForWriting  Writing?                 @relation("WritingCurrentVersion")
+  sentenceBindings   WritingSentenceBinding[]
+
+  @@unique([writingId, versionNo], map: "writing_versions_writing_id_version_no_key")
+  @@map("writing_versions")
+}
+
+model WritingSentenceBinding {
+  id               String   @id @db.Uuid
+  writingId        String   @map("writing_id") @db.Uuid
+  writingVersionId String   @map("writing_version_id") @db.Uuid
+  projectId        String   @map("project_id") @db.Uuid
+  sentenceHash     String   @map("sentence_hash")
+  evidenceId       String   @map("evidence_id") @db.Uuid
+  strength         Decimal  @db.Decimal
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  writing        Writing        @relation(fields: [writingId], references: [id], onDelete: Restrict)
+  writingVersion WritingVersion @relation(fields: [writingVersionId], references: [id], onDelete: Restrict)
+  evidence       Evidence       @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+
+  @@unique([writingVersionId, sentenceHash, evidenceId], map: "writing_sentence_bindings_writing_version_id_sentence_hash__key")
+  @@map("writing_sentence_bindings")
+}
+
+// --- 018 conversations ---
+
+model Conversation {
+  id        String    @id @db.Uuid
+  projectId String    @map("project_id") @db.Uuid
+  title     String?
+  createdBy String    @map("created_by") @db.Uuid
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  creator  User      @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  messages Message[]
+
+  @@map("conversations")
+}
+
+model Message {
+  id            String        @id @db.Uuid
+  conversationId String       @map("conversation_id") @db.Uuid
+  role          MessageRole
+  content       String
+  status        MessageStatus @default(pending)
+  sequence      Int
+  aiExecutionId String?       @map("ai_execution_id") @db.Uuid
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  conversation    Conversation             @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  aiExecution     AiExecution?             @relation(fields: [aiExecutionId], references: [id], onDelete: Restrict)
+  evidenceBindings MessageEvidenceBinding[]
+
+  @@unique([conversationId, sequence], map: "messages_conversation_id_sequence_key")
+  @@map("messages")
+}
+
+model MessageEvidenceBinding {
+  id         String   @id @db.Uuid
+  messageId  String   @map("message_id") @db.Uuid
+  evidenceId String   @map("evidence_id") @db.Uuid
+  projectId  String   @map("project_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  message  Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  evidence Evidence @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+
+  @@unique([messageId, evidenceId], map: "message_evidence_bindings_message_id_evidence_id_key")
+  @@map("message_evidence_bindings")
+}
+
+// --- 019 library ---
+
+model LibraryFolder {
+  id             String    @id @db.Uuid
+  projectId      String    @map("project_id") @db.Uuid
+  parentFolderId String?   @map("parent_folder_id") @db.Uuid
+  name           String
+  position       Int       @default(0)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  project      Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parentFolder LibraryFolder?  @relation("LibraryFolderHierarchy", fields: [parentFolderId], references: [id], onDelete: Cascade)
+  childFolders LibraryFolder[] @relation("LibraryFolderHierarchy")
+  items        LibraryItem[]
+
+  @@map("library_folders")
+}
+
+model LibraryItem {
+  id               String    @id @db.Uuid
+  projectId        String    @map("project_id") @db.Uuid
+  folderId         String?   @map("folder_id") @db.Uuid
+  documentId       String?   @map("document_id") @db.Uuid
+  externalRecordId String?   @map("external_record_id") @db.Uuid
+  position         Int       @default(0)
+  metadata         Json      @default("{}") @db.JsonB
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  folder         LibraryFolder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  document       Document?       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  externalRecord ExternalRecord? @relation(fields: [externalRecordId], references: [id], onDelete: Cascade)
+
+  @@map("library_items")
+}
+
+// --- 020 connectors ---
+
+model ConnectorCache {
+  id        String   @id @db.Uuid
+  provider  String
+  cacheKey  String   @map("cache_key")
+  value     Json     @db.JsonB
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([provider, cacheKey], map: "connector_cache_provider_cache_key_key")
+  @@map("connector_cache")
+}
+
+model ReferenceManagerImportSession {
+  id             String             @id @db.Uuid
+  projectId      String             @map("project_id") @db.Uuid
+  source         String
+  initiatedBy    String             @map("initiated_by") @db.Uuid
+  state          ImportSessionState @default(CREATED)
+  itemsTotal     Int?               @map("items_total")
+  itemsAdmitted  Int                @default(0) @map("items_admitted")
+  itemsRejected  Int                @default(0) @map("items_rejected")
+  errors         Json               @default("[]") @db.JsonB
+  idempotencyKey String             @map("idempotency_key")
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  terminalAt     DateTime?          @map("terminal_at") @db.Timestamptz(3)
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  initiator User    @relation(fields: [initiatedBy], references: [id], onDelete: Restrict)
+
+  @@unique([projectId, idempotencyKey], map: "refmgr_import_sessions_project_idempotency_key")
+  @@map("reference_manager_import_sessions")
 }

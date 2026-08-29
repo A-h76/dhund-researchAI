@@ -224,6 +224,7 @@ async function expectRejectsAppendOnly(fn: () => Promise<unknown>): Promise<void
           blockIds: [],
           contentHash: `hash-${generateId()}`,
           chunkerVersion: 'v1',
+          text: '',
         },
       });
 
@@ -238,30 +239,6 @@ async function expectRejectsAppendOnly(fn: () => Promise<unknown>): Promise<void
         const idx006 = dirs.findIndex((d) => d.includes('_006_'));
         const idx011 = dirs.findIndex((d) => d.includes('_011_'));
         expect(idx006).toBeLessThan(idx011);
-      });
-
-      it('has no research_run_id FK on ai_executions after deploy', async () => {
-        const rows = await prisma.$queryRaw<Array<{ column_name: string | null }>>`
-          SELECT kcu.column_name
-          FROM information_schema.table_constraints tc
-          JOIN information_schema.key_column_usage kcu
-            ON tc.constraint_name = kcu.constraint_name
-          JOIN information_schema.constraint_column_usage ccu
-            ON ccu.constraint_name = tc.constraint_name
-          WHERE tc.table_name = 'ai_executions'
-            AND tc.constraint_type = 'FOREIGN KEY'
-            AND ccu.table_name = 'research_runs'
-        `;
-        expect(rows).toHaveLength(0);
-      });
-
-      it('ai_executions has no research_run_id column', async () => {
-        const rows = await prisma.$queryRaw<Array<{ column_name: string }>>`
-          SELECT column_name
-          FROM information_schema.columns
-          WHERE table_name = 'ai_executions' AND column_name = 'research_run_id'
-        `;
-        expect(rows).toHaveLength(0);
       });
     });
 
@@ -657,6 +634,7 @@ async function expectRejectsAppendOnly(fn: () => Promise<unknown>): Promise<void
             blockIds: [],
             contentHash,
             chunkerVersion: 'v1',
+            text: '',
           },
         });
         await expectRejectsUnique(() =>
@@ -671,6 +649,7 @@ async function expectRejectsAppendOnly(fn: () => Promise<unknown>): Promise<void
               blockIds: [],
               contentHash,
               chunkerVersion: 'v1',
+              text: '',
             },
           }),
         );
