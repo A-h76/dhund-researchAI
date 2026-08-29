@@ -1,3 +1,14 @@
+// DHB-28 Prisma conventions:
+// - PostgreSQL only (no SQLite, no create_all)
+// - PKs: native UUID, application-generated UUIDv7 via platform generateId()
+// - NEVER @default(uuid()) / DB-generated IDs
+// - created_at / updated_at are real TIMESTAMPTZ columns — never UUIDv7 embedded time
+// - snake_case tables/columns; camelCase Prisma fields via @map
+// - money/cost as integer micros (BigInt) — never Float
+// - jsonb where Design Master specifies jsonb
+//
+// PersistenceConventionFixture is a DHB-28 harness table only — not a product domain model.
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -5,4 +16,14 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model PersistenceConventionFixture {
+  id         String   @id @db.Uuid
+  createdAt  DateTime @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  metadata   Json     @map("metadata") @db.JsonB
+  costMicros BigInt   @map("cost_micros")
+
+  @@map("_persistence_convention_fixture")
 }

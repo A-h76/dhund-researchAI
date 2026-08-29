@@ -34,6 +34,7 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
       const connectionConfig: L0ConnectionConfig = {
         databaseUrl: 'postgres://localhost:5432/dhund',
         redisUrl,
+        databasePoolSize: 10,
       };
       const adapter = new BullmqQueueAdapter(connectionConfig);
       await adapter.connect('integration-correlation');

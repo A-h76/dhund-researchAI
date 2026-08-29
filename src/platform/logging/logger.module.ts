@@ -7,6 +7,7 @@ import { getAppConfig } from '../config/config.runtime';
 import { createPinoOptions } from './pino.config';
 import { JobEnqueueService } from './job-enqueue.service';
 import { PlatformLogger } from './platform-logger.service';
+import { QueryObservabilityRegistrar } from './query-observability.registrar';
 
 @Global()
 @Module({
@@ -22,7 +23,7 @@ import { PlatformLogger } from './platform-logger.service';
       }),
     }),
   ],
-  providers: [PlatformLogger, JobEnqueueService],
+  providers: [PlatformLogger, JobEnqueueService, QueryObservabilityRegistrar],
   exports: [NestPinoLoggerModule, PlatformLogger, JobEnqueueService],
 })
 export class LoggerModule {}

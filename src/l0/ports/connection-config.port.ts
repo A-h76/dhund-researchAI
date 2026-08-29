@@ -9,6 +9,7 @@ export interface S3ConnectionConfig {
 export interface L0ConnectionConfig {
   readonly databaseUrl: string;
   readonly redisUrl: string;
+  readonly databasePoolSize: number;
   readonly s3?: S3ConnectionConfig;
 }
 

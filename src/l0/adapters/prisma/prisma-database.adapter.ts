@@ -4,28 +4,69 @@ import {
   L0_CONNECTION_CONFIG,
   type L0ConnectionConfig,
 } from '../../ports/connection-config.port';
+import { isSlowQuery } from '../../ports/query-observer.port';
+import { emitSlowQuery } from '../../observability-bridge';
 import { logAdapterLifecycle } from '../adapter-logger';
 import { L0ConnectionError, L0OperationError } from '../../ports/errors';
 import type {
   AppliedMigrationRecord,
+  DatabasePoolInfo,
   DatabaseService,
 } from '../../ports/database.port';
+import { withPrismaPoolSize } from './prisma-pool-url';
 
 @Injectable()
 export class PrismaDatabaseAdapter implements DatabaseService, OnModuleDestroy {
   private readonly client: PrismaClient;
+  private readonly poolSize: number;
   private connected = false;
+  private slowQueryCount = 0;
 
   constructor(
     @Inject(L0_CONNECTION_CONFIG) connectionConfig: L0ConnectionConfig,
   ) {
-    this.client = new PrismaClient({
+    this.poolSize = connectionConfig.databasePoolSize;
+    const datasourceUrl = withPrismaPoolSize(
+      connectionConfig.databaseUrl,
+      this.poolSize,
+    );
+
+    const base = new PrismaClient({
       datasources: {
         db: {
-          url: connectionConfig.databaseUrl,
+          url: datasourceUrl,
         },
       },
     });
+
+    this.client = base.$extends({
+      query: {
+        $allOperations: async ({ operation, model, args, query }) => {
+          const started = Date.now();
+          try {
+            return await query(args);
+          } finally {
+            const durationMs = Date.now() - started;
+            if (isSlowQuery(durationMs)) {
+              this.slowQueryCount += 1;
+              emitSlowQuery({
+                durationMs,
+                operation,
+                ...(model !== undefined ? { model } : {}),
+              });
+            }
+          }
+        },
+      },
+    }) as unknown as PrismaClient;
+  }
+
+  getPoolInfo(): DatabasePoolInfo {
+    return { configuredSize: this.poolSize };
+  }
+
+  getSlowQueryCount(): number {
+    return this.slowQueryCount;
   }
 
   async onModuleDestroy(): Promise<void> {

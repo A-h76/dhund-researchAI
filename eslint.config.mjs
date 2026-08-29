@@ -22,6 +22,21 @@ export default tseslint.config(
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-function-return-type': 'off',
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "CallExpression[callee.name=/^(extractUuidTimestamp|uuidTimestamp|getUuidTime|timestampFromUuid|createdAtFromUuid)$/]",
+          message:
+            'GAP-PK-01: do not extract timestamps from UUIDv7; use created_at TIMESTAMPTZ.',
+        },
+        {
+          selector:
+            "MemberExpression[object.name='uuid'][property.name=/^(getTimestamp|timestamp)$/]",
+          message:
+            'GAP-PK-01: do not extract timestamps from UUIDv7; use created_at TIMESTAMPTZ.',
+        },
+      ],
     },
   },
   {

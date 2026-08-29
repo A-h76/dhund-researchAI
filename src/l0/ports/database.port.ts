@@ -4,9 +4,14 @@ export interface AppliedMigrationRecord {
   readonly rolledBackAt: Date | null;
 }
 
+export interface DatabasePoolInfo {
+  readonly configuredSize: number;
+}
+
 export interface DatabaseService {
   connect(correlationId?: string): Promise<void>;
   disconnect(correlationId?: string): Promise<void>;
   ping(): Promise<boolean>;
   listAppliedMigrations(): Promise<readonly AppliedMigrationRecord[]>;
+  getPoolInfo(): DatabasePoolInfo;
 }

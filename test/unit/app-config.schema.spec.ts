@@ -60,6 +60,31 @@ describe('app config schema', () => {
     expect(() => parseEmbeddingDimension('0')).toThrow(ConfigValidationError);
   });
 
+  it('parses DATABASE_POOL_SIZE from secrets with default when unset', () => {
+    const config = loadAndValidateConfig(
+      createSecrets({
+        DATABASE_URL: 'postgres://user:pass@localhost:5432/db',
+        REDIS_URL: 'redis://localhost:6379',
+      }),
+      RuntimeRole.Api,
+    );
+
+    expect(config.databasePoolSize).toBe(10);
+  });
+
+  it('rejects an invalid DATABASE_POOL_SIZE', () => {
+    expect(() =>
+      loadAndValidateConfig(
+        createSecrets({
+          DATABASE_URL: 'postgres://user:pass@localhost:5432/db',
+          REDIS_URL: 'redis://localhost:6379',
+          DATABASE_POOL_SIZE: '0',
+        }),
+        RuntimeRole.Api,
+      ),
+    ).toThrow(ConfigValidationError);
+  });
+
   it('rejects partial S3 configuration', () => {
     expect(() =>
       loadAndValidateConfig(

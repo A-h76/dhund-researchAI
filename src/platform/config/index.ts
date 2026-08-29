@@ -11,11 +11,15 @@ export { getAppConfig, resetAppConfigForTests, setAppConfig } from './config.run
 export { APP_CONFIG } from './config.tokens';
 export type { FrozenAppConfig } from './config.tokens';
 export {
+  parseDatabasePoolSize,
   parseEmbeddingDimension,
   parseFeatureFlags,
   parseLogLevel,
   parsePort,
   parseRequiredSecret,
+  DEFAULT_DATABASE_POOL_SIZE,
+  MAX_DATABASE_POOL_SIZE,
+  MIN_DATABASE_POOL_SIZE,
 } from './config.schema';
 export {
   evaluateMigrationReadiness,

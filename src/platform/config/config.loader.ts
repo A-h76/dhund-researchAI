@@ -9,6 +9,7 @@ import {
   parsePort,
   parseRequiredSecret,
   parseFeatureFlags,
+  parseDatabasePoolSize,
 } from './config.schema';
 
 export function loadAndValidateConfig(
@@ -40,6 +41,10 @@ export function loadAndValidateConfig(
   const embeddingValue = secrets.getSecret('EMBEDDING_DIMENSION');
   track('EMBEDDING_DIMENSION', embeddingValue);
   const embeddingDimension = parseEmbeddingDimension(embeddingValue);
+
+  const poolValue = secrets.getSecret('DATABASE_POOL_SIZE');
+  track('DATABASE_POOL_SIZE', poolValue);
+  const databasePoolSize = parseDatabasePoolSize(poolValue);
 
   const s3Endpoint = secrets.getSecret('S3_ENDPOINT');
   const s3Region = secrets.getSecret('S3_REGION');
@@ -82,6 +87,7 @@ export function loadAndValidateConfig(
     port,
     logLevel,
     databaseUrl,
+    databasePoolSize,
     redisUrl,
     embeddingDimension,
     featureFlags,

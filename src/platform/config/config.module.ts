@@ -17,6 +17,7 @@ import { FeatureFlagsService } from './feature-flags.service';
       useFactory: (config: ReturnType<typeof getAppConfig>): L0ConnectionConfig => ({
         databaseUrl: config.databaseUrl,
         redisUrl: config.redisUrl,
+        databasePoolSize: config.databasePoolSize,
         ...(config.s3 !== undefined ? { s3: config.s3 } : {}),
       }),
       inject: [APP_CONFIG],
