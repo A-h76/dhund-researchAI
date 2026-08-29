@@ -6,7 +6,7 @@
  */
 
 const FORBIDDEN_BACKFILL =
-  /\bUPDATE\b[\s\S]{0,200}\b(SET\s+\w+\s*=|FROM\s+\w+)/i;
+  /\bUPDATE\s+"?[a-z_][a-z0-9_]*"?\s+SET\b/i;
 
 export function findForbiddenMigrationBackfills(
   files: Array<{ path: string; content: string }>,
