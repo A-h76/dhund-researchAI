@@ -10,6 +10,7 @@
 // PersistenceConventionFixture is a DHB-28 harness table only — not a product domain model.
 //
 // DHB-29: product schema foundation (migrations 001–005).
+// DHB-30: ai ledger, identity, external, ingestion, embeddings, evidence (migrations 006–011).
 // Documented PK exception: stripe_events.id is Stripe's event id (TEXT), not UUIDv7.
 // Partial unique indexes and CHECK constraints live in migration SQL (Prisma cannot express them).
 
@@ -420,9 +421,11 @@ model User {
   totpSecret          TotpSecret?
   mfaRecoveryCodes    MfaRecoveryCode[]
   authTokens          AuthToken[]
-  ownedOrganizations  Organization[]        @relation("OrganizationOwner")
-  orgMemberships      OrgMembership[]
-  projectMemberships  ProjectMembership[]
+  ownedOrganizations   Organization[]        @relation("OrganizationOwner")
+  orgMemberships       OrgMembership[]
+  projectMemberships   ProjectMembership[]
+  uploadSessions       UploadSession[]
+  mergeReviews         MergeCandidate[]
 
   @@map("users")
 }
@@ -522,6 +525,9 @@ model Organization {
   projects           Project[]
   subscriptions      Subscription[]
   usageCounters      UsageCounter[]
+  documents          Document[]
+  uploadSessions     UploadSession[]
+  aiExecutions       AiExecution[]
 
   @@map("organizations")
 }
@@ -548,8 +554,14 @@ model Project {
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
 
-  organization Organization         @relation(fields: [orgId], references: [id], onDelete: Restrict)
-  memberships  ProjectMembership[]
+  organization        Organization         @relation(fields: [orgId], references: [id], onDelete: Restrict)
+  memberships         ProjectMembership[]
+  uploadSessions      UploadSession[]
+  documents           Document[]
+  externalRecords     ExternalRecord[]
+  discoveryCandidates DiscoveryCandidate[]
+  sources             Source[]
+  aiExecutions        AiExecution[]
 
   @@map("projects")
 }
@@ -624,4 +636,459 @@ model IdempotencyRecord {
 
   @@unique([scope, key], map: "idempotency_records_scope_key_key")
   @@map("idempotency_records")
+}
+
+// --- 006 ai ledger ---
+
+model AiExecution {
+  id               String       @id @db.Uuid
+  orgId            String       @map("org_id") @db.Uuid
+  projectId        String?      @map("project_id") @db.Uuid
+  capability       AiCapability
+  provider         String
+  model            String
+  promptVersion    String       @map("prompt_version")
+  inputFingerprint String       @map("input_fingerprint")
+  status           AiStatus
+  method           AiMethod
+  tokensIn         Int          @default(0) @map("tokens_in")
+  tokensOut        Int          @default(0) @map("tokens_out")
+  costMicros       BigInt       @default(0) @map("cost_micros")
+  latencyMs        Int          @default(0) @map("latency_ms")
+  correlationId    String       @map("correlation_id")
+  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  organization Organization          @relation(fields: [orgId], references: [id], onDelete: Restrict)
+  project      Project?              @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  attempts     AiExecutionAttempt[]
+  evidence     Evidence[]
+
+  @@map("ai_executions")
+}
+
+model AiExecutionAttempt {
+  id            String   @id @db.Uuid
+  aiExecutionId String   @map("ai_execution_id") @db.Uuid
+  attemptNo     Int      @map("attempt_no")
+  provider      String
+  model         String
+  status        AiStatus
+  error         String?
+  latencyMs     Int      @map("latency_ms")
+  costMicros    BigInt   @map("cost_micros")
+
+  aiExecution AiExecution @relation(fields: [aiExecutionId], references: [id], onDelete: Cascade)
+
+  @@unique([aiExecutionId, attemptNo], map: "ai_execution_attempts_ai_execution_id_attempt_no_key")
+  @@map("ai_execution_attempts")
+}
+
+// --- 007 identity (GLOBAL) ---
+
+model CanonicalWork {
+  id              String            @id @db.Uuid
+  canonicalTitle  String            @map("canonical_title")
+  authorHash      String            @map("author_hash")
+  year            Int?
+  type            CanonicalWorkType
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  manifestations       WorkManifestation[]
+  externalIdentifiers  ExternalIdentifier[]
+  relationshipsFrom    WorkRelationship[]   @relation("WorkRelationshipFrom")
+  relationshipsTo      WorkRelationship[]   @relation("WorkRelationshipTo")
+  mergeCandidatesAsCandidate MergeCandidate[] @relation("MergeCandidateWork")
+  mergeCandidatesAsExisting  MergeCandidate[] @relation("MergeExistingWork")
+  documents            Document[]
+  externalRecords      ExternalRecord[]
+  discoveryCandidates  DiscoveryCandidate[]
+
+  @@map("canonical_works")
+}
+
+model WorkManifestation {
+  id                         String  @id @db.Uuid
+  canonicalWorkId            String  @map("canonical_work_id") @db.Uuid
+  manifestationType          String  @map("manifestation_type")
+  bibliographicMetadata      Json    @map("bibliographic_metadata") @db.JsonB
+  preferredSourceConnectorId String? @map("preferred_source_connector_id")
+
+  canonicalWork CanonicalWork @relation(fields: [canonicalWorkId], references: [id], onDelete: Cascade)
+
+  @@map("work_manifestations")
+}
+
+model ExternalIdentifier {
+  id              String           @id @db.Uuid
+  canonicalWorkId String           @map("canonical_work_id") @db.Uuid
+  scheme          IdentifierScheme
+  value           String
+
+  canonicalWork CanonicalWork @relation(fields: [canonicalWorkId], references: [id], onDelete: Cascade)
+
+  @@unique([scheme, value], map: "external_identifiers_scheme_value_key")
+  @@map("external_identifiers")
+}
+
+model WorkRelationship {
+  id         String               @id @db.Uuid
+  fromWorkId String               @map("from_work_id") @db.Uuid
+  toWorkId   String               @map("to_work_id") @db.Uuid
+  type       WorkRelationshipType
+  provenance Json                 @db.JsonB
+
+  fromWork CanonicalWork @relation("WorkRelationshipFrom", fields: [fromWorkId], references: [id], onDelete: Cascade)
+  toWork   CanonicalWork @relation("WorkRelationshipTo", fields: [toWorkId], references: [id], onDelete: Cascade)
+
+  @@unique([fromWorkId, toWorkId, type], map: "work_relationships_from_to_type_key")
+  @@map("work_relationships")
+}
+
+model MergeCandidate {
+  id              String          @id @db.Uuid
+  candidateWorkId String          @map("candidate_work_id") @db.Uuid
+  existingWorkId  String          @map("existing_work_id") @db.Uuid
+  matchType       MergeMatchType  @map("match_type")
+  evidence        Json            @db.JsonB
+  status          MergeStatus     @default(pending)
+  reviewedBy      String?         @map("reviewed_by") @db.Uuid
+  createdAt       DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  candidateWork CanonicalWork @relation("MergeCandidateWork", fields: [candidateWorkId], references: [id], onDelete: Restrict)
+  existingWork  CanonicalWork @relation("MergeExistingWork", fields: [existingWorkId], references: [id], onDelete: Restrict)
+  reviewer      User?         @relation(fields: [reviewedBy], references: [id], onDelete: Restrict)
+
+  @@map("merge_candidates")
+}
+
+// --- 008 rights + external ---
+
+model RightsSnapshot {
+  id            String   @id @db.Uuid
+  connectorId   String   @map("connector_id")
+  policyVersion String   @map("policy_version")
+  capabilities  Json     @db.JsonB
+  capturedAt    DateTime @map("captured_at") @db.Timestamptz(3)
+
+  externalRecords ExternalRecord[]
+  documents       Document[]
+
+  @@unique([connectorId, policyVersion], map: "rights_snapshots_connector_id_policy_version_key")
+  @@map("rights_snapshots")
+}
+
+model ExternalRecord {
+  id                    String             @id @db.Uuid
+  projectId             String             @map("project_id") @db.Uuid
+  connectorId           String             @map("connector_id")
+  externalId            String             @map("external_id")
+  type                  ExternalRecordType
+  linkedCanonicalWorkId String?            @map("linked_canonical_work_id") @db.Uuid
+  rightsSnapshotId      String             @map("rights_snapshot_id") @db.Uuid
+  lastCheckedAt         DateTime?          @map("last_checked_at") @db.Timestamptz(3)
+  createdAt             DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  deletedAt             DateTime?          @map("deleted_at") @db.Timestamptz(3)
+
+  project             Project                  @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  linkedCanonicalWork CanonicalWork?           @relation(fields: [linkedCanonicalWorkId], references: [id], onDelete: SetNull)
+  rightsSnapshot      RightsSnapshot           @relation(fields: [rightsSnapshotId], references: [id], onDelete: Restrict)
+  snapshots           ExternalRecordSnapshot[]
+  sources             Source[]
+
+  @@map("external_records")
+}
+
+model ExternalRecordSnapshot {
+  id               String   @id @db.Uuid
+  externalRecordId String   @map("external_record_id") @db.Uuid
+  capturedAt       DateTime @map("captured_at") @db.Timestamptz(3)
+  contentRef       String?  @map("content_ref")
+  metadata         Json     @db.JsonB
+
+  externalRecord ExternalRecord @relation(fields: [externalRecordId], references: [id], onDelete: Cascade)
+
+  @@map("external_record_snapshots")
+}
+
+model DiscoveryCandidate {
+  id                      String          @id @db.Uuid
+  projectId               String          @map("project_id") @db.Uuid
+  queryId                 String          @map("query_id") @db.Uuid
+  connectorId             String          @map("connector_id")
+  externalId              String          @map("external_id")
+  metadata                Json            @db.JsonB
+  resolvedCanonicalWorkId String?         @map("resolved_canonical_work_id") @db.Uuid
+  status                  DiscoveryStatus @default(pending_admission)
+  createdAt               DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt               DateTime?       @map("expires_at") @db.Timestamptz(3)
+
+  project               Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  resolvedCanonicalWork CanonicalWork? @relation(fields: [resolvedCanonicalWorkId], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, queryId, connectorId, externalId], map: "discovery_candidates_project_query_connector_external_key")
+  @@map("discovery_candidates")
+}
+
+// --- 009 ingestion ---
+
+model UploadSession {
+  id          String              @id @db.Uuid
+  projectId   String              @map("project_id") @db.Uuid
+  orgId       String              @map("org_id") @db.Uuid
+  initiatedBy String              @map("initiated_by") @db.Uuid
+  filename    String
+  sizeBytes   BigInt              @map("size_bytes")
+  mimeType    String              @map("mime_type")
+  storageKey  String              @unique(map: "upload_sessions_storage_key_key") @map("storage_key")
+  status      UploadSessionStatus @default(issued)
+  createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt   DateTime            @map("expires_at") @db.Timestamptz(3)
+
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Restrict)
+  initiator   User         @relation(fields: [initiatedBy], references: [id], onDelete: Restrict)
+
+  @@map("upload_sessions")
+}
+
+model Document {
+  id                String         @id @db.Uuid
+  projectId         String         @map("project_id") @db.Uuid
+  orgId             String         @map("org_id") @db.Uuid
+  title             String
+  authors           String[]
+  year              Int?
+  venue             String?
+  doi               String?
+  pmid              String?
+  arxivId           String?        @map("arxiv_id")
+  abstract          String?
+  canonicalWorkId   String?        @map("canonical_work_id") @db.Uuid
+  storageKey        String         @map("storage_key")
+  status            DocumentStatus @default(queued)
+  rightsSnapshotId  String?        @map("rights_snapshot_id") @db.Uuid
+  createdAt         DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt         DateTime?      @map("deleted_at") @db.Timestamptz(3)
+
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  organization   Organization    @relation(fields: [orgId], references: [id], onDelete: Restrict)
+  canonicalWork  CanonicalWork?  @relation(fields: [canonicalWorkId], references: [id], onDelete: SetNull)
+  rightsSnapshot RightsSnapshot? @relation(fields: [rightsSnapshotId], references: [id], onDelete: Restrict)
+  versions       DocumentVersion[]
+  sources        Source[]
+
+  @@unique([projectId, storageKey], map: "uq_documents_storage_key")
+  @@map("documents")
+}
+
+model DocumentVersion {
+  id          String    @id @db.Uuid
+  documentId  String    @map("document_id") @db.Uuid
+  versionNo   Int       @map("version_no")
+  storageKey  String    @map("storage_key")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  retiredAt   DateTime? @map("retired_at") @db.Timestamptz(3)
+
+  document    Document             @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  extractions DocumentExtraction[]
+  blocks      DocumentBlock[]
+  chunks      Chunk[]
+
+  @@unique([documentId, versionNo], map: "document_versions_document_id_version_no_key")
+  @@map("document_versions")
+}
+
+model DocumentExtraction {
+  id                String   @id @db.Uuid
+  documentVersionId String   @map("document_version_id") @db.Uuid
+  extractorVersion  String   @map("extractor_version")
+  contentHash       String   @map("content_hash")
+  status            String
+  producedAt        DateTime @map("produced_at") @db.Timestamptz(3)
+
+  documentVersion DocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Cascade)
+
+  @@unique([documentVersionId, extractorVersion, contentHash], map: "uq_document_extractions_idempotency")
+  @@map("document_extractions")
+}
+
+model DocumentBlock {
+  id                String            @id @db.Uuid
+  documentVersionId String            @map("document_version_id") @db.Uuid
+  type              DocumentBlockType
+  page              Int
+  bbox              Json?             @db.JsonB
+  text              String
+  parentBlockId     String?           @map("parent_block_id") @db.Uuid
+  ordinal           Int
+
+  documentVersion DocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Cascade)
+  parentBlock     DocumentBlock?  @relation("DocumentBlockHierarchy", fields: [parentBlockId], references: [id], onDelete: Cascade)
+  childBlocks     DocumentBlock[] @relation("DocumentBlockHierarchy")
+
+  @@unique([documentVersionId, ordinal], map: "document_blocks_document_version_id_ordinal_key")
+  @@map("document_blocks")
+}
+
+model Chunk {
+  id                String   @id @db.Uuid
+  documentVersionId String   @map("document_version_id") @db.Uuid
+  projectId         String   @map("project_id") @db.Uuid
+  ordinal           Int
+  charSpan          Json     @map("char_span") @db.JsonB
+  tokenCount        Int      @map("token_count")
+  page              Int?
+  section           String?
+  blockIds          String[] @map("block_ids") @db.Uuid
+  contentHash       String   @map("content_hash")
+  chunkerVersion    String   @map("chunker_version")
+
+  documentVersion DocumentVersion @relation(fields: [documentVersionId], references: [id], onDelete: Cascade)
+  embeddings        ChunkEmbedding[]
+  evidence          Evidence[]
+
+  @@unique([documentVersionId, chunkerVersion, contentHash], map: "chunks_document_version_id_chunker_version_content_hash_key")
+  @@map("chunks")
+}
+
+// --- 010 embeddings ---
+
+model ChunkEmbedding {
+  id           String          @id @db.Uuid
+  chunkId      String          @map("chunk_id") @db.Uuid
+  projectId    String          @map("project_id") @db.Uuid
+  modelId      String          @map("model_id")
+  modelVersion String          @map("model_version")
+  dimensions   Int
+  vector       Unsupported("vector(1024)")
+  contentHash  String          @map("content_hash")
+  status       EmbeddingStatus
+
+  chunk Chunk @relation(fields: [chunkId], references: [id], onDelete: Cascade)
+
+  @@unique([chunkId, modelVersion, contentHash], map: "chunk_embeddings_chunk_id_model_version_content_hash_key")
+  @@map("chunk_embeddings")
+}
+
+// --- 011 evidence spine ---
+
+model Source {
+  id               String     @id @db.Uuid
+  projectId        String     @map("project_id") @db.Uuid
+  type             SourceType
+  documentId       String?    @map("document_id") @db.Uuid
+  externalRecordId String?    @map("external_record_id") @db.Uuid
+
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  document       Document?       @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  externalRecord ExternalRecord? @relation(fields: [externalRecordId], references: [id], onDelete: Restrict)
+  evidence       Evidence[]
+  citations      Citation[]      @relation("CitationSource")
+
+  @@map("sources")
+}
+
+model Evidence {
+  id               String           @id @db.Uuid
+  projectId        String           @map("project_id") @db.Uuid
+  sourceId         String           @map("source_id") @db.Uuid
+  chunkId          String?          @map("chunk_id") @db.Uuid
+  locator          Json             @db.JsonB
+  text             String
+  stance           EvidenceStance   @default(unresolved)
+  polarity         Int?             @db.SmallInt
+  qualityScore     Decimal          @map("quality_score") @db.Decimal
+  extractionMethod ExtractionMethod @map("extraction_method")
+  aiExecutionId    String?          @map("ai_execution_id") @db.Uuid
+  type             EvidenceType
+  supersededById   String?          @map("superseded_by_id") @db.Uuid
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  source       Source              @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  chunk        Chunk?              @relation(fields: [chunkId], references: [id], onDelete: Restrict)
+  aiExecution  AiExecution?        @relation(fields: [aiExecutionId], references: [id], onDelete: Restrict)
+  supersededBy Evidence?           @relation("EvidenceSupersession", fields: [supersededById], references: [id], onDelete: Restrict)
+  supersedes   Evidence[]          @relation("EvidenceSupersession")
+  claimLinks   EvidenceClaimLink[]
+  citations    Citation[]          @relation("CitationEvidence")
+
+  @@map("evidence")
+}
+
+model Claim {
+  id                 String    @id @db.Uuid
+  projectId          String    @map("project_id") @db.Uuid
+  text               String
+  coverageAnnotation Json      @default("{}") @map("coverage_annotation") @db.JsonB
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt          DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  evidenceLinks EvidenceClaimLink[]
+  argumentLinks ArgumentClaimLink[]
+
+  @@map("claims")
+}
+
+model Argument {
+  id        String   @id @db.Uuid
+  projectId String   @map("project_id") @db.Uuid
+  title     String
+  structure Json     @db.JsonB
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  claimLinks ArgumentClaimLink[]
+
+  @@map("arguments")
+}
+
+model EvidenceClaimLink {
+  id         String         @id @db.Uuid
+  evidenceId String         @map("evidence_id") @db.Uuid
+  claimId    String         @map("claim_id") @db.Uuid
+  weight     Decimal        @db.Decimal
+  stance     EvidenceStance
+
+  evidence Evidence @relation(fields: [evidenceId], references: [id], onDelete: Restrict)
+  claim    Claim    @relation(fields: [claimId], references: [id], onDelete: Restrict)
+
+  @@unique([evidenceId, claimId], map: "evidence_claim_links_evidence_id_claim_id_key")
+  @@map("evidence_claim_links")
+}
+
+model ArgumentClaimLink {
+  id         String   @id @db.Uuid
+  argumentId String   @map("argument_id") @db.Uuid
+  claimId    String   @map("claim_id") @db.Uuid
+  projectId  String   @map("project_id") @db.Uuid
+  role       String?
+  ordinal    Int?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  argument Argument @relation(fields: [argumentId], references: [id], onDelete: Cascade)
+  claim    Claim    @relation(fields: [claimId], references: [id], onDelete: Restrict)
+
+  @@unique([argumentId, claimId], map: "argument_claim_links_argument_id_claim_id_key")
+  @@map("argument_claim_links")
+}
+
+/// writing_id FK added in migration 017 (GAP-WRITING-01).
+model Citation {
+  id                    String       @id @db.Uuid
+  projectId             String       @map("project_id") @db.Uuid
+  writingId             String?      @map("writing_id") @db.Uuid
+  resolvesToEvidenceId  String?      @map("resolves_to_evidence_id") @db.Uuid
+  resolvesToSourceId    String?      @map("resolves_to_source_id") @db.Uuid
+  cslJson               Json         @map("csl_json") @db.JsonB
+  qualityAnnotation     EvidenceType @map("quality_annotation")
+  createdAt             DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  resolvesToEvidence Evidence? @relation("CitationEvidence", fields: [resolvesToEvidenceId], references: [id], onDelete: Restrict)
+  resolvesToSource   Source?   @relation("CitationSource", fields: [resolvesToSourceId], references: [id], onDelete: Restrict)
+
+  @@map("citations")
 }
