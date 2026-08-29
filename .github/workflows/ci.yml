@@ -39,7 +39,7 @@ jobs:
           docker run -d --name dhund-postgres-migrate-gate --network dhund-migrate-gate \
             -e POSTGRES_PASSWORD=postgres -e POSTGRES_USER=postgres -e POSTGRES_DB=dhund \
             -p 5433:5432 \
-            postgres:16-alpine
+            pgvector/pgvector:pg16
           for i in $(seq 1 30); do
             if docker exec dhund-postgres-migrate-gate pg_isready -U postgres >/dev/null 2>&1; then
               break
@@ -82,7 +82,7 @@ jobs:
           docker run -d --name dhund-postgres-api-smoke --network dhund-api-smoke \
             -e POSTGRES_PASSWORD=postgres -e POSTGRES_USER=postgres -e POSTGRES_DB=dhund \
             -p 5432:5432 \
-            postgres:16-alpine
+            pgvector/pgvector:pg16
           docker run -d --name dhund-redis-api-smoke --network dhund-api-smoke redis:7-alpine
           for i in $(seq 1 30); do
             if docker exec dhund-postgres-api-smoke pg_isready -U postgres >/dev/null 2>&1; then

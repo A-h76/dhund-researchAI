@@ -4,7 +4,7 @@ import { join } from 'node:path';
 const SCHEMA = readFileSync(join(process.cwd(), 'prisma', 'schema.prisma'), 'utf8');
 const ACTIVE = SCHEMA.replace(/\/\/.*$/gm, '');
 
-describe('Prisma persistence conventions (DHB-28)', () => {
+describe('Prisma persistence conventions (DHB-28 / DHB-29)', () => {
   it('uses PostgreSQL only', () => {
     expect(ACTIVE).toMatch(/provider\s*=\s*"postgresql"/);
     expect(ACTIVE).not.toMatch(/sqlite/i);
@@ -14,6 +14,11 @@ describe('Prisma persistence conventions (DHB-28)', () => {
     expect(ACTIVE).toMatch(/id\s+String\s+@id\s+@db\.Uuid/);
     expect(ACTIVE).not.toMatch(/@default\(uuid\(\)\)/);
     expect(ACTIVE).not.toMatch(/@default\(dbgenerated/i);
+  });
+
+  it('documents stripe_events TEXT PK as the sole UUIDv7 exception', () => {
+    expect(SCHEMA.toLowerCase()).toContain("stripe_events.id is stripe's event id (text)");
+    expect(ACTIVE).toMatch(/model\s+StripeEvent\s*\{[\s\S]*?id\s+String\s+@id(?!\s+@db\.Uuid)/);
   });
 
   it('maps created_at and updated_at as Timestamptz', () => {

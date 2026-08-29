@@ -11,7 +11,7 @@ const ROOT = join(__dirname, '..', '..');
     jest.setTimeout(180_000);
 
     it('applies migrations to an empty disposable Postgres and re-applies as a no-op', async () => {
-      const postgres = await new PostgreSqlContainer('postgres:16-alpine').start();
+      const postgres = await new PostgreSqlContainer('pgvector/pgvector:pg16').start();
       const databaseUrl = postgres.getConnectionUri();
 
       try {

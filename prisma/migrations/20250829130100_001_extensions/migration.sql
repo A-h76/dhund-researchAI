@@ -1,0 +1,4 @@
+-- DHB-29 / Phase 2 §14.1 migration 001: extensions
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS citext;
