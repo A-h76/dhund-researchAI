@@ -19,7 +19,7 @@ CREATE TABLE "upload_sessions" (
     CONSTRAINT "chk_upload_filename" CHECK (
         length("filename") <= 255
         AND "filename" NOT LIKE '%/%'
-        AND position(E'\x00' in "filename") = 0
+        AND position(chr(0) in "filename") = 0
     ),
     CONSTRAINT "upload_sessions_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "projects"("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "upload_sessions_org_id_fkey" FOREIGN KEY ("org_id") REFERENCES "organizations"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
