@@ -11,6 +11,8 @@ import type { CacheService } from '../../ports/cache.port';
 
 @Injectable()
 export class RedisCacheAdapter implements CacheService, OnModuleDestroy {
+  private static readonly PING_TIMEOUT_MS = 2_000;
+
   private client: Redis | null = null;
 
   constructor(
@@ -28,10 +30,8 @@ export class RedisCacheAdapter implements CacheService, OnModuleDestroy {
 
     try {
       this.client = new Redis(this.connectionConfig.redisUrl, {
-        connectTimeout: 2_000,
-        commandTimeout: 2_000,
+        connectTimeout: RedisCacheAdapter.PING_TIMEOUT_MS,
         maxRetriesPerRequest: 1,
-        enableOfflineQueue: false,
       });
       await this.client.ping();
       logAdapterLifecycle('cache', 'connect', correlationId);
@@ -59,7 +59,15 @@ export class RedisCacheAdapter implements CacheService, OnModuleDestroy {
     const client = await this.requireClient();
 
     try {
-      const response = await client.ping();
+      const response = await Promise.race([
+        client.ping(),
+        new Promise<never>((_, reject) => {
+          setTimeout(
+            () => reject(new Error('Cache ping timed out')),
+            RedisCacheAdapter.PING_TIMEOUT_MS,
+          );
+        }),
+      ]);
       return response === 'PONG';
     } catch (error) {
       throw new L0OperationError('Cache ping failed', error);
