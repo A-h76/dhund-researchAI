@@ -7,6 +7,7 @@ import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AiModule } from '../../ai/ai.module';
 import {
   PROCESSOR_READINESS,
+  BootstrapValidationService,
   provideRuntimeRole,
 } from '../../platform/config';
 import { GlobalExceptionFilter } from '../../platform/errors/global-exception.filter';
@@ -29,6 +30,7 @@ import { NoopProcessorReadiness } from './noop-processor-readiness';
     ApiEventsGateway,
     provideRuntimeRole(RuntimeRole.Api),
     { provide: PROCESSOR_READINESS, useClass: NoopProcessorReadiness },
+    BootstrapValidationService,
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: HttpLoggingInterceptor },
   ],

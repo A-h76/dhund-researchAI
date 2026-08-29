@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { OrchestrationModule } from '../../orchestration/orchestration.module';
 import {
+  BootstrapValidationService,
   PROCESSOR_READINESS,
   provideRuntimeRole,
 } from '../../platform/config';
@@ -17,6 +18,7 @@ import { WorkerBootstrapService } from './worker-bootstrap.service';
     ProcessorRegistry,
     PlaceholderProcessor,
     { provide: PROCESSOR_READINESS, useExisting: ProcessorRegistry },
+    BootstrapValidationService,
     WorkerBootstrapService,
   ],
 })
