@@ -17,7 +17,7 @@ const ROOT = join(__dirname, '..', '..');
     jest.setTimeout(180_000);
 
     it('flips /ready from unready to ready after migrations are applied', async () => {
-      const postgres = await new PostgreSqlContainer('postgres:16-alpine').start();
+      const postgres = await new PostgreSqlContainer('pgvector/pgvector:pg16').start();
       const redis = await new GenericContainer('redis:7-alpine')
         .withExposedPorts(6379)
         .withWaitStrategy(Wait.forLogMessage('Ready to accept connections'))
@@ -68,7 +68,7 @@ const ROOT = join(__dirname, '..', '..');
     });
 
     it('returns 503 from /ready when redis becomes unavailable after boot', async () => {
-      const postgres = await new PostgreSqlContainer('postgres:16-alpine').start();
+      const postgres = await new PostgreSqlContainer('pgvector/pgvector:pg16').start();
       const redis = await new GenericContainer('redis:7-alpine')
         .withExposedPorts(6379)
         .withWaitStrategy(Wait.forLogMessage('Ready to accept connections'))
