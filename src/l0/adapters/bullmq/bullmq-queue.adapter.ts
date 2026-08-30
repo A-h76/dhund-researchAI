@@ -7,7 +7,12 @@ import {
 } from '../../ports/connection-config.port';
 import { logAdapterLifecycle } from '../adapter-logger';
 import { L0ConnectionError, L0OperationError } from '../../ports/errors';
-import type { QueueService } from '../../ports/queue.port';
+import type {
+  QueueBackoffPolicy,
+  QueueDepthSnapshot,
+  QueueJobOptions,
+  QueueService,
+} from '../../ports/queue.port';
 
 @Injectable()
 export class BullmqQueueAdapter implements QueueService, OnModuleDestroy {
@@ -69,11 +74,25 @@ export class BullmqQueueAdapter implements QueueService, OnModuleDestroy {
     }
   }
 
-  async addJob<T extends Record<string, unknown>>(queueName: string, data: T): Promise<string> {
+  async addJob<T extends Record<string, unknown>>(
+    queueName: string,
+    data: T,
+    options: QueueJobOptions,
+  ): Promise<string> {
     const queue = await this.getOrCreateQueue(queueName);
 
     try {
-      const job = await queue.add(queueName, data);
+      const job = await queue.add(queueName, data, {
+        jobId: options.jobId,
+        ...(options.attempts !== undefined ? { attempts: options.attempts } : {}),
+        ...(options.backoff !== undefined
+          ? { backoff: toBullmqBackoff(options.backoff) }
+          : {}),
+        // Retain recent completions so DLQ replay can detect already-completed jobs.
+        removeOnComplete: { count: 1000 },
+        removeOnFail: false,
+      });
+
       if (job.id === undefined) {
         throw new L0OperationError('Queue job id missing after enqueue');
       }
@@ -84,8 +103,71 @@ export class BullmqQueueAdapter implements QueueService, OnModuleDestroy {
         throw error;
       }
 
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes('Job with id') && message.includes('already exists')) {
+        return options.jobId;
+      }
+
       throw new L0OperationError('Queue enqueue failed', error);
     }
+  }
+
+  async addDlqJob<T extends Record<string, unknown>>(
+    dlqName: string,
+    data: T,
+    jobId: string,
+  ): Promise<string> {
+    const queue = await this.getOrCreateQueue(dlqName);
+
+    try {
+      const job = await queue.add(dlqName, data, {
+        jobId,
+        removeOnComplete: false,
+        removeOnFail: false,
+      });
+
+      if (job.id === undefined) {
+        throw new L0OperationError('DLQ job id missing after enqueue');
+      }
+
+      return job.id;
+    } catch (error) {
+      if (error instanceof L0OperationError) {
+        throw error;
+      }
+
+      const message = error instanceof Error ? error.message : String(error);
+      if (message.includes('Job with id') && message.includes('already exists')) {
+        return jobId;
+      }
+
+      throw new L0OperationError('DLQ enqueue failed', error);
+    }
+  }
+
+  async getJobState(queueName: string, jobId: string): Promise<string | null> {
+    const queue = await this.getOrCreateQueue(queueName);
+
+    try {
+      const job = await queue.getJob(jobId);
+      if (job === undefined) {
+        return null;
+      }
+      return await job.getState();
+    } catch (error) {
+      throw new L0OperationError('Queue getJobState failed', error);
+    }
+  }
+
+  async getQueueDepth(queueName: string): Promise<QueueDepthSnapshot> {
+    const queue = await this.getOrCreateQueue(queueName);
+    const counts = await queue.getJobCounts('waiting', 'active', 'failed', 'delayed');
+    return {
+      waiting: counts.waiting ?? 0,
+      active: counts.active ?? 0,
+      failed: counts.failed ?? 0,
+      delayed: counts.delayed ?? 0,
+    };
   }
 
   private async getOrCreateQueue(queueName: string): Promise<Queue> {
@@ -111,4 +193,8 @@ export class BullmqQueueAdapter implements QueueService, OnModuleDestroy {
 
     return this.connection;
   }
+}
+
+function toBullmqBackoff(backoff: QueueBackoffPolicy): { type: 'exponential'; delay: number } {
+  return { type: 'exponential', delay: backoff.delayMs };
 }

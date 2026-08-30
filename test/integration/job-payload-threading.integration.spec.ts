@@ -51,15 +51,14 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
       let jobId = '';
 
       await runWithCorrelationId(correlationId, async () => {
-        jobId = await enqueue.enqueue('research.run', {
+        jobId = await enqueue.enqueue('billing-sync', {
           orgId: 'org-integration-1',
-          projectId: 'proj-integration-1',
-          kind: 'integration-probe',
+          stripeEventId: 'evt_integration_1',
         });
       });
 
       const connection = new Redis(redisUrl, { maxRetriesPerRequest: null });
-      const queue = new Queue('research.run', { connection });
+      const queue = new Queue('billing-sync', { connection });
       const job = await queue.getJob(jobId);
 
       expect(job).toBeDefined();
@@ -67,8 +66,7 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
       expect(job?.data).toEqual({
         correlationId,
         orgId: 'org-integration-1',
-        projectId: 'proj-integration-1',
-        kind: 'integration-probe',
+        stripeEventId: 'evt_integration_1',
       });
 
       await queue.close();
