@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common';
 import { LoggerModule as NestPinoLoggerModule } from 'nestjs-pino';
 import pino from 'pino';
 import { L0Module } from '../../l0/l0.module';
+import { ConcurrencyModule } from '../concurrency/concurrency.module';
 import { ConfigModule } from '../config/config.module';
 import { getAppConfig } from '../config/config.runtime';
 import { createPinoOptions } from './pino.config';
@@ -14,6 +15,7 @@ import { QueryObservabilityRegistrar } from './query-observability.registrar';
   imports: [
     ConfigModule,
     L0Module,
+    ConcurrencyModule,
     NestPinoLoggerModule.forRootAsync({
       useFactory: () => ({
         pinoHttp: {
