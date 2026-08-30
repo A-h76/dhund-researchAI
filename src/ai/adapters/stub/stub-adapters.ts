@@ -4,7 +4,8 @@ import type {
   AdapterInvokeInput,
   CapabilityAdapter,
 } from '../adapter.port';
-import type { GatewayExecutionMetrics, GatewayResult } from '../../gateway/gateway.types';
+import type { AdapterInvokeOutcome } from '../adapter-outcome';
+import type { CapabilityInvokeResult, GatewayExecutionMetrics } from '../../gateway/gateway.types';
 import { computeInputFingerprint } from '../../gateway/input-fingerprint';
 
 const STUB_METRICS: GatewayExecutionMetrics = Object.freeze({
@@ -14,17 +15,41 @@ const STUB_METRICS: GatewayExecutionMetrics = Object.freeze({
   costMicros: 0,
 });
 
+function successfulOutcome(
+  input: AdapterInvokeInput,
+  result: CapabilityInvokeResult,
+): AdapterInvokeOutcome {
+  return {
+    status: 'ok',
+    method: 'llm',
+    result,
+    attempts: [
+      {
+        provider: input.policy.provider,
+        model: input.policy.modelId,
+        status: 'ok',
+        latencyMs: result.metrics.latencyMs,
+        costMicros: result.metrics.costMicros,
+      },
+    ],
+    tokensIn: result.metrics.tokensIn,
+    tokensOut: result.metrics.tokensOut,
+    costMicros: result.metrics.costMicros,
+  };
+}
+
 abstract class StubCapabilityAdapter implements CapabilityAdapter {
   abstract readonly capability: CapabilityAdapter['capability'];
   private readonly dispatches: AdapterDispatchRecord[] = [];
 
-  async invoke(input: AdapterInvokeInput): Promise<GatewayResult> {
+  async invoke(input: AdapterInvokeInput): Promise<AdapterInvokeOutcome> {
     this.dispatches.push({
       capability: this.capability,
       provider: input.policy.provider,
       model: input.policy.modelId,
     });
-    return this.buildResult(input);
+    const result = await this.buildResult(input);
+    return successfulOutcome(input, result);
   }
 
   getDispatches(): readonly AdapterDispatchRecord[] {
@@ -45,13 +70,13 @@ abstract class StubCapabilityAdapter implements CapabilityAdapter {
     };
   }
 
-  protected abstract buildResult(input: AdapterInvokeInput): Promise<GatewayResult>;
+  protected abstract buildResult(input: AdapterInvokeInput): Promise<CapabilityInvokeResult>;
 }
 
 export class StubChatAdapter extends StubCapabilityAdapter {
   readonly capability = 'CHAT' as const;
 
-  protected async buildResult(input: AdapterInvokeInput): Promise<GatewayResult> {
+  protected async buildResult(input: AdapterInvokeInput): Promise<CapabilityInvokeResult> {
     return {
       capability: 'CHAT',
       text: 'stub-chat-response',
@@ -63,7 +88,7 @@ export class StubChatAdapter extends StubCapabilityAdapter {
 export class StubEmbedAdapter extends StubCapabilityAdapter {
   readonly capability = 'EMBED' as const;
 
-  protected async buildResult(input: AdapterInvokeInput): Promise<GatewayResult> {
+  protected async buildResult(input: AdapterInvokeInput): Promise<CapabilityInvokeResult> {
     if (input.request.capability !== 'EMBED') {
       throw new Error('StubEmbedAdapter received non-EMBED request');
     }
@@ -82,7 +107,7 @@ export class StubEmbedAdapter extends StubCapabilityAdapter {
 export class StubRerankAdapter extends StubCapabilityAdapter {
   readonly capability = 'RERANK' as const;
 
-  protected async buildResult(input: AdapterInvokeInput): Promise<GatewayResult> {
+  protected async buildResult(input: AdapterInvokeInput): Promise<CapabilityInvokeResult> {
     if (input.request.capability !== 'RERANK') {
       throw new Error('StubRerankAdapter received non-RERANK request');
     }
@@ -98,7 +123,7 @@ export class StubRerankAdapter extends StubCapabilityAdapter {
 export class StubAutocompleteAdapter extends StubCapabilityAdapter {
   readonly capability = 'AUTOCOMPLETE' as const;
 
-  protected async buildResult(input: AdapterInvokeInput): Promise<GatewayResult> {
+  protected async buildResult(input: AdapterInvokeInput): Promise<CapabilityInvokeResult> {
     if (input.request.capability !== 'AUTOCOMPLETE') {
       throw new Error('StubAutocompleteAdapter received non-AUTOCOMPLETE request');
     }
@@ -114,7 +139,7 @@ export class StubAutocompleteAdapter extends StubCapabilityAdapter {
 export class StubExtractCellAdapter extends StubCapabilityAdapter {
   readonly capability = 'EXTRACT_CELL' as const;
 
-  protected async buildResult(input: AdapterInvokeInput): Promise<GatewayResult> {
+  protected async buildResult(input: AdapterInvokeInput): Promise<CapabilityInvokeResult> {
     return {
       capability: 'EXTRACT_CELL',
       value: 'stub-cell-value',
@@ -126,7 +151,7 @@ export class StubExtractCellAdapter extends StubCapabilityAdapter {
 export class StubScreeningAdapter extends StubCapabilityAdapter {
   readonly capability = 'SCREENING' as const;
 
-  protected async buildResult(input: AdapterInvokeInput): Promise<GatewayResult> {
+  protected async buildResult(input: AdapterInvokeInput): Promise<CapabilityInvokeResult> {
     return {
       capability: 'SCREENING',
       decision: 'include',
@@ -138,7 +163,7 @@ export class StubScreeningAdapter extends StubCapabilityAdapter {
 export class StubStanceAdapter extends StubCapabilityAdapter {
   readonly capability = 'STANCE' as const;
 
-  protected async buildResult(input: AdapterInvokeInput): Promise<GatewayResult> {
+  protected async buildResult(input: AdapterInvokeInput): Promise<CapabilityInvokeResult> {
     return {
       capability: 'STANCE',
       stance: 'neutral',
@@ -150,7 +175,7 @@ export class StubStanceAdapter extends StubCapabilityAdapter {
 export class StubSynthesisAdapter extends StubCapabilityAdapter {
   readonly capability = 'SYNTHESIS' as const;
 
-  protected async buildResult(input: AdapterInvokeInput): Promise<GatewayResult> {
+  protected async buildResult(input: AdapterInvokeInput): Promise<CapabilityInvokeResult> {
     return {
       capability: 'SYNTHESIS',
       text: 'stub-synthesis',
@@ -162,7 +187,7 @@ export class StubSynthesisAdapter extends StubCapabilityAdapter {
 export class StubOcrAdapter extends StubCapabilityAdapter {
   readonly capability = 'OCR' as const;
 
-  protected async buildResult(input: AdapterInvokeInput): Promise<GatewayResult> {
+  protected async buildResult(input: AdapterInvokeInput): Promise<CapabilityInvokeResult> {
     return {
       capability: 'OCR',
       text: 'stub-ocr-text',

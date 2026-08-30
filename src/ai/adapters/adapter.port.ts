@@ -1,6 +1,7 @@
-import type { GatewayContext, GatewayRequest, AssembledProviderPayload, GatewayResult } from '../gateway/gateway.types';
+import type { GatewayContext, GatewayRequest, AssembledProviderPayload } from '../gateway/gateway.types';
 import type { PolicyDecision } from '../policy/policy.types';
 import type { AiCapability } from '../capability';
+import type { AdapterInvokeOutcome } from './adapter-outcome';
 
 export interface AdapterInvokeInput {
   readonly ctx: GatewayContext;
@@ -11,7 +12,7 @@ export interface AdapterInvokeInput {
 
 export interface CapabilityAdapter {
   readonly capability: AiCapability;
-  invoke(input: AdapterInvokeInput): Promise<GatewayResult>;
+  invoke(input: AdapterInvokeInput): Promise<AdapterInvokeOutcome>;
 }
 
 export interface AdapterDispatchRecord {

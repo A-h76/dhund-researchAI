@@ -13,6 +13,16 @@ export class AdapterRegistry {
     );
   }
 
+  /** Test-only: construct an isolated registry with custom adapters. */
+  static forAdapters(adapters: readonly CapabilityAdapter[]): AdapterRegistry {
+    const registry = Object.create(AdapterRegistry.prototype) as AdapterRegistry;
+    Object.defineProperty(registry, 'adapters', {
+      value: new Map(adapters.map((adapter) => [adapter.capability, adapter])),
+      writable: false,
+    });
+    return registry;
+  }
+
   get(capability: AiCapability): CapabilityAdapter {
     const adapter = this.adapters.get(capability);
     if (adapter === undefined) {
