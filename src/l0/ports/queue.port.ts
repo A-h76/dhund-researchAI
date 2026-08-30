@@ -7,6 +7,7 @@ export interface QueueJobOptions {
   readonly jobId: string;
   readonly attempts?: number;
   readonly backoff?: QueueBackoffPolicy;
+  readonly delayMs?: number;
 }
 
 export interface QueueDepthSnapshot {
@@ -31,5 +32,6 @@ export interface QueueService {
     jobId: string,
   ): Promise<string>;
   getJobState(queueName: string, jobId: string): Promise<string | null>;
+  retryFailedJob(queueName: string, jobId: string): Promise<'retried' | 'noop' | 'not_found'>;
   getQueueDepth(queueName: string): Promise<QueueDepthSnapshot>;
 }

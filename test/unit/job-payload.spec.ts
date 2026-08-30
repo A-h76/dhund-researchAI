@@ -6,7 +6,7 @@ import {
   assertValidJobPayload,
 } from '../../src/platform/logging/job-payload';
 import { runWithCorrelationId } from '../../src/platform/logging/correlation-context';
-import { QUEUE_SERVICE } from '../../src/l0/ports';
+import { CACHE_SERVICE, COUNTER_SERVICE, QUEUE_SERVICE } from '../../src/l0/ports';
 import { installTestAppConfig } from '../fixtures/app-config.fixture';
 import { resetAppConfigForTests } from '../../src/platform/config';
 
@@ -18,12 +18,31 @@ describe('job payload contract', () => {
     addJob: jest.fn().mockResolvedValue('job-123'),
     addDlqJob: jest.fn().mockResolvedValue('dlq-123'),
     getJobState: jest.fn().mockResolvedValue(null),
+    retryFailedJob: jest.fn().mockResolvedValue('noop'),
     getQueueDepth: jest.fn().mockResolvedValue({
       waiting: 0,
       active: 0,
       failed: 0,
       delayed: 0,
     }),
+  };
+
+  const mockCounterService = {
+    connect: jest.fn(),
+    disconnect: jest.fn(),
+    ping: jest.fn().mockResolvedValue(true),
+    incrementIfBelow: jest.fn().mockResolvedValue(true),
+    decrement: jest.fn().mockResolvedValue(0),
+    get: jest.fn().mockResolvedValue(0),
+  };
+
+  const mockCacheService = {
+    connect: jest.fn(),
+    disconnect: jest.fn(),
+    ping: jest.fn().mockResolvedValue(true),
+    get: jest.fn().mockResolvedValue(null),
+    set: jest.fn().mockResolvedValue(undefined),
+    del: jest.fn().mockResolvedValue(undefined),
   };
 
   beforeAll(() => {
@@ -70,6 +89,10 @@ describe('job payload contract', () => {
     })
       .overrideProvider(QUEUE_SERVICE)
       .useValue(mockQueueService)
+      .overrideProvider(COUNTER_SERVICE)
+      .useValue(mockCounterService)
+      .overrideProvider(CACHE_SERVICE)
+      .useValue(mockCacheService)
       .compile();
 
     const enqueue = moduleRef.get(JobEnqueueService);
