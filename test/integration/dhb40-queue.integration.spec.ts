@@ -189,30 +189,31 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
       { connection, concurrency: 1 },
     );
 
+    const poisonPayload = {
+      orgId: 'org-int-1',
+      projectId: 'proj-int-1',
+      correlationId: 'cor-poison-1',
+      runId: 'run-1',
+      evidenceId: 'ev-poison',
+      fail: true,
+    };
+    const goodPayload = {
+      orgId: 'org-int-1',
+      projectId: 'proj-int-1',
+      correlationId: 'cor-poison-2',
+      runId: 'run-1',
+      evidenceId: 'ev-good',
+    };
+
     const queue = new Queue('stance', { connection });
-    await queue.add(
-      'stance',
-      {
-        orgId: 'org-int-1',
-        projectId: 'proj-int-1',
-        correlationId: 'cor-poison-1',
-        runId: 'run-1',
-        evidenceId: 'ev-poison',
-        fail: true,
-      },
-      { jobId: 'stance:poison', attempts: 1 },
-    );
-    await queue.add(
-      'stance',
-      {
-        orgId: 'org-int-1',
-        projectId: 'proj-int-1',
-        correlationId: 'cor-poison-2',
-        runId: 'run-1',
-        evidenceId: 'ev-good',
-      },
-      { jobId: 'stance:good', attempts: 1 },
-    );
+    await queue.add('stance', poisonPayload, {
+      jobId: deriveJobId('stance', poisonPayload),
+      attempts: 1,
+    });
+    await queue.add('stance', goodPayload, {
+      jobId: deriveJobId('stance', goodPayload),
+      attempts: 1,
+    });
 
     await new Promise((resolve) => setTimeout(resolve, 3_000));
 

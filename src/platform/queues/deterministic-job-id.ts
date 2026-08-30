@@ -8,6 +8,6 @@ export function deriveJobId(
   payload: Record<string, unknown>,
 ): string {
   const naturalKey = extractNaturalKey(queueName, payload);
-  const digest = createHash('sha256').update(canonicalJson(naturalKey)).digest('hex');
-  return `${queueName}:${digest}`;
+  // BullMQ custom job IDs must not contain ':' — queue scope is in naturalKey.queue.
+  return createHash('sha256').update(canonicalJson(naturalKey)).digest('hex');
 }

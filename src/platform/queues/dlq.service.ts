@@ -64,10 +64,10 @@ export class DlqService {
 }
 
 export function deriveDlqJobId(queueName: QueueName, originalJobId: string): string {
-  const digest = createHash('sha256')
-    .update(canonicalJson({ queueName, originalJobId }))
+  // BullMQ custom job IDs must not contain ':' — dlq queue name is separate from jobId.
+  return createHash('sha256')
+    .update(canonicalJson({ dlq: dlqNameFor(queueName), originalJobId }))
     .digest('hex');
-  return `${dlqNameFor(queueName)}:${digest}`;
 }
 
 export function parseDlqPayload(payload: unknown): {

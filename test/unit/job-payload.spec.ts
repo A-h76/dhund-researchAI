@@ -89,7 +89,7 @@ describe('job payload contract', () => {
         correlationId: 'cor-enqueue-1',
       },
       expect.objectContaining({
-        jobId: expect.stringMatching(/^billing-sync:[a-f0-9]{64}$/),
+        jobId: expect.stringMatching(/^[a-f0-9]{64}$/),
         attempts: 5,
       }),
     );

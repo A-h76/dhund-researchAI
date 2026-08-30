@@ -11,7 +11,7 @@ describe('deterministic jobId (DHB-40)', () => {
     const first = deriveJobId('billing-sync', billingPayload);
     const second = deriveJobId('billing-sync', billingPayload);
     expect(first).toBe(second);
-    expect(first).toMatch(/^billing-sync:[a-f0-9]{64}$/);
+    expect(first).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it('derives different jobIds for different natural keys', () => {
@@ -25,8 +25,8 @@ describe('deterministic jobId (DHB-40)', () => {
 
   it('does not embed timestamps or randomness in the jobId', () => {
     const jobId = deriveJobId('billing-sync', billingPayload);
-    expect(jobId).not.toMatch(/\d{13}/);
-    expect(jobId.split(':')[1]).toHaveLength(64);
+    expect(jobId).toHaveLength(64);
+    expect(jobId).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it('scopes jobId by queue name', () => {
