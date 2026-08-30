@@ -8,7 +8,6 @@ import {
 import { PlatformLogger } from '../logging';
 import { RuntimeRole } from '../runtime/role';
 import { APP_CONFIG, type FrozenAppConfig } from './config.tokens';
-import { assertEmbeddingPolicy } from './embed-policy';
 import { MigrationReadinessService } from './migration-readiness.service';
 import {
   PROCESSOR_READINESS,
@@ -30,8 +29,6 @@ export class BootstrapValidationService implements OnApplicationBootstrap {
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
-    assertEmbeddingPolicy(this.config, undefined);
-
     this.logger.info({
       module: 'boot',
       message: 'config.loaded',

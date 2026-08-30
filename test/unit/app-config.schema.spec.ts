@@ -3,7 +3,6 @@ import { RuntimeRole } from '../../src/platform/runtime/role';
 import {
   ConfigValidationError,
   loadAndValidateConfig,
-  parseEmbeddingDimension,
   parseFeatureFlags,
   parseLogLevel,
   parsePort,
@@ -25,7 +24,6 @@ describe('app config schema', () => {
         REDIS_URL: 'redis://localhost:6379',
         PORT: '3000',
         LOG_LEVEL: 'info',
-        EMBEDDING_DIMENSION: '1536',
         FEATURE_RESEARCH_RUNS: 'false',
       }),
       RuntimeRole.Api,
@@ -35,8 +33,8 @@ describe('app config schema', () => {
     expect(config.redisUrl).toBe('redis://localhost:6379');
     expect(config.port).toBe(3000);
     expect(config.logLevel).toBe('info');
-    expect(config.embeddingDimension).toBe(1536);
     expect(config.featureFlags.research_runs).toBe(false);
+    expect(config.loadedKeyNames).not.toContain('EMBEDDING_DIMENSION');
   });
 
   it('rejects a missing DATABASE_URL', () => {
@@ -56,8 +54,21 @@ describe('app config schema', () => {
     expect(() => parseLogLevel('verbose')).toThrow(ConfigValidationError);
   });
 
-  it('rejects an invalid EMBEDDING_DIMENSION', () => {
-    expect(() => parseEmbeddingDimension('0')).toThrow(ConfigValidationError);
+  it('rejects EMBEDDING_DIMENSION because dimension is schema-bound', () => {
+    expect(() =>
+      loadAndValidateConfig(
+        createSecrets({
+          DATABASE_URL: 'postgres://user:pass@localhost:5432/db',
+          REDIS_URL: 'redis://localhost:6379',
+          EMBEDDING_DIMENSION: '1536',
+        }),
+        RuntimeRole.Api,
+      ),
+    ).toThrow(
+      new ConfigValidationError(
+        'EMBEDDING_DIMENSION is not supported; embedding dimension is schema-bound at 1024',
+      ),
+    );
   });
 
   it('parses DATABASE_POOL_SIZE from secrets with default when unset', () => {

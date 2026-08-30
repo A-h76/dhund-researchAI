@@ -10,12 +10,10 @@ export function buildTestAppConfig(
     databaseUrl: 'postgres://dhund:dhund@localhost:5432/dhund',
     databasePoolSize: 10,
     redisUrl: 'redis://localhost:6379',
-    embeddingDimension: 1536,
     featureFlags: Object.freeze({ research_runs: false }),
     loadedKeyNames: Object.freeze([
       'DATABASE_URL',
       'DATABASE_POOL_SIZE',
-      'EMBEDDING_DIMENSION',
       'REDIS_URL',
     ]),
     ...overrides,

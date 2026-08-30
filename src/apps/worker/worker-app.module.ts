@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { OrchestrationModule } from '../../orchestration/orchestration.module';
+import { AiModule } from '../../ai/ai.module';
 import {
   BootstrapValidationService,
   PROCESSOR_READINESS,
@@ -12,7 +12,7 @@ import { ProcessorRegistry } from './processor-registry';
 import { WorkerBootstrapService } from './worker-bootstrap.service';
 
 @Module({
-  imports: [PlatformModule, OrchestrationModule],
+  imports: [PlatformModule, AiModule],
   providers: [
     provideRuntimeRole(RuntimeRole.Worker),
     ProcessorRegistry,

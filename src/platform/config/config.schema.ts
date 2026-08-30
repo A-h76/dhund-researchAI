@@ -42,16 +42,6 @@ export function parseLogLevel(value: string | undefined): string {
   return level;
 }
 
-export function parseEmbeddingDimension(value: string | undefined): number {
-  const raw = value ?? '1536';
-  const parsed = Number(raw);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new ConfigValidationError('EMBEDDING_DIMENSION must be a positive integer');
-  }
-
-  return parsed;
-}
-
 /** Default Prisma connection pool size when DATABASE_POOL_SIZE is unset. */
 export const DEFAULT_DATABASE_POOL_SIZE = 10;
 export const MIN_DATABASE_POOL_SIZE = 1;
