@@ -6,7 +6,7 @@ import {
   assertValidJobPayload,
 } from '../../src/platform/logging/job-payload';
 import { runWithCorrelationId } from '../../src/platform/logging/correlation-context';
-import { QUEUE_SERVICE, COUNTER_SERVICE } from '../../src/l0/ports';
+import { CACHE_SERVICE, COUNTER_SERVICE, QUEUE_SERVICE } from '../../src/l0/ports';
 import { installTestAppConfig } from '../fixtures/app-config.fixture';
 import { resetAppConfigForTests } from '../../src/platform/config';
 
@@ -34,6 +34,15 @@ describe('job payload contract', () => {
     incrementIfBelow: jest.fn().mockResolvedValue(true),
     decrement: jest.fn().mockResolvedValue(0),
     get: jest.fn().mockResolvedValue(0),
+  };
+
+  const mockCacheService = {
+    connect: jest.fn(),
+    disconnect: jest.fn(),
+    ping: jest.fn().mockResolvedValue(true),
+    get: jest.fn().mockResolvedValue(null),
+    set: jest.fn().mockResolvedValue(undefined),
+    del: jest.fn().mockResolvedValue(undefined),
   };
 
   beforeAll(() => {
@@ -82,6 +91,8 @@ describe('job payload contract', () => {
       .useValue(mockQueueService)
       .overrideProvider(COUNTER_SERVICE)
       .useValue(mockCounterService)
+      .overrideProvider(CACHE_SERVICE)
+      .useValue(mockCacheService)
       .compile();
 
     const enqueue = moduleRef.get(JobEnqueueService);
