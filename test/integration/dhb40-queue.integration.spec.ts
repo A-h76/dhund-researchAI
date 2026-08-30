@@ -3,7 +3,9 @@ import Redis from 'ioredis';
 import { Test } from '@nestjs/testing';
 import { GenericContainer, Wait } from 'testcontainers';
 import { BullmqQueueAdapter } from '../../src/l0/adapters/bullmq/bullmq-queue.adapter';
-import { QUEUE_SERVICE } from '../../src/l0/ports';
+import { RedisCacheAdapter } from '../../src/l0/adapters/redis/redis-cache.adapter';
+import { RedisCounterAdapter } from '../../src/l0/adapters/redis/redis-counter.adapter';
+import { CACHE_SERVICE, COUNTER_SERVICE, QUEUE_SERVICE } from '../../src/l0/ports';
 import type { L0ConnectionConfig } from '../../src/l0/ports/connection-config.port';
 import { runWithCorrelationIdAsync } from '../../src/platform/logging/correlation-context';
 import { JobEnqueueService } from '../../src/platform/logging/job-enqueue.service';
@@ -63,13 +65,21 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
       databasePoolSize: 10,
     };
     const adapter = new BullmqQueueAdapter(connectionConfig);
+    const cache = new RedisCacheAdapter(connectionConfig);
+    const counter = new RedisCounterAdapter(connectionConfig);
     await adapter.connect('dhb40');
+    await cache.connect('dhb40');
+    await counter.connect('dhb40');
 
     const moduleRef = await Test.createTestingModule({
       imports: [LoggerModule, QueuesModule],
     })
       .overrideProvider(QUEUE_SERVICE)
       .useValue(adapter)
+      .overrideProvider(CACHE_SERVICE)
+      .useValue(cache)
+      .overrideProvider(COUNTER_SERVICE)
+      .useValue(counter)
       .compile();
 
     return {
@@ -79,6 +89,8 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
       replay: moduleRef.get(DlqReplayService),
       close: async () => {
         await adapter.disconnect('dhb40');
+        await cache.disconnect('dhb40');
+        await counter.disconnect('dhb40');
         await moduleRef.close();
       },
     };

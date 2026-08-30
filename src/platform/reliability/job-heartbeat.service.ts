@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { QueueName } from '../queues/queue-names';
+import { GateSlotRegistry } from '../concurrency/gate-slot.registry';
 import { PlatformLogger } from '../logging/platform-logger.service';
 import { getQueueLivenessPolicy } from './queue-liveness.config';
 import { RedisJobLivenessStore } from './redis-job-liveness.store';
@@ -14,6 +15,7 @@ export class JobHeartbeatService {
     private readonly semaphore: LeasedSemaphoreService,
     private readonly logger: PlatformLogger,
     private readonly metrics: ReliabilityMetrics,
+    private readonly gateSlots: GateSlotRegistry,
   ) {}
 
   async startJob(input: {
@@ -78,6 +80,7 @@ export class JobHeartbeatService {
   }
 
   async complete(input: { queue: QueueName; jobId: string }): Promise<void> {
+    await this.gateSlots.releaseByJobId(input.jobId);
     await this.semaphore.release(
       this.semaphore.buildJobLeaseKey(input.queue, input.jobId),
       input.jobId,

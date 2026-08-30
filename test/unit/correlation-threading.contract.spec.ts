@@ -1,7 +1,7 @@
 import { Controller, Get, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
-import { QUEUE_SERVICE } from '../../src/l0/ports';
+import { QUEUE_SERVICE, COUNTER_SERVICE, CACHE_SERVICE } from '../../src/l0/ports';
 import { resetAppConfigForTests } from '../../src/platform/config';
 import {
   consumeJobPayload,
@@ -49,7 +49,24 @@ describe('correlation threading contract (HTTP → log → job → execution)', 
     }),
     addDlqJob: jest.fn(),
     getJobState: jest.fn(),
+    retryFailedJob: jest.fn(),
     getQueueDepth: jest.fn(),
+  };
+  const mockCounterService = {
+    connect: jest.fn(),
+    disconnect: jest.fn(),
+    ping: jest.fn().mockResolvedValue(true),
+    incrementIfBelow: jest.fn().mockResolvedValue(true),
+    decrement: jest.fn().mockResolvedValue(0),
+    get: jest.fn().mockResolvedValue(0),
+  };
+  const mockCacheService = {
+    connect: jest.fn(),
+    disconnect: jest.fn(),
+    ping: jest.fn().mockResolvedValue(true),
+    get: jest.fn().mockResolvedValue(null),
+    set: jest.fn(),
+    del: jest.fn(),
   };
 
   beforeAll(async () => {
@@ -60,6 +77,10 @@ describe('correlation threading contract (HTTP → log → job → execution)', 
     })
       .overrideProvider(QUEUE_SERVICE)
       .useValue(mockQueueService)
+      .overrideProvider(COUNTER_SERVICE)
+      .useValue(mockCounterService)
+      .overrideProvider(CACHE_SERVICE)
+      .useValue(mockCacheService)
       .compile();
 
     logger = moduleRef.get(PlatformLogger);

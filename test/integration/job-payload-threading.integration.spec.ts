@@ -3,7 +3,9 @@ import Redis from 'ioredis';
 import { Test } from '@nestjs/testing';
 import { GenericContainer, Wait } from 'testcontainers';
 import { BullmqQueueAdapter } from '../../src/l0/adapters/bullmq/bullmq-queue.adapter';
-import { QUEUE_SERVICE } from '../../src/l0/ports';
+import { RedisCacheAdapter } from '../../src/l0/adapters/redis/redis-cache.adapter';
+import { RedisCounterAdapter } from '../../src/l0/adapters/redis/redis-counter.adapter';
+import { CACHE_SERVICE, COUNTER_SERVICE, QUEUE_SERVICE } from '../../src/l0/ports';
 import type { L0ConnectionConfig } from '../../src/l0/ports/connection-config.port';
 import { runWithCorrelationId } from '../../src/platform/logging/correlation-context';
 import { JobEnqueueService } from '../../src/platform/logging/job-enqueue.service';
@@ -37,13 +39,21 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
         databasePoolSize: 10,
       };
       const adapter = new BullmqQueueAdapter(connectionConfig);
+      const cache = new RedisCacheAdapter(connectionConfig);
+      const counter = new RedisCounterAdapter(connectionConfig);
       await adapter.connect('integration-correlation');
+      await cache.connect('integration-correlation');
+      await counter.connect('integration-correlation');
 
       const moduleRef = await Test.createTestingModule({
         imports: [LoggerModule],
       })
         .overrideProvider(QUEUE_SERVICE)
         .useValue(adapter)
+        .overrideProvider(CACHE_SERVICE)
+        .useValue(cache)
+        .overrideProvider(COUNTER_SERVICE)
+        .useValue(counter)
         .compile();
 
       const enqueue = moduleRef.get(JobEnqueueService);
@@ -72,6 +82,8 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
       await queue.close();
       await connection.quit();
       await adapter.disconnect('integration-correlation');
+      await cache.disconnect('integration-correlation');
+      await counter.disconnect('integration-correlation');
       await moduleRef.close();
       await redis.stop();
     });

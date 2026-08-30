@@ -7,6 +7,7 @@ export interface QueueJobOptions {
   readonly jobId: string;
   readonly attempts?: number;
   readonly backoff?: QueueBackoffPolicy;
+  readonly delayMs?: number;
 }
 
 export interface QueueDepthSnapshot {
