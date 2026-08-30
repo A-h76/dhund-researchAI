@@ -4,7 +4,6 @@ import { RuntimeRole as Role } from '../runtime/role';
 import type { AppConfig } from './app-config.types';
 import { ConfigValidationError } from './config-validation.error';
 import {
-  parseEmbeddingDimension,
   parseLogLevel,
   parsePort,
   parseRequiredSecret,
@@ -38,9 +37,11 @@ export function loadAndValidateConfig(
   track('LOG_LEVEL', logLevelValue);
   const logLevel = parseLogLevel(logLevelValue);
 
-  const embeddingValue = secrets.getSecret('EMBEDDING_DIMENSION');
-  track('EMBEDDING_DIMENSION', embeddingValue);
-  const embeddingDimension = parseEmbeddingDimension(embeddingValue);
+  if (secrets.getSecret('EMBEDDING_DIMENSION') !== undefined) {
+    throw new ConfigValidationError(
+      'EMBEDDING_DIMENSION is not supported; embedding dimension is schema-bound at 1024',
+    );
+  }
 
   const poolValue = secrets.getSecret('DATABASE_POOL_SIZE');
   track('DATABASE_POOL_SIZE', poolValue);
@@ -89,7 +90,6 @@ export function loadAndValidateConfig(
     databaseUrl,
     databasePoolSize,
     redisUrl,
-    embeddingDimension,
     featureFlags,
     loadedKeyNames: [...new Set(loadedKeyNames)].sort(),
     ...(s3Provided.length === 5

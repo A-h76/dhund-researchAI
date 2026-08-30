@@ -1,0 +1,2 @@
+export const GATEWAY_SERVICE = Symbol('GATEWAY_SERVICE');
+export const DATA_BOUNDARY_CHECK = Symbol('DATA_BOUNDARY_CHECK');

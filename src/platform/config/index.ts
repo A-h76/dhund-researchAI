@@ -1,6 +1,4 @@
 export { evaluateAuthorizationDecision } from './authorization-decision';
-export { assertEmbeddingPolicy } from './embed-policy';
-export type { EmbeddingSchemaMetadata } from './embed-policy';
 export type { AppConfig, EmailConfig } from './app-config.types';
 export { BootstrapValidationService } from './bootstrap-validation.service';
 export { ConfigValidationError } from './config-validation.error';
@@ -12,7 +10,6 @@ export { APP_CONFIG } from './config.tokens';
 export type { FrozenAppConfig } from './config.tokens';
 export {
   parseDatabasePoolSize,
-  parseEmbeddingDimension,
   parseFeatureFlags,
   parseLogLevel,
   parsePort,

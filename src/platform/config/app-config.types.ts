@@ -9,7 +9,6 @@ export interface AppConfig {
   readonly databaseUrl: string;
   readonly databasePoolSize: number;
   readonly redisUrl: string;
-  readonly embeddingDimension: number;
   readonly s3?: {
     readonly endpoint: string;
     readonly region: string;
