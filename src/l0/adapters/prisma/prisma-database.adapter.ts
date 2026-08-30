@@ -13,6 +13,8 @@ import type {
   DatabasePoolInfo,
   DatabaseService,
 } from '../../ports/database.port';
+import type { AiExecutionLedgerRecord } from '../../ports/ai-execution-ledger.port';
+import { mapLedgerRecordToPrismaCreate } from './prisma-ai-execution-ledger.mapper';
 import { withPrismaPoolSize } from './prisma-pool-url';
 
 @Injectable()
@@ -132,6 +134,28 @@ export class PrismaDatabaseAdapter implements DatabaseService, OnModuleDestroy {
     } catch {
       return [];
     }
+  }
+
+  async recordAiExecutionLedger(input: AiExecutionLedgerRecord): Promise<void> {
+    await this.ensureConnected();
+
+    const { execution, attempts } = mapLedgerRecordToPrismaCreate(input);
+
+    await this.client.$transaction(async (tx) => {
+      await tx.aiExecution.create({ data: execution });
+      await tx.aiExecutionAttempt.createMany({ data: attempts });
+
+      if (input.researchRunId !== undefined && input.costMicros > 0) {
+        await tx.researchRun.update({
+          where: { id: input.researchRunId },
+          data: {
+            consumedMicros: {
+              increment: BigInt(input.costMicros),
+            },
+          },
+        });
+      }
+    });
   }
 
   private async ensureConnected(): Promise<void> {

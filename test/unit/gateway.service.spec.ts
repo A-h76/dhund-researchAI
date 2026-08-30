@@ -2,10 +2,12 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { AI_CAPABILITIES } from '../../src/ai/capability';
 import { AdapterRegistry } from '../../src/ai/adapters/adapter-registry';
+import type { CapabilityAdapter } from '../../src/ai/adapters/adapter.port';
 import { NoopDataBoundary } from '../../src/ai/boundary/noop-data-boundary';
 import { GatewayService } from '../../src/ai/gateway/gateway.service';
 import type { GatewayContext, GatewayRequest } from '../../src/ai/gateway/gateway.types';
 import { GatewayError } from '../../src/ai/gateway/gateway.errors';
+import type { AiExecutionLedgerPort, AiExecutionLedgerRecord } from '../../src/l0/ports/ai-execution-ledger.port';
 import { PolicyResolver } from '../../src/ai/policy/policy-resolver';
 import {
   DOCUMENT_CLOSE,
@@ -20,27 +22,54 @@ import {
 import { RuntimeRole } from '../../src/platform/runtime/role';
 import { PlatformLogger } from '../../src/platform/logging/platform-logger.service';
 
-function createGateway(): {
+class InMemoryAiExecutionLedger implements AiExecutionLedgerPort {
+  readonly records: AiExecutionLedgerRecord[] = [];
+
+  async record(input: AiExecutionLedgerRecord): Promise<void> {
+    this.records.push(structuredClone(input));
+  }
+
+  reset(): void {
+    this.records.length = 0;
+  }
+}
+
+function createGateway(
+  options: {
+    ledger?: InMemoryAiExecutionLedger;
+    adapters?: readonly CapabilityAdapter[];
+    logger?: PlatformLogger;
+  } = {},
+): {
   gateway: GatewayService;
   boundary: NoopDataBoundary;
   policy: PolicyResolver;
+  ledger: InMemoryAiExecutionLedger;
+  logger: PlatformLogger;
 } {
   const boundary = new NoopDataBoundary();
   const policy = new PolicyResolver();
-  const gateway = new GatewayService(
-    boundary,
-    policy,
-    new PromptAssembler(),
-    new AdapterRegistry(),
-    {
+  const ledger = options.ledger ?? new InMemoryAiExecutionLedger();
+  const logger =
+    options.logger ??
+    ({
       info: jest.fn(),
       error: jest.fn(),
       warn: jest.fn(),
       debug: jest.fn(),
-    } as unknown as PlatformLogger,
+    } as unknown as PlatformLogger);
+  const gateway = new GatewayService(
+    boundary,
+    ledger,
+    policy,
+    new PromptAssembler(),
+    options.adapters !== undefined
+      ? AdapterRegistry.forAdapters(options.adapters)
+      : new AdapterRegistry(),
+    logger,
   );
 
-  return { gateway, boundary, policy };
+  return { gateway, boundary, policy, ledger, logger };
 }
 
 function apiContext(overrides: Partial<GatewayContext> = {}): GatewayContext {
@@ -123,6 +152,8 @@ describe('GatewayService (DHB-44)', () => {
 
       const result = await gateway.execute(ctx, requestForCapability(capability));
       expect(result.capability).toBe(capability);
+      expect(result.aiExecutionId).toEqual(expect.any(String));
+      expect(result.method).toBe('llm');
       expect(boundary.getInvocations()).toHaveLength(1);
       expect(boundary.getInvocations()[0]?.capability).toBe(capability);
     }

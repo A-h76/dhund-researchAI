@@ -10,6 +10,7 @@ export interface GatewaySecretsContext {
 export interface GatewayContext {
   readonly orgId: string;
   readonly projectId?: string;
+  readonly researchRunId?: string;
   readonly correlationId: string;
   readonly runtimeRole: RuntimeRole;
   readonly secretsContext?: GatewaySecretsContext;
@@ -79,7 +80,12 @@ export interface GatewayExecutionMetrics {
   readonly costMicros: number;
 }
 
-export type GatewayResult =
+export interface GatewayResultProvenance {
+  readonly aiExecutionId: string;
+  readonly method: 'llm' | 'deterministic';
+}
+
+export type CapabilityInvokeResult =
   | {
       readonly capability: 'CHAT';
       readonly text: string;
@@ -162,3 +168,5 @@ export type GatewayResult =
       readonly provider: string;
       readonly model: string;
     };
+
+export type GatewayResult = CapabilityInvokeResult & GatewayResultProvenance;
