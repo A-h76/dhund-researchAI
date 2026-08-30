@@ -120,24 +120,10 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
     };
     const jobId = deriveJobId('extract', payload);
 
-    const queue = new Queue('extract', { connection });
-    await queue.add('extract', payload, {
-      jobId,
-      attempts: 1,
-      removeOnComplete: true,
-      removeOnFail: false,
-    });
-
-    const worker = new Worker(
-      'extract',
-      async () => {
-        throw new Error('poison failure');
-      },
-      { connection, concurrency: 1 },
-    );
-
     const queueEvents = new QueueEvents('extract', { connection });
-    await new Promise<void>((resolve, reject) => {
+    await queueEvents.waitUntilReady();
+
+    const failedPromise = new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error('timed out waiting for failure')), 30_000);
       queueEvents.on('failed', async (event) => {
         if (event.jobId !== jobId) {
@@ -154,6 +140,25 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
         resolve();
       });
     });
+
+    const worker = new Worker(
+      'extract',
+      async () => {
+        throw new Error('poison failure');
+      },
+      { connection, concurrency: 1 },
+    );
+    await worker.waitUntilReady();
+
+    const queue = new Queue('extract', { connection });
+    await queue.add('extract', payload, {
+      jobId,
+      attempts: 1,
+      removeOnComplete: true,
+      removeOnFail: false,
+    });
+
+    await failedPromise;
 
     const dlqQueue = new Queue(dlqNameFor('extract'), { connection });
     const dlqJobs = await dlqQueue.getJobs(['waiting', 'completed', 'failed']);
@@ -240,9 +245,31 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
     });
 
     const connection = new Redis(redisUrl, { maxRetriesPerRequest: null });
+    const queueEvents = new QueueEvents('billing-sync', { connection });
+    await queueEvents.waitUntilReady();
+
+    const completedPromise = new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('timed out waiting for completion')), 30_000);
+      queueEvents.on('completed', (event) => {
+        if (event.jobId === jobId) {
+          clearTimeout(timeout);
+          resolve();
+        }
+      });
+    });
+
+    const worker = new Worker(
+      'billing-sync',
+      async () => undefined,
+      { connection, concurrency: 1 },
+    );
+    await worker.waitUntilReady();
+
+    await completedPromise;
+
     const queue = new Queue('billing-sync', { connection });
     const job = await queue.getJob(jobId);
-    await job?.moveToCompleted('done', '0', false);
+    expect(await job?.getState()).toBe('completed');
 
     const dlqPayload = {
       queue: 'billing-sync',
@@ -262,6 +289,8 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
     expect(result).toBe('noop');
     expect(await queue.getWaitingCount()).toBe(0);
 
+    await worker.close();
+    await queueEvents.close();
     await queue.close();
     await connection.quit();
     await harness.close();
