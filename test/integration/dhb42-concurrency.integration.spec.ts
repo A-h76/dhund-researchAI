@@ -30,8 +30,8 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
     };
   }
 
-  const extractPayload = (suffix: string) => ({
-    orgId: `org-${suffix}`,
+  const extractPayload = (orgId: string, suffix: string) => ({
+    orgId,
     projectId: 'proj-int-1',
     documentVersionId: `dv-${suffix}`,
     contentHash: `hash-${suffix}`,
@@ -63,21 +63,23 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
       .compile();
 
     const enqueue = moduleRef.get(JobEnqueueService);
+    const orgA = 'org-a';
+    const orgB = 'org-b';
 
     await runWithCorrelationIdAsync('cor-gate-1', async () => {
       for (let index = 0; index < 5; index += 1) {
-        await enqueue.enqueue('extract', extractPayload(`a-${index}`), { orgBatchLimit: 5 });
+        await enqueue.enqueue('extract', extractPayload(orgA, `a-${index}`), { orgBatchLimit: 5 });
       }
     });
 
     await expect(
       runWithCorrelationIdAsync('cor-gate-2', async () => {
-        await enqueue.enqueue('extract', extractPayload('a-overflow'), { orgBatchLimit: 5 });
+        await enqueue.enqueue('extract', extractPayload(orgA, 'overflow'), { orgBatchLimit: 5 });
       }),
     ).rejects.toMatchObject({ code: 'concurrency_limit' });
 
     await runWithCorrelationIdAsync('cor-gate-3', async () => {
-      await enqueue.enqueue('extract', extractPayload('b-1'), { orgBatchLimit: 5 });
+      await enqueue.enqueue('extract', extractPayload(orgB, 'b-1'), { orgBatchLimit: 5 });
     });
 
     const connection = new Redis(redisUrl, { maxRetriesPerRequest: null });
