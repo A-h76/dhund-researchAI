@@ -20,10 +20,9 @@ class ThreadProbeController {
 
   @Get()
   async threadProbe(): Promise<{ queued: boolean }> {
-    await this.enqueue.enqueue('research.run', {
+    await this.enqueue.enqueue('billing-sync', {
       orgId: 'org-thread-1',
-      projectId: 'proj-thread-1',
-      kind: 'contract-probe',
+      stripeEventId: 'evt_thread_1',
     });
     return { queued: true };
   }
@@ -45,9 +44,12 @@ describe('correlation threading contract (HTTP → log → job → execution)', 
     disconnect: jest.fn(),
     ping: jest.fn(),
     addJob: jest.fn().mockImplementation(async (_queue: string, data: unknown) => {
-      consumeJobPayload(data, writer, logger);
+      consumeJobPayload('billing-sync', data, writer, logger);
       return 'job-contract-1';
     }),
+    addDlqJob: jest.fn(),
+    getJobState: jest.fn(),
+    getQueueDepth: jest.fn(),
   };
 
   beforeAll(async () => {
@@ -93,19 +95,19 @@ describe('correlation threading contract (HTTP → log → job → execution)', 
     expect(await response.json()).toEqual({ queued: true });
 
     expect(mockQueueService.addJob).toHaveBeenCalledWith(
-      'research.run',
+      'billing-sync',
       expect.objectContaining({
         correlationId: suppliedId,
         orgId: 'org-thread-1',
-        projectId: 'proj-thread-1',
+        stripeEventId: 'evt_thread_1',
       }),
+      expect.objectContaining({ jobId: expect.any(String) }),
     );
 
     expect(writer.getRecords()).toEqual([
       {
         correlationId: suppliedId,
         orgId: 'org-thread-1',
-        projectId: 'proj-thread-1',
       },
     ]);
 
@@ -115,15 +117,15 @@ describe('correlation threading contract (HTTP → log → job → execution)', 
     expect(workerLog?.[0]).toMatchObject({
       module: 'worker',
       message: 'job.received',
+      queue: 'billing-sync',
       orgId: 'org-thread-1',
-      projectId: 'proj-thread-1',
     });
 
     infoSpy.mockRestore();
   });
 
   it('rejects consumer payloads missing required correlation fields', () => {
-    expect(() => consumeJobPayload({ orgId: 'org-1' }, writer, logger)).toThrow(
+    expect(() => consumeJobPayload('billing-sync', { orgId: 'org-1' }, writer, logger)).toThrow(
       'Job payload is missing correlationId',
     );
   });

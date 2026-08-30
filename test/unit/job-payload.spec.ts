@@ -16,6 +16,14 @@ describe('job payload contract', () => {
     disconnect: jest.fn(),
     ping: jest.fn(),
     addJob: jest.fn().mockResolvedValue('job-123'),
+    addDlqJob: jest.fn().mockResolvedValue('dlq-123'),
+    getJobState: jest.fn().mockResolvedValue(null),
+    getQueueDepth: jest.fn().mockResolvedValue({
+      waiting: 0,
+      active: 0,
+      failed: 0,
+      delayed: 0,
+    }),
   };
 
   beforeAll(() => {
@@ -67,19 +75,24 @@ describe('job payload contract', () => {
     const enqueue = moduleRef.get(JobEnqueueService);
 
     await runWithCorrelationId('cor-enqueue-1', async () => {
-      await enqueue.enqueue('research.run', {
+      await enqueue.enqueue('billing-sync', {
         orgId: 'org-1',
-        projectId: 'proj-1',
-        kind: 'probe',
+        stripeEventId: 'evt_123',
       });
     });
 
-    expect(mockQueueService.addJob).toHaveBeenCalledWith('research.run', {
-      orgId: 'org-1',
-      projectId: 'proj-1',
-      kind: 'probe',
-      correlationId: 'cor-enqueue-1',
-    });
+    expect(mockQueueService.addJob).toHaveBeenCalledWith(
+      'billing-sync',
+      {
+        orgId: 'org-1',
+        stripeEventId: 'evt_123',
+        correlationId: 'cor-enqueue-1',
+      },
+      expect.objectContaining({
+        jobId: expect.stringMatching(/^billing-sync:[a-f0-9]{64}$/),
+        attempts: 5,
+      }),
+    );
 
     await moduleRef.close();
   });

@@ -5,8 +5,11 @@ import {
 } from './execution-record';
 import { assertValidJobPayload, type BaseJobPayload } from './job-payload';
 import type { PlatformLogger } from './platform-logger.service';
+import { isQueueName } from '../queues/queue-names';
+import { assertValidQueuePayload } from '../queues/queue-payload.validators';
 
 export function processValidatedJobPayload(
+  queueName: string,
   payload: BaseJobPayload,
   writer: ExecutionRecordWriter,
   logger: PlatformLogger,
@@ -15,6 +18,7 @@ export function processValidatedJobPayload(
     logger.info({
       module: 'worker',
       message: 'job.received',
+      queue: queueName,
       orgId: payload.orgId,
       ...(payload.projectId !== undefined ? { projectId: payload.projectId } : {}),
     });
@@ -23,10 +27,14 @@ export function processValidatedJobPayload(
 }
 
 export function consumeJobPayload(
+  queueName: string,
   payload: unknown,
   writer: ExecutionRecordWriter,
   logger: PlatformLogger,
 ): void {
   assertValidJobPayload(payload);
-  processValidatedJobPayload(payload, writer, logger);
+  if (isQueueName(queueName)) {
+    assertValidQueuePayload(queueName, payload);
+  }
+  processValidatedJobPayload(queueName, payload, writer, logger);
 }
