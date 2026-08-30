@@ -159,6 +159,30 @@ export class BullmqQueueAdapter implements QueueService, OnModuleDestroy {
     }
   }
 
+  async retryFailedJob(
+    queueName: string,
+    jobId: string,
+  ): Promise<'retried' | 'noop' | 'not_found'> {
+    const queue = await this.getOrCreateQueue(queueName);
+
+    try {
+      const job = await queue.getJob(jobId);
+      if (job === undefined) {
+        return 'not_found';
+      }
+
+      const state = await job.getState();
+      if (state === 'failed') {
+        await job.retry();
+        return 'retried';
+      }
+
+      return 'noop';
+    } catch (error) {
+      throw new L0OperationError('Queue retryFailedJob failed', error);
+    }
+  }
+
   async getQueueDepth(queueName: string): Promise<QueueDepthSnapshot> {
     const queue = await this.getOrCreateQueue(queueName);
     const counts = await queue.getJobCounts('waiting', 'active', 'failed', 'delayed');

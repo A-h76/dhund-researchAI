@@ -31,5 +31,6 @@ export interface QueueService {
     jobId: string,
   ): Promise<string>;
   getJobState(queueName: string, jobId: string): Promise<string | null>;
+  retryFailedJob(queueName: string, jobId: string): Promise<'retried' | 'noop' | 'not_found'>;
   getQueueDepth(queueName: string): Promise<QueueDepthSnapshot>;
 }

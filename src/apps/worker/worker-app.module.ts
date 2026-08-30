@@ -9,6 +9,7 @@ import { PlatformModule } from '../../platform/platform.module';
 import { RuntimeRole } from '../../platform/runtime/role';
 import { PlaceholderProcessor } from './placeholder.processor';
 import { ProcessorRegistry } from './processor-registry';
+import { ReaperProcessor } from './reaper.processor';
 import { WorkerBootstrapService } from './worker-bootstrap.service';
 
 @Module({
@@ -17,6 +18,7 @@ import { WorkerBootstrapService } from './worker-bootstrap.service';
     provideRuntimeRole(RuntimeRole.Worker),
     ProcessorRegistry,
     PlaceholderProcessor,
+    ReaperProcessor,
     { provide: PROCESSOR_READINESS, useExisting: ProcessorRegistry },
     BootstrapValidationService,
     WorkerBootstrapService,
