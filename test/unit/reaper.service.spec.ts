@@ -131,7 +131,7 @@ describe('reaper service (DHB-41)', () => {
       jobId,
       orgId: 'org-1',
       correlationId: 'cor-2',
-      startedAtMs: now - 3_600_000,
+      startedAtMs: now - 3_000_000,
       lastHeartbeatAtMs: now - 5_000,
       payload,
     });
