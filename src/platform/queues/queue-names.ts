@@ -36,8 +36,9 @@ export function isQueueName(value: string): value is QueueName {
   return (QUEUE_NAMES as readonly string[]).includes(value);
 }
 
+/** BullMQ queue names must not contain ':' — use a hyphenated DLQ suffix. */
 export function dlqNameFor(queueName: QueueName): string {
-  return `${queueName}:dlq`;
+  return `${queueName}-dlq`;
 }
 
 /** Queues defined in inventory but without live R1 BullMQ processors. */

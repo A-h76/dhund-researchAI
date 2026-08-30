@@ -30,9 +30,10 @@ describe('queue registry (DHB-40)', () => {
     expect(QUEUE_REGISTRY.derivation.r1Processor).toBe(false);
   });
 
-  it('names DLQs as <queue>:dlq for every queue', () => {
+  it('names DLQs as <queue>-dlq for every queue (BullMQ-safe, no colons)', () => {
     for (const policy of listQueuePolicies()) {
       expect(policy.dlqName).toBe(dlqNameFor(policy.name));
+      expect(policy.dlqName).not.toContain(':');
     }
   });
 

@@ -130,14 +130,18 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
           return;
         }
         clearTimeout(timeout);
-        await harness.dlq.routeExhaustedJob({
-          queueName: 'extract',
-          jobId,
-          payload,
-          errorMessage: 'poison failure',
-          attemptCount: 1,
-        });
-        resolve();
+        try {
+          await harness.dlq.routeExhaustedJob({
+            queueName: 'extract',
+            jobId,
+            payload,
+            errorMessage: 'poison failure',
+            attemptCount: 1,
+          });
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
       });
     });
 
@@ -267,9 +271,8 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
 
     await completedPromise;
 
+    expect(await harness.adapter.getJobState('billing-sync', jobId)).toBe('completed');
     const queue = new Queue('billing-sync', { connection });
-    const job = await queue.getJob(jobId);
-    expect(await job?.getState()).toBe('completed');
 
     const dlqPayload = {
       queue: 'billing-sync',

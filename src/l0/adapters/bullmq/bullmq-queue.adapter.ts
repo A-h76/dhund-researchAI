@@ -88,7 +88,8 @@ export class BullmqQueueAdapter implements QueueService, OnModuleDestroy {
         ...(options.backoff !== undefined
           ? { backoff: toBullmqBackoff(options.backoff) }
           : {}),
-        removeOnComplete: true,
+        // Retain recent completions so DLQ replay can detect already-completed jobs.
+        removeOnComplete: { count: 1000 },
         removeOnFail: false,
       });
 
