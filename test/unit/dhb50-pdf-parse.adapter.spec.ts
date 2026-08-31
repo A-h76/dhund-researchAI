@@ -1,10 +1,12 @@
 import { toParseResult } from '../../src/ingestion/extract/pdf-parse.adapter';
 
 jest.mock('pdf-parse', () => {
-  return jest.fn(async (buffer: Buffer) => ({
-    numpages: 1,
-    text: buffer.toString('utf8'),
+  const PDFParse = jest.fn().mockImplementation(() => ({
+    getText: async () => ({ text: '', total: 1, pages: [{ num: 1, text: '' }] }),
+    destroy: async () => undefined,
   }));
+  (PDFParse as unknown as { setWorker: () => string }).setWorker = () => '';
+  return { PDFParse };
 });
 
 describe('DHB-50 PdfParseAdapter text-layer detection', () => {

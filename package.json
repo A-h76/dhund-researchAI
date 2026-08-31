@@ -14,10 +14,10 @@
     "lint": "eslint \"src/**/*.ts\" \"test/unit/**/*.ts\" \"test/integration/**/*.ts\" \"test/static/**/*.ts\" \"test/eslint/**/*.ts\" \"test/smoke/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "postinstall": "prisma generate",
-    "test": "jest",
-    "test:ci": "jest --ci --coverage --forceExit",
-    "test:integration": "cross-env RUN_INTEGRATION_TESTS=true jest --config jest.integration.config.ts --runInBand --forceExit",
-    "test:migrate": "cross-env RUN_INTEGRATION_TESTS=true jest --config jest.integration.config.ts --runInBand --forceExit --testPathPattern=migrate-gate",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:ci": "node --experimental-vm-modules node_modules/jest/bin/jest.js --ci --coverage --forceExit",
+    "test:integration": "cross-env RUN_INTEGRATION_TESTS=true node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.integration.config.ts --runInBand --forceExit",
+    "test:migrate": "cross-env RUN_INTEGRATION_TESTS=true node --experimental-vm-modules node_modules/jest/bin/jest.js --config jest.integration.config.ts --runInBand --forceExit --testPathPattern=migrate-gate",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -32,7 +32,7 @@
     "bullmq": "^5.41.0",
     "ioredis": "^5.5.0",
     "nestjs-pino": "^4.6.1",
-    "pdf-parse": "1.1.1",
+    "pdf-parse": "2.4.5",
     "pino": "^10.3.1",
     "reflect-metadata": "^0.2.2",
     "resend": "^4.1.2",

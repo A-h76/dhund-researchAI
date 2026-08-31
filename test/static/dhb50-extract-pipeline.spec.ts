@@ -38,7 +38,7 @@ describe('DHB-50 single-owner ingestion pipeline', () => {
     for (const file of collectFiles(SRC_ROOT)) {
       const normalized = relative(process.cwd(), file).replace(/\\/g, '/');
       const content = readFileSync(file, 'utf8');
-      if (/from\s+['"]pdf-parse['"]/.test(content) || /\bpdfParse\s*\(/.test(content)) {
+      if (/from\s+['"]pdf-parse['"]/.test(content) || /requirePdf\(\s*['"]pdf-parse['"]/.test(content) || /new\s+PDFParse\b/.test(content) || /\bpdfParseModule\b/.test(content)) {
         parsers.push(normalized);
       }
     }

@@ -1,6 +1,6 @@
 /**
  * Minimal PDF builders for DHB-50 extract tests (no external assets).
- * Offsets are computed from UTF-8 byte lengths so pdf.js accepts the files.
+ * Offsets are computed from byte lengths so pdf-parse/pdf.js accepts the files.
  */
 
 function buildSinglePagePdf(contentStream: string): Buffer {
@@ -43,6 +43,5 @@ export function buildTextLayerPdf(
 
 /** Scanned / empty text-layer PDF — no extractable text operators. */
 export function buildScannedPdf(): Buffer {
-  // Empty content stream: page exists but has no text layer.
   return buildSinglePagePdf(' ');
 }
