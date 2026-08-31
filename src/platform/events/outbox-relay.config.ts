@@ -1,0 +1,4 @@
+export const OUTBOX_RELAY_TICK_INTERVAL_MS = 5_000;
+export const OUTBOX_RELAY_BATCH_SIZE = 50;
+export const OUTBOX_RELAY_LEASE_TTL_SECONDS = 120;
+export const PLATFORM_EVENTS_SCOPE = 'platform';
