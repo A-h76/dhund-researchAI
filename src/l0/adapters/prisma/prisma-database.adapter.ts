@@ -158,6 +158,11 @@ export class PrismaDatabaseAdapter implements DatabaseService, OnModuleDestroy {
     });
   }
 
+  /** L0-internal: Prisma client for sibling adapters (outbox, ledger). */
+  getPrismaClient(): PrismaClient {
+    return this.client;
+  }
+
   private async ensureConnected(): Promise<void> {
     if (!this.connected) {
       await this.connect();

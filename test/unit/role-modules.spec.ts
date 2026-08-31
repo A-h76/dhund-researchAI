@@ -1,7 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { ApiAppModule } from '../../src/apps/api/api-app.module';
 import { WorkerAppModule } from '../../src/apps/worker/worker-app.module';
-import { CACHE_SERVICE, COUNTER_SERVICE, LEASE_SERVICE, QUEUE_SERVICE } from '../../src/l0/ports';
+import { CACHE_SERVICE, COUNTER_SERVICE, LEASE_SERVICE, OUTBOX_SERVICE, PUBSUB_SERVICE, QUEUE_SERVICE } from '../../src/l0/ports';
 import {
   BootstrapValidationService,
   resetAppConfigForTests,
@@ -47,6 +47,26 @@ const mockLeaseService = {
   getHolder: jest.fn().mockResolvedValue(null),
 };
 
+const mockOutboxService = {
+  withTransaction: jest.fn(async (work: (tx: unknown) => Promise<unknown>) =>
+    work({ __brand: 'OutboxTransaction' }),
+  ),
+  append: jest.fn().mockResolvedValue(undefined),
+  appendStateMarker: jest.fn().mockResolvedValue(undefined),
+  listUnrelayedOrdered: jest.fn().mockResolvedValue([]),
+  markRelayed: jest.fn().mockResolvedValue(undefined),
+  incrementAttempt: jest.fn().mockResolvedValue(undefined),
+  countUnrelayed: jest.fn().mockResolvedValue(0),
+  oldestUnrelayedCreatedAt: jest.fn().mockResolvedValue(null),
+};
+
+const mockPubSubService = {
+  connect: jest.fn().mockResolvedValue(undefined),
+  disconnect: jest.fn().mockResolvedValue(undefined),
+  ping: jest.fn().mockResolvedValue(true),
+  publish: jest.fn().mockResolvedValue(undefined),
+};
+
 const mockBootstrapValidation = {
   onApplicationBootstrap: jest.fn().mockResolvedValue(undefined),
 };
@@ -84,6 +104,10 @@ describe('role module selection', () => {
       .useValue(mockCacheService)
       .overrideProvider(LEASE_SERVICE)
       .useValue(mockLeaseService)
+      .overrideProvider(OUTBOX_SERVICE)
+      .useValue(mockOutboxService)
+      .overrideProvider(PUBSUB_SERVICE)
+      .useValue(mockPubSubService)
       .overrideProvider(BootstrapValidationService)
       .useValue(mockBootstrapValidation)
       .compile();

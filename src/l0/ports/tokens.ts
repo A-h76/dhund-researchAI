@@ -7,3 +7,5 @@ export const SECRETS_SERVICE = Symbol('SECRETS_SERVICE');
 export const EMAIL_SERVICE = Symbol('EMAIL_SERVICE');
 export const LEASE_SERVICE = Symbol('LEASE_SERVICE');
 export const COUNTER_SERVICE = Symbol('COUNTER_SERVICE');
+export const OUTBOX_SERVICE = Symbol('OUTBOX_SERVICE');
+export const PUBSUB_SERVICE = Symbol('PUBSUB_SERVICE');

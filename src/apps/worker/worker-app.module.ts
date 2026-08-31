@@ -7,6 +7,7 @@ import {
 } from '../../platform/config';
 import { PlatformModule } from '../../platform/platform.module';
 import { RuntimeRole } from '../../platform/runtime/role';
+import { OutboxRelayProcessor } from './outbox-relay.processor';
 import { PlaceholderProcessor } from './placeholder.processor';
 import { ProcessorRegistry } from './processor-registry';
 import { ReaperProcessor } from './reaper.processor';
@@ -19,6 +20,7 @@ import { WorkerBootstrapService } from './worker-bootstrap.service';
     ProcessorRegistry,
     PlaceholderProcessor,
     ReaperProcessor,
+    OutboxRelayProcessor,
     { provide: PROCESSOR_READINESS, useExisting: ProcessorRegistry },
     BootstrapValidationService,
     WorkerBootstrapService,
