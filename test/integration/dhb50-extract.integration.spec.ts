@@ -286,7 +286,10 @@ const ROOT = join(__dirname, '..', '..');
   });
 
   it('re-running extract for the same version is idempotent', async () => {
-    const seeded = await seedDocument('Idempotent paper', buildTextLayerPdf('Stable text layer.'));
+    const seeded = await seedDocument(
+      'Idempotent paper',
+      buildTextLayerPdf('Stable text layer with enough characters for extract.'),
+    );
     const payload = {
       orgId: seeded.orgId,
       projectId: seeded.projectId,
@@ -316,7 +319,10 @@ const ROOT = join(__dirname, '..', '..');
   });
 
   it('admits extract only through the pipeline entry and heartbeats keep work alive', async () => {
-    const seeded = await seedDocument('Pipeline paper', buildTextLayerPdf('Pipeline admission.'));
+    const seeded = await seedDocument(
+      'Pipeline paper',
+      buildTextLayerPdf('Pipeline admission with enough characters for extract.'),
+    );
     const jobId = await runWithCorrelationIdAsync('cor-pipeline', async () =>
       pipeline.admitExtract({
         orgId: seeded.orgId,
