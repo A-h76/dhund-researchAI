@@ -25,6 +25,7 @@ describe('job payload contract', () => {
       failed: 0,
       delayed: 0,
     }),
+    processJobs: async () => ({ close: async () => undefined }),
   };
 
   const mockCounterService = {

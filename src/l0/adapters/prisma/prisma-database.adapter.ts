@@ -158,6 +158,11 @@ export class PrismaDatabaseAdapter implements DatabaseService, OnModuleDestroy {
     });
   }
 
+  /** Escape hatch for L0 Prisma adapters that share this connection. */
+  getPrismaClient(): PrismaClient {
+    return this.client;
+  }
+
   private async ensureConnected(): Promise<void> {
     if (!this.connected) {
       await this.connect();

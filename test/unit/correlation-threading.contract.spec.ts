@@ -51,6 +51,7 @@ describe('correlation threading contract (HTTP → log → job → execution)', 
     getJobState: jest.fn(),
     retryFailedJob: jest.fn(),
     getQueueDepth: jest.fn(),
+    processJobs: jest.fn().mockResolvedValue({ close: jest.fn() }),
   };
   const mockCounterService = {
     connect: jest.fn(),

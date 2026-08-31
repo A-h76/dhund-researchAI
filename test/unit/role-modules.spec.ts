@@ -17,6 +17,7 @@ const mockQueueService = {
   getJobState: jest.fn().mockResolvedValue(null),
   retryFailedJob: jest.fn().mockResolvedValue('noop'),
   getQueueDepth: jest.fn().mockResolvedValue({ waiting: 0, active: 0, failed: 0, delayed: 0 }),
+    processJobs: async () => ({ close: async () => undefined }),
 };
 
 const mockCounterService = {

@@ -2,6 +2,7 @@ export * from './ai-execution-ledger.port';
 export * from './cache.port';
 export * from './connection-config.port';
 export * from './database.port';
+export * from './document-ingestion.port';
 export * from './email.port';
 export * from './errors';
 export * from './object-storage.port';

@@ -17,6 +17,19 @@ export interface QueueDepthSnapshot {
   readonly delayed: number;
 }
 
+export interface QueueJobContext {
+  readonly id: string;
+  readonly data: Record<string, unknown>;
+  readonly attemptsMade: number;
+  readonly attempts: number;
+}
+
+export type QueueJobProcessor = (job: QueueJobContext) => Promise<void>;
+
+export interface QueueWorkerHandle {
+  close(): Promise<void>;
+}
+
 export interface QueueService {
   connect(correlationId?: string): Promise<void>;
   disconnect(correlationId?: string): Promise<void>;
@@ -34,4 +47,10 @@ export interface QueueService {
   getJobState(queueName: string, jobId: string): Promise<string | null>;
   retryFailedJob(queueName: string, jobId: string): Promise<'retried' | 'noop' | 'not_found'>;
   getQueueDepth(queueName: string): Promise<QueueDepthSnapshot>;
+  /** Start a durable consumer for a queue (BullMQ Worker behind the port). */
+  processJobs(
+    queueName: string,
+    processor: QueueJobProcessor,
+    options?: { concurrency?: number },
+  ): Promise<QueueWorkerHandle>;
 }

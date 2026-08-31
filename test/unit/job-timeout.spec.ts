@@ -17,6 +17,7 @@ describe('job timeout service (DHB-41, GAP-TIMEOUT-01)', () => {
       getJobState: async () => 'active',
       retryFailedJob: async () => 'noop',
       getQueueDepth: async () => ({ waiting: 0, active: 0, failed: 0, delayed: 0 }),
+    processJobs: async () => ({ close: async () => undefined }),
     };
     const logger = {
       info: jest.fn(),

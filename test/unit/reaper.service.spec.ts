@@ -52,6 +52,7 @@ describe('reaper service (DHB-41)', () => {
     getJobState: async () => 'failed',
     retryFailedJob: async () => 'retried',
     getQueueDepth: async () => ({ waiting: 0, active: 0, failed: 0, delayed: 0 }),
+    processJobs: async () => ({ close: async () => undefined }),
   };
 
   const logger = {
@@ -131,7 +132,8 @@ describe('reaper service (DHB-41)', () => {
       jobId,
       orgId: 'org-1',
       correlationId: 'cor-2',
-      startedAtMs: now - 3_000_000,
+      // Within extract MEDIUM timeout (10m); heartbeat is fresh so reaper skips.
+      startedAtMs: now - 60_000,
       lastHeartbeatAtMs: now - 5_000,
       payload,
     });

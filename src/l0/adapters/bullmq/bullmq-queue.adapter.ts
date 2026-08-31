@@ -1,5 +1,5 @@
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
-import { Queue } from 'bullmq';
+import { Queue, Worker } from 'bullmq';
 import Redis from 'ioredis';
 import {
   L0_CONNECTION_CONFIG,
@@ -11,13 +11,16 @@ import type {
   QueueBackoffPolicy,
   QueueDepthSnapshot,
   QueueJobOptions,
+  QueueJobProcessor,
   QueueService,
+  QueueWorkerHandle,
 } from '../../ports/queue.port';
 
 @Injectable()
 export class BullmqQueueAdapter implements QueueService, OnModuleDestroy {
   private connection: Redis | null = null;
   private readonly queues = new Map<string, Queue>();
+  private readonly workers = new Map<string, Worker>();
 
   constructor(
     @Inject(L0_CONNECTION_CONFIG) private readonly connectionConfig: L0ConnectionConfig,
@@ -45,6 +48,11 @@ export class BullmqQueueAdapter implements QueueService, OnModuleDestroy {
   }
 
   async disconnect(correlationId?: string): Promise<void> {
+    for (const worker of this.workers.values()) {
+      await worker.close();
+    }
+    this.workers.clear();
+
     for (const queue of this.queues.values()) {
       await queue.close();
     }
@@ -192,6 +200,50 @@ export class BullmqQueueAdapter implements QueueService, OnModuleDestroy {
       active: counts.active ?? 0,
       failed: counts.failed ?? 0,
       delayed: counts.delayed ?? 0,
+    };
+  }
+
+  async processJobs(
+    queueName: string,
+    processor: QueueJobProcessor,
+    options?: { concurrency?: number },
+  ): Promise<QueueWorkerHandle> {
+    const existing = this.workers.get(queueName);
+    if (existing !== undefined) {
+      return {
+        close: async () => {
+          await existing.close();
+          this.workers.delete(queueName);
+        },
+      };
+    }
+
+    const connection = await this.requireConnection();
+    const worker = new Worker(
+      queueName,
+      async (job) => {
+        const attempts = typeof job.opts.attempts === 'number' ? job.opts.attempts : 1;
+        await processor({
+          id: job.id ?? `${queueName}-unknown`,
+          data: (job.data ?? {}) as Record<string, unknown>,
+          attemptsMade: job.attemptsMade,
+          attempts,
+        });
+      },
+      {
+        connection,
+        concurrency: options?.concurrency ?? 1,
+      },
+    );
+
+    this.workers.set(queueName, worker);
+    await worker.waitUntilReady();
+
+    return {
+      close: async () => {
+        await worker.close();
+        this.workers.delete(queueName);
+      },
     };
   }
 
