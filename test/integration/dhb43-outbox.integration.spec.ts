@@ -111,8 +111,15 @@ const ROOT = join(__dirname, '..', '..');
   });
 
   beforeEach(async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7305/ingest/8832b42a-f47e-4d07-8187-23831256c8d6',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c8bca6'},body:JSON.stringify({sessionId:'c8bca6',location:'dhb43-outbox.integration.spec.ts:beforeEach',message:'cleanup start',data:{hypothesisId:'A'},timestamp:Date.now(),runId:'post-fix'})}).catch(()=>{});
+    // #endregion
+    // audit_events is append-only (DHB-31 trigger) — never DELETE; scope assertions instead.
     await prisma.outbox.deleteMany();
-    await prisma.auditEvent.deleteMany();
+    const auditCount = await prisma.auditEvent.count();
+    // #region agent log
+    fetch('http://127.0.0.1:7305/ingest/8832b42a-f47e-4d07-8187-23831256c8d6',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'c8bca6'},body:JSON.stringify({sessionId:'c8bca6',location:'dhb43-outbox.integration.spec.ts:beforeEach:after',message:'cleanup done without audit delete',data:{hypothesisId:'A',auditCount},timestamp:Date.now(),runId:'post-fix'})}).catch(()=>{});
+    // #endregion
   });
 
   const baseEvent = (suffix: string) => ({
@@ -134,11 +141,13 @@ const ROOT = join(__dirname, '..', '..');
       });
     });
 
-    expect(await prisma.outbox.count()).toBe(1);
-    expect(await prisma.auditEvent.count()).toBe(1);
+    expect(await prisma.outbox.count({ where: { correlationId: 'cor-commit' } })).toBe(1);
+    expect(await prisma.auditEvent.count({ where: { correlationId: 'cor-commit' } })).toBe(1);
   });
 
   it('rolling back a state change leaves zero outbox rows', async () => {
+    const auditBefore = await prisma.auditEvent.count({ where: { correlationId: 'cor-rollback' } });
+
     await expect(
       runWithCorrelationIdAsync('cor-rollback', async () => {
         await writer.commitWithStateChange(baseEvent('rollback'), async ({ markState }) => {
@@ -148,8 +157,10 @@ const ROOT = join(__dirname, '..', '..');
       }),
     ).rejects.toBeDefined();
 
-    expect(await prisma.outbox.count()).toBe(0);
-    expect(await prisma.auditEvent.count()).toBe(0);
+    expect(await prisma.outbox.count({ where: { correlationId: 'cor-rollback' } })).toBe(0);
+    expect(await prisma.auditEvent.count({ where: { correlationId: 'cor-rollback' } })).toBe(
+      auditBefore,
+    );
   });
 
   it('relay publishes in per-aggregate insertion order', async () => {
