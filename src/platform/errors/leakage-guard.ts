@@ -27,7 +27,12 @@ const SENSITIVE_KEYS = new Set([
   'prompt',
   'prompttext',
   'documenttext',
+  'documentcontent',
   'evidencetext',
+  'evidencesummaries',
+  'userpayload',
+  'usermessage',
+  'systemprompt',
 ]);
 
 export function containsForbiddenLeak(value: unknown): boolean {

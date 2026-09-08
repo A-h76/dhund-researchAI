@@ -1,5 +1,5 @@
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import {
   L0_CONNECTION_CONFIG,
   type L0ConnectionConfig,
@@ -14,6 +14,7 @@ import type {
   DatabaseService,
 } from '../../ports/database.port';
 import type { AiExecutionLedgerRecord } from '../../ports/ai-execution-ledger.port';
+import type { AuditEventAppendInput } from '../../ports/audit-event.port';
 import { mapLedgerRecordToPrismaCreate } from './prisma-ai-execution-ledger.mapper';
 import { withPrismaPoolSize } from './prisma-pool-url';
 
@@ -155,6 +156,20 @@ export class PrismaDatabaseAdapter implements DatabaseService, OnModuleDestroy {
           },
         });
       }
+    });
+  }
+
+  async appendAuditEvent(input: AuditEventAppendInput): Promise<void> {
+    await this.ensureConnected();
+
+    await this.client.auditEvent.create({
+      data: {
+        id: input.id,
+        actorType: input.actorType,
+        action: input.action,
+        scope: input.scope as Prisma.InputJsonValue,
+        correlationId: input.correlationId,
+      },
     });
   }
 

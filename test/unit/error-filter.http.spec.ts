@@ -97,6 +97,15 @@ class ErrorProbeController {
     });
   }
 
+  @Get('data-boundary')
+  dataBoundaryProbe(): never {
+    throw new DomainError(ErrorCode.AiDataBoundaryViolation, {
+      module: 'ai.gateway',
+      details: { reason: 'declared_clinical' },
+      serverDetail: { kind: 'data_boundary', reason: 'declared_clinical' },
+    });
+  }
+
   @Get('internal')
   internalProbe(): never {
     throw new DomainError(ErrorCode.InternalError, {
@@ -236,6 +245,20 @@ describe('global exception filter HTTP contract', () => {
       message: 'A usage limit for this organization has been reached.',
       details: { metric: 'ai_cost_micros', limit: 5000000, observed: 5012400 },
       correlationId: 'cor_quota_1',
+    });
+  });
+
+  it('returns 422 ai_data_boundary_violation for declared-clinical refusal', async () => {
+    const result = await getJson(baseUrl, '/probe/data-boundary', {
+      [CORRELATION_ID_HEADER]: 'cor_boundary_1',
+    });
+
+    expect(result.status).toBe(422);
+    expect(result.body).toEqual({
+      code: ErrorCode.AiDataBoundaryViolation,
+      message: 'Request violates the AI data boundary.',
+      details: { reason: 'declared_clinical' },
+      correlationId: 'cor_boundary_1',
     });
   });
 

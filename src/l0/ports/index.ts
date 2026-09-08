@@ -1,4 +1,5 @@
 export * from './ai-execution-ledger.port';
+export * from './audit-event.port';
 export * from './cache.port';
 export * from './connection-config.port';
 export * from './database.port';

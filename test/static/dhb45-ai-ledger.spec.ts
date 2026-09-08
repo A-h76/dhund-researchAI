@@ -49,6 +49,12 @@ describe('DHB-45 AI execution ledger static checks', () => {
     expect(moduleSource).toMatch(/PrismaAiExecutionLedgerAdapter/);
   });
 
+  it('registers the audit-event adapter in L0Module', () => {
+    const moduleSource = readFileSync(join(L0_ROOT, 'l0.module.ts'), 'utf8');
+    expect(moduleSource).toMatch(/AUDIT_EVENT/);
+    expect(moduleSource).toMatch(/PrismaAuditEventAdapter/);
+  });
+
   it('GatewayService injects the ledger port rather than Prisma', () => {
     const gatewaySource = readFileSync(join(AI_ROOT, 'gateway', 'gateway.service.ts'), 'utf8');
     expect(gatewaySource).toMatch(/AiExecutionLedgerPort/);

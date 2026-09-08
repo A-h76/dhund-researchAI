@@ -10,6 +10,7 @@ import { ResendEmailAdapter } from './adapters/resend/resend-email.adapter';
 import { S3ObjectStorageAdapter } from './adapters/s3-compatible/s3-object-storage.adapter';
 import {
   AI_EXECUTION_LEDGER,
+  AUDIT_EVENT,
   CACHE_SERVICE,
   COUNTER_SERVICE,
   DATABASE_SERVICE,
@@ -22,6 +23,7 @@ import {
   SECRETS_SERVICE,
 } from './ports/tokens';
 import { PrismaAiExecutionLedgerAdapter } from './adapters/prisma/prisma-ai-execution-ledger.adapter';
+import { PrismaAuditEventAdapter } from './adapters/prisma/prisma-audit-event.adapter';
 import { PrismaOutboxAdapter } from './adapters/prisma/prisma-outbox.adapter';
 
 @Module({
@@ -29,6 +31,7 @@ import { PrismaOutboxAdapter } from './adapters/prisma/prisma-outbox.adapter';
     EnvSecretsAdapter,
     PrismaDatabaseAdapter,
     PrismaAiExecutionLedgerAdapter,
+    PrismaAuditEventAdapter,
     PrismaOutboxAdapter,
     RedisCacheAdapter,
     RedisCounterAdapter,
@@ -40,6 +43,7 @@ import { PrismaOutboxAdapter } from './adapters/prisma/prisma-outbox.adapter';
     { provide: SECRETS_SERVICE, useExisting: EnvSecretsAdapter },
     { provide: DATABASE_SERVICE, useExisting: PrismaDatabaseAdapter },
     { provide: AI_EXECUTION_LEDGER, useExisting: PrismaAiExecutionLedgerAdapter },
+    { provide: AUDIT_EVENT, useExisting: PrismaAuditEventAdapter },
     { provide: OUTBOX_SERVICE, useExisting: PrismaOutboxAdapter },
     { provide: CACHE_SERVICE, useExisting: RedisCacheAdapter },
     { provide: COUNTER_SERVICE, useExisting: RedisCounterAdapter },
@@ -53,6 +57,7 @@ import { PrismaOutboxAdapter } from './adapters/prisma/prisma-outbox.adapter';
     SECRETS_SERVICE,
     DATABASE_SERVICE,
     AI_EXECUTION_LEDGER,
+    AUDIT_EVENT,
     OUTBOX_SERVICE,
     CACHE_SERVICE,
     COUNTER_SERVICE,

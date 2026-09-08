@@ -27,7 +27,9 @@ describe('pino redaction', () => {
         password: 'hunter2',
         prompt: 'secret prompt text',
         documentText: 'classified document body',
+        documentContent: 'classified documentContent body',
         evidenceText: 'classified evidence body',
+        userPayload: 'classified user payload',
         nested: {
           apiKey: 'sk-abcdefghijklmnopqrstuvwxyz',
           provider: 'voyage',
@@ -43,7 +45,9 @@ describe('pino redaction', () => {
     expect(output).not.toContain('hunter2');
     expect(output).not.toContain('secret prompt text');
     expect(output).not.toContain('classified document body');
+    expect(output).not.toContain('classified documentContent body');
     expect(output).not.toContain('classified evidence body');
+    expect(output).not.toContain('classified user payload');
     expect(output).not.toContain('sk-abcdefghijklmnopqrstuvwxyz');
     expect(output).not.toContain('voyage');
     expect(output).not.toContain('voyage-4');
