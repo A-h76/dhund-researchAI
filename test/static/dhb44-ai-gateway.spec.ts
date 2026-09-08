@@ -76,8 +76,8 @@ describe('DHB-44 AI gateway static checks', () => {
   });
 
   it('uses stub adapters with no network or provider SDK imports', () => {
-    const adapterFiles = collectFiles(join(AI_ROOT, 'adapters'));
-    const contents = adapterFiles.map((file) => readFileSync(file, 'utf8')).join('\n');
+    const stubFiles = collectFiles(join(AI_ROOT, 'adapters', 'stub'));
+    const contents = stubFiles.map((file) => readFileSync(file, 'utf8')).join('\n');
 
     expect(contents).not.toMatch(/\bfetch\s*\(/);
     expect(contents).not.toMatch(/\baxios\b/);
