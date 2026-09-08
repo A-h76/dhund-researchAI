@@ -17,17 +17,27 @@ describe('DLQ sanitization (DHB-40)', () => {
     const poisoned = sanitizeForDlq({
       ...entry,
       documentText: 'full document body',
+      documentContent: 'gateway document content',
       evidenceText: 'quoted evidence',
+      evidenceSummaries: ['summary one'],
       prompt: 'system prompt',
       promptText: 'user prompt',
+      userPayload: 'assembled user payload',
+      userMessage: 'chat message',
+      systemPrompt: 'system prompt body',
       password: 'secret',
       token: 'tok',
     }) as Record<string, unknown>;
 
     expect(poisoned.documentText).toBeUndefined();
+    expect(poisoned.documentContent).toBeUndefined();
     expect(poisoned.evidenceText).toBeUndefined();
+    expect(poisoned.evidenceSummaries).toBeUndefined();
     expect(poisoned.prompt).toBeUndefined();
     expect(poisoned.promptText).toBeUndefined();
+    expect(poisoned.userPayload).toBeUndefined();
+    expect(poisoned.userMessage).toBeUndefined();
+    expect(poisoned.systemPrompt).toBeUndefined();
     expect(poisoned.password).toBeUndefined();
     expect(poisoned.token).toBeUndefined();
     expect(poisoned.orgId).toBe('org-1');

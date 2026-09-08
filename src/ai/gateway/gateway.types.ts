@@ -13,6 +13,8 @@ export interface GatewayContext {
   readonly researchRunId?: string;
   readonly correlationId: string;
   readonly runtimeRole: RuntimeRole;
+  /** Caller-declared clinical/patient work. Not inferred from document text. */
+  readonly declaredClinical?: boolean;
   readonly secretsContext?: GatewaySecretsContext;
 }
 
