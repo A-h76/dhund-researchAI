@@ -3,7 +3,7 @@ import { join, relative } from 'node:path';
 
 const SRC_ROOT = join(__dirname, '..', '..', 'src');
 
-const VENDOR_PACKAGE_PREFIXES = [
+const L0_VENDOR_PACKAGE_PREFIXES = [
   '@prisma/client',
   'prisma',
   'ioredis',
@@ -11,6 +11,8 @@ const VENDOR_PACKAGE_PREFIXES = [
   '@aws-sdk/',
   'resend',
 ] as const;
+
+const AI_ADAPTER_VENDOR_PACKAGES = ['openai', 'voyageai'] as const;
 
 function collectSourceFiles(dir: string): Array<{ path: string; content: string }> {
   const entries = readdirSync(dir);
@@ -38,14 +40,25 @@ function collectSourceFiles(dir: string): Array<{ path: string; content: string 
   return files;
 }
 
+function isL0AdapterFile(filePath: string): boolean {
+  return /\/l0\/adapters\//.test(filePath.replace(/\\/g, '/'));
+}
+
+function isAiAdapterFile(filePath: string): boolean {
+  const normalized = filePath.replace(/\\/g, '/');
+  return /\/ai\/adapters\//.test(normalized) && !/\/ai\/adapters\/stub\//.test(normalized);
+}
+
 function isVendorPackage(importPath: string): boolean {
-  return VENDOR_PACKAGE_PREFIXES.some(
+  return L0_VENDOR_PACKAGE_PREFIXES.some(
     (prefix) => importPath === prefix || importPath.startsWith(prefix),
   );
 }
 
-function isAdapterFile(filePath: string): boolean {
-  return /\/l0\/adapters\//.test(filePath.replace(/\\/g, '/'));
+function isAiAdapterVendorPackage(importPath: string): boolean {
+  return AI_ADAPTER_VENDOR_PACKAGES.some(
+    (prefix) => importPath === prefix || importPath.startsWith(`${prefix}/`),
+  );
 }
 
 function extractImports(content: string): string[] {
@@ -71,12 +84,15 @@ export function findVendorNeutralityViolations(
   const violations: VendorNeutralityViolation[] = [];
 
   for (const file of files) {
-    if (isAdapterFile(file.path)) {
-      continue;
-    }
-
     for (const importPath of extractImports(file.content)) {
-      if (isVendorPackage(importPath)) {
+      if (isL0AdapterFile(file.path) && isVendorPackage(importPath)) {
+        continue;
+      }
+      if (isAiAdapterFile(file.path) && isAiAdapterVendorPackage(importPath)) {
+        continue;
+      }
+
+      if (isVendorPackage(importPath) || isAiAdapterVendorPackage(importPath)) {
         violations.push({ file: file.path, importPath });
       }
     }
@@ -86,7 +102,7 @@ export function findVendorNeutralityViolations(
 }
 
 describe('vendor neutrality (static)', () => {
-  it('has no vendor SDK imports outside l0/adapters', () => {
+  it('has no vendor SDK imports outside approved adapter layers', () => {
     const violations = findVendorNeutralityViolations(collectSourceFiles(SRC_ROOT));
     expect(violations).toEqual([]);
   });
