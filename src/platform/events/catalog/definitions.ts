@@ -100,6 +100,18 @@ export const PROJECTS_EVENTS: readonly CatalogEventDefinition[] = [
     currentVersion: 1,
     versions: [{ schemaVersion: 1, fields: [orgId, projectId, userId] }],
   },
+  {
+    eventType: 'projects.break_glass.used',
+    aggregateType: 'project',
+    domain: 'projects',
+    currentVersion: 1,
+    versions: [
+      {
+        schemaVersion: 1,
+        fields: [orgId, userId, projectId],
+      },
+    ],
+  },
 ];
 
 export const BILLING_EVENTS: readonly CatalogEventDefinition[] = [

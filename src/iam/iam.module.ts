@@ -38,5 +38,6 @@ import { MfaChallengeService } from './tokens/mfa-challenge.service';
     MfaMetrics,
     MfaService,
   ],
+  exports: [AccessTokenService],
 })
 export class IamModule {}

@@ -26,12 +26,16 @@ import {
   SESSION_STORE,
   AUTH_TOKEN_STORE,
   MFA_STORE,
+  TENANCY_STORE,
+  ACCESS_CONTEXT_INVALIDATOR,
   SECRETS_SERVICE,
 } from './ports/tokens';
 import { PrismaAiExecutionLedgerAdapter } from './adapters/prisma/prisma-ai-execution-ledger.adapter';
 import { PrismaAuditEventAdapter } from './adapters/prisma/prisma-audit-event.adapter';
 import { PrismaAuthTokenAdapter } from './adapters/prisma/prisma-auth-token.adapter';
 import { PrismaMfaAdapter } from './adapters/prisma/prisma-mfa.adapter';
+import { PrismaTenancyAdapter } from './adapters/prisma/prisma-tenancy.adapter';
+import { NoopAccessContextInvalidator } from './adapters/noop/noop-access-context-invalidator';
 import { PrismaOutboxAdapter } from './adapters/prisma/prisma-outbox.adapter';
 import { PrismaRegistrationAdapter } from './adapters/prisma/prisma-registration.adapter';
 import { PrismaSessionAdapter } from './adapters/prisma/prisma-session.adapter';
@@ -47,6 +51,8 @@ import { PrismaSessionAdapter } from './adapters/prisma/prisma-session.adapter';
     PrismaSessionAdapter,
     PrismaAuthTokenAdapter,
     PrismaMfaAdapter,
+    PrismaTenancyAdapter,
+    NoopAccessContextInvalidator,
     HibpBreachListAdapter,
     RedisCacheAdapter,
     RedisCounterAdapter,
@@ -64,6 +70,11 @@ import { PrismaSessionAdapter } from './adapters/prisma/prisma-session.adapter';
     { provide: SESSION_STORE, useExisting: PrismaSessionAdapter },
     { provide: AUTH_TOKEN_STORE, useExisting: PrismaAuthTokenAdapter },
     { provide: MFA_STORE, useExisting: PrismaMfaAdapter },
+    { provide: TENANCY_STORE, useExisting: PrismaTenancyAdapter },
+    {
+      provide: ACCESS_CONTEXT_INVALIDATOR,
+      useExisting: NoopAccessContextInvalidator,
+    },
     { provide: BREACH_LIST, useExisting: HibpBreachListAdapter },
     { provide: CACHE_SERVICE, useExisting: RedisCacheAdapter },
     { provide: COUNTER_SERVICE, useExisting: RedisCounterAdapter },
@@ -83,6 +94,8 @@ import { PrismaSessionAdapter } from './adapters/prisma/prisma-session.adapter';
     SESSION_STORE,
     AUTH_TOKEN_STORE,
     MFA_STORE,
+    TENANCY_STORE,
+    ACCESS_CONTEXT_INVALIDATOR,
     BREACH_LIST,
     CACHE_SERVICE,
     COUNTER_SERVICE,

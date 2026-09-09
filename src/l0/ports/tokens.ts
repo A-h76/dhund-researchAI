@@ -15,3 +15,5 @@ export const REGISTRATION_STORE = Symbol('REGISTRATION_STORE');
 export const SESSION_STORE = Symbol('SESSION_STORE');
 export const AUTH_TOKEN_STORE = Symbol('AUTH_TOKEN_STORE');
 export const MFA_STORE = Symbol('MFA_STORE');
+export const TENANCY_STORE = Symbol('TENANCY_STORE');
+export const ACCESS_CONTEXT_INVALIDATOR = Symbol('ACCESS_CONTEXT_INVALIDATOR');
