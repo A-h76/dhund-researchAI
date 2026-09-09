@@ -34,6 +34,11 @@ describe('app config schema', () => {
     expect(config.port).toBe(3000);
     expect(config.logLevel).toBe('info');
     expect(config.featureFlags.research_runs).toBe(false);
+    expect(config.argon2).toEqual({
+      memoryCost: 65536,
+      timeCost: 3,
+      parallelism: 4,
+    });
     expect(config.loadedKeyNames).not.toContain('EMBEDDING_DIMENSION');
   });
 

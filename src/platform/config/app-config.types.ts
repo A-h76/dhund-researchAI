@@ -3,12 +3,19 @@ export interface EmailConfig {
   readonly from: string;
 }
 
+export interface Argon2Config {
+  readonly memoryCost: number;
+  readonly timeCost: number;
+  readonly parallelism: number;
+}
+
 export interface AppConfig {
   readonly port: number;
   readonly logLevel: string;
   readonly databaseUrl: string;
   readonly databasePoolSize: number;
   readonly redisUrl: string;
+  readonly argon2: Argon2Config;
   readonly s3?: {
     readonly endpoint: string;
     readonly region: string;
