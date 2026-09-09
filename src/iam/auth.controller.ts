@@ -8,6 +8,7 @@ import {
   Post,
 } from '@nestjs/common';
 import { AuthService, type TokenPairResponse } from './auth/auth.service';
+import { AuthTokensService, type AuthAcceptedResponse } from './auth/auth-tokens.service';
 import {
   RegistrationService,
   type RegisterResponse,
@@ -19,6 +20,7 @@ export class AuthController {
   constructor(
     private readonly registration: RegistrationService,
     private readonly auth: AuthService,
+    private readonly tokens: AuthTokensService,
   ) {}
 
   @Post('register')
@@ -50,5 +52,29 @@ export class AuthController {
   @Get('jwks')
   jwks(): Promise<JwksResponse> {
     return this.auth.jwks();
+  }
+
+  @Post('verify-email')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  verifyEmail(@Body() body: unknown): Promise<void> {
+    return this.tokens.verifyEmail(body);
+  }
+
+  @Post('verify-email/resend')
+  @HttpCode(HttpStatus.OK)
+  resendVerification(@Body() body: unknown): Promise<AuthAcceptedResponse> {
+    return this.tokens.resendVerification(body);
+  }
+
+  @Post('password/reset-request')
+  @HttpCode(HttpStatus.OK)
+  requestPasswordReset(@Body() body: unknown): Promise<AuthAcceptedResponse> {
+    return this.tokens.requestPasswordReset(body);
+  }
+
+  @Post('password/reset')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  resetPassword(@Body() body: unknown): Promise<void> {
+    return this.tokens.resetPassword(body);
   }
 }

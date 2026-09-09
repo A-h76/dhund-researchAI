@@ -26,6 +26,56 @@ export function parseLoginRequest(body: unknown): ParsedLoginRequest {
   return { email, password: record.password };
 }
 
+export function parseEmailRequest(body: unknown): { email: string } {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    throw malformed();
+  }
+
+  const record = body as Record<string, unknown>;
+  if (typeof record.email !== 'string') {
+    throw malformed();
+  }
+
+  const email = record.email.trim();
+  if (email.length === 0 || !EMAIL_PATTERN.test(email)) {
+    throw malformed();
+  }
+
+  return { email };
+}
+
+export function parseTokenRequest(body: unknown): { token: string } {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    throw malformed();
+  }
+
+  const record = body as Record<string, unknown>;
+  if (typeof record.token !== 'string' || record.token.length === 0) {
+    throw malformed();
+  }
+
+  return { token: record.token };
+}
+
+export function parsePasswordResetRequest(body: unknown): {
+  token: string;
+  password: string;
+} {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    throw malformed();
+  }
+
+  const record = body as Record<string, unknown>;
+  if (typeof record.token !== 'string' || record.token.length === 0) {
+    throw malformed();
+  }
+  if (typeof record.password !== 'string') {
+    throw malformed();
+  }
+
+  return { token: record.token, password: record.password };
+}
+
 export function parseRefreshRequest(body: unknown): { refreshToken: string } {
   if (typeof body !== 'object' || body === null || Array.isArray(body)) {
     throw malformed();

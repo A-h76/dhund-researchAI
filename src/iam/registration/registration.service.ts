@@ -10,6 +10,7 @@ import { generateId } from '../../platform/ids/uuid-v7';
 import { DomainError, ErrorCode } from '../../platform/errors';
 import { OutboxWriterService } from '../../platform/events';
 import { requireCorrelationId } from '../../platform/logging';
+import { AuthTokensService } from '../auth/auth-tokens.service';
 import { PasswordPolicy } from '../password/password-policy';
 import { PASSWORD_HASHER, type PasswordHasher } from '../password/password-hasher';
 import { parseRegisterRequest, type ParsedRegisterRequest } from './parse-register-request';
@@ -28,6 +29,7 @@ export class RegistrationService {
     @Inject(OUTBOX_SERVICE) private readonly outbox: OutboxPort,
     private readonly outboxWriter: OutboxWriterService,
     private readonly metrics: RegistrationMetrics,
+    private readonly authTokens: AuthTokensService,
   ) {}
 
   async register(body: unknown): Promise<RegisterResponse> {
@@ -103,6 +105,7 @@ export class RegistrationService {
     }
 
     this.metrics.recordSuccess();
+    await this.authTokens.afterRegister(userId, parsed.email);
     return REGISTER_SUCCESS_BODY;
   }
 

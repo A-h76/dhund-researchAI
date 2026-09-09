@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { AuthController } from '../../src/iam/auth.controller';
 import { AuthService } from '../../src/iam/auth/auth.service';
+import { AuthTokensService } from '../../src/iam/auth/auth-tokens.service';
 import { PASSWORD_BREACH_LIST } from '../../src/iam/password/breach-list.port';
 import { PASSWORD_HASHER } from '../../src/iam/password/password-hasher';
 import { PasswordPolicy } from '../../src/iam/password/password-policy';
@@ -69,6 +70,16 @@ async function startApp(conflictEmails: Set<string> = new Set()): Promise<{
       PasswordPolicy,
       RegistrationMetrics,
       { provide: AuthService, useValue: { login: async () => undefined } },
+      {
+        provide: AuthTokensService,
+        useValue: {
+          afterRegister: async () => undefined,
+          verifyEmail: async () => undefined,
+          resendVerification: async () => ({ status: 'accepted' }),
+          requestPasswordReset: async () => ({ status: 'accepted' }),
+          resetPassword: async () => undefined,
+        },
+      },
       { provide: PASSWORD_HASHER, useValue: hasher },
       { provide: PASSWORD_BREACH_LIST, useValue: { check: async () => 'clear' } },
       { provide: REGISTRATION_STORE, useValue: store },

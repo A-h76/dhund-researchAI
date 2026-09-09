@@ -143,7 +143,12 @@ export class AuthService {
     const revokedAt = new Date();
 
     await this.outbox.withTransaction(async (tx) => {
-      const result = await this.sessions.logoutAll(tx, verified.sub, revokedAt);
+      const result = await this.sessions.logoutAll(
+        tx,
+        verified.sub,
+        revokedAt,
+        'logout_all',
+      );
       if (result.orgId === null) {
         return;
       }

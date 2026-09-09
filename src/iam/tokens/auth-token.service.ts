@@ -8,78 +8,56 @@ import {
   type JWK,
   type KeyLike,
 } from 'jose';
-import {
-  SESSION_STORE,
-  type SessionStore,
-} from '../../l0/ports';
+import type { AuthTokenPurpose } from '../../l0/ports';
 import { APP_CONFIG, type FrozenAppConfig } from '../../platform/config';
 import { DomainError, ErrorCode } from '../../platform/errors';
-import { generateId } from '../../platform/ids/uuid-v7';
 import {
-  ACCESS_TOKEN_ALGORITHMS,
-  ACCESS_TOKEN_TTL_SECONDS,
-} from './access-token.constants';
+  AUTH_TOKEN_ALGORITHMS,
+  AUTH_TOKEN_TYP,
+} from './auth-token.constants';
 
-export interface AccessTokenClaims {
+export interface AuthTokenSignInput {
   readonly sub: string;
-  readonly sid: string;
-  readonly sv: number;
+  readonly purpose: AuthTokenPurpose;
+  readonly jti: string;
+  readonly ttlSeconds: number;
 }
 
-export interface VerifiedAccessToken extends AccessTokenClaims {
+export interface VerifiedAuthToken {
+  readonly sub: string;
+  readonly purpose: AuthTokenPurpose;
   readonly jti: string;
 }
 
-export interface JwksResponse {
-  readonly keys: readonly JwksPublicKey[];
-}
-
-export interface JwksPublicKey {
-  readonly kty: 'OKP';
-  readonly crv: 'Ed25519';
-  readonly x: string;
-  readonly kid: string;
-  readonly alg: 'EdDSA';
-}
-
 @Injectable()
-export class AccessTokenService {
+export class AuthTokenService {
   private privateKey: KeyLike | undefined;
   private publicKey: KeyLike | Uint8Array | undefined;
-  private publicJwk: JwksPublicKey | undefined;
   private keysPromise: Promise<void> | undefined;
 
-  constructor(
-    @Inject(APP_CONFIG) private readonly config: FrozenAppConfig,
-    @Inject(SESSION_STORE) private readonly sessions: SessionStore,
-  ) {
+  constructor(@Inject(APP_CONFIG) private readonly config: FrozenAppConfig) {
     if (this.config.jwt === undefined) {
       throw new Error('Missing JWT configuration');
     }
   }
 
-  async sign(claims: AccessTokenClaims): Promise<string> {
+  async sign(input: AuthTokenSignInput): Promise<string> {
     const { privateKey, kid } = await this.keys();
-    return new SignJWT({ sid: claims.sid, sv: claims.sv })
-      .setProtectedHeader({ alg: 'EdDSA', kid, typ: 'JWT' })
-      .setSubject(claims.sub)
+    return new SignJWT({ purpose: input.purpose })
+      .setProtectedHeader({ alg: 'EdDSA', kid, typ: AUTH_TOKEN_TYP })
+      .setSubject(input.sub)
       .setIssuedAt()
-      .setExpirationTime(`${ACCESS_TOKEN_TTL_SECONDS}s`)
-      .setJti(generateId())
+      .setExpirationTime(`${input.ttlSeconds}s`)
+      .setJti(input.jti)
       .sign(privateKey);
   }
 
-  async jwks(): Promise<JwksResponse> {
-    const { publicJwk } = await this.keys();
-    return { keys: [publicJwk] };
-  }
-
-  async verify(token: string): Promise<VerifiedAccessToken> {
+  async verify(token: string, expectedPurpose: AuthTokenPurpose): Promise<VerifiedAuthToken> {
     const { publicKey, kid } = await this.keys();
     let payload: Record<string, unknown>;
     try {
       const verified = await jwtVerify(token, publicKey, {
-        algorithms: [...ACCESS_TOKEN_ALGORITHMS],
+        algorithms: [...AUTH_TOKEN_ALGORITHMS],
       });
       if (verified.protectedHeader.alg !== 'EdDSA') {
         throw invalidToken();
@@ -87,7 +65,7 @@ export class AccessTokenService {
       if (verified.protectedHeader.kid !== kid) {
         throw invalidToken();
       }
-      if (verified.protectedHeader.typ !== 'JWT') {
+      if (verified.protectedHeader.typ !== AUTH_TOKEN_TYP) {
         throw invalidToken();
       }
       payload = verified.payload as Record<string, unknown>;
@@ -99,37 +77,23 @@ export class AccessTokenService {
     }
 
     const sub = payload.sub;
-    const sid = payload.sid;
-    const sv = payload.sv;
     const jti = payload.jti;
+    const purpose = payload.purpose;
     if (
       typeof sub !== 'string' ||
-      typeof sid !== 'string' ||
       typeof jti !== 'string' ||
-      typeof sv !== 'number' ||
-      !Number.isInteger(sv)
+      (purpose !== 'email_verification' && purpose !== 'password_reset') ||
+      purpose !== expectedPurpose
     ) {
       throw invalidToken();
     }
 
-    const session = await this.sessions.getAccessSession(sid);
-    if (session === null || session.userId !== sub) {
-      throw new DomainError(ErrorCode.SessionRevoked, { module: 'iam' });
-    }
-    if (session.revokedAt !== null) {
-      throw new DomainError(ErrorCode.SessionRevoked, { module: 'iam' });
-    }
-    if (sv !== session.userSessionVersion) {
-      throw invalidToken();
-    }
-
-    return { sub, sid, sv, jti };
+    return { sub, purpose, jti };
   }
 
   private async keys(): Promise<{
     privateKey: KeyLike;
     publicKey: KeyLike | Uint8Array;
-    publicJwk: JwksPublicKey;
     kid: string;
   }> {
     if (this.keysPromise === undefined) {
@@ -139,7 +103,6 @@ export class AccessTokenService {
     return {
       privateKey: this.privateKey!,
       publicKey: this.publicKey!,
-      publicJwk: this.publicJwk!,
       kid: this.config.jwt!.kid,
     };
   }
@@ -157,13 +120,6 @@ export class AccessTokenService {
       throw new Error('Ed25519 public key is missing');
     }
 
-    const publicJwk: JwksPublicKey = {
-      kty: 'OKP',
-      crv: 'Ed25519',
-      x,
-      kid: jwt.kid,
-      alg: 'EdDSA',
-    };
     const publicOnly: JWK = {
       kty: 'OKP',
       crv: 'Ed25519',
@@ -173,7 +129,6 @@ export class AccessTokenService {
 
     this.privateKey = privateKey;
     this.publicKey = await importJWK(publicOnly, 'EdDSA');
-    this.publicJwk = publicJwk;
   }
 }
 

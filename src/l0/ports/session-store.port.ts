@@ -5,6 +5,7 @@ export interface LoginIdentity {
   readonly sessionVersion: number;
   readonly passwordHash: string | null;
   readonly orgId: string | null;
+  readonly emailVerifiedAt: Date | null;
 }
 
 export interface AccessSession {
@@ -48,5 +49,10 @@ export interface SessionStore {
     tx: OutboxTransaction,
     input: { familyId: string; sessionId: string; reason: string },
   ): Promise<void>;
-  logoutAll(tx: OutboxTransaction, userId: string, revokedAt: Date): Promise<LogoutAllResult>;
+  logoutAll(
+    tx: OutboxTransaction,
+    userId: string,
+    revokedAt: Date,
+    reason: string,
+  ): Promise<LogoutAllResult>;
 }

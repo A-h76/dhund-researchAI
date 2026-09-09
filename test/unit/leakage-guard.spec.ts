@@ -19,6 +19,7 @@ describe('leakage guard (Phase 8 §6)', () => {
 
   it('detects password keys as sensitive', () => {
     expect(containsSensitiveKey({ password: 'N0tInBody!!' })).toBe(true);
+    expect(containsSensitiveKey({ tokenHash: 'abc123' })).toBe(true);
     expect(containsSensitiveKey({ fields: [{ field: 'password', rule: 'breached' }] })).toBe(
       false,
     );

@@ -45,6 +45,7 @@ export class PrismaSessionAdapter implements SessionStore {
         sessionVersion: user.sessionVersion,
         passwordHash: user.credential?.passwordHash ?? null,
         orgId: resolveOrgId(user.ownedOrganizations, user.orgMemberships),
+        emailVerifiedAt: user.emailVerifiedAt,
       };
     } catch (error) {
       throw new L0OperationError('Login lookup failed', error);
@@ -184,6 +185,7 @@ export class PrismaSessionAdapter implements SessionStore {
     tx: OutboxTransaction,
     userId: string,
     revokedAt: Date,
+    reason: string,
   ): Promise<LogoutAllResult> {
     const prismaTx = unwrapOutboxTx(tx);
     try {
@@ -197,7 +199,7 @@ export class PrismaSessionAdapter implements SessionStore {
       });
       await prismaTx.refreshTokenFamily.updateMany({
         where: { userId, revokedAt: null },
-        data: { revokedAt, revokedReason: 'logout_all' },
+        data: { revokedAt, revokedReason: reason },
       });
       await prismaTx.user.update({
         where: { id: userId },

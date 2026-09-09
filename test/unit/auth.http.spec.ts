@@ -5,6 +5,7 @@ import { decodeProtectedHeader, importJWK, jwtVerify } from 'jose';
 import { AuthController } from '../../src/iam/auth.controller';
 import { AuthMetrics } from '../../src/iam/auth/auth.metrics';
 import { AuthService } from '../../src/iam/auth/auth.service';
+import { AuthTokensService } from '../../src/iam/auth/auth-tokens.service';
 import { DUMMY_ARGON2_HASH } from '../../src/iam/password/dummy-hash';
 import { PASSWORD_HASHER } from '../../src/iam/password/password-hasher';
 import { RegistrationService } from '../../src/iam/registration/registration.service';
@@ -59,6 +60,7 @@ async function startApp(): Promise<{
     sessionVersion: 1,
     passwordHash: STORED_HASH,
     orgId,
+    emailVerifiedAt: null,
   });
 
   const hasher = {
@@ -79,6 +81,16 @@ async function startApp(): Promise<{
       AccessTokenService,
       OutboxWriterService,
       { provide: RegistrationService, useValue: { register: async () => undefined } },
+      {
+        provide: AuthTokensService,
+        useValue: {
+          afterRegister: async () => undefined,
+          verifyEmail: async () => undefined,
+          resendVerification: async () => ({ status: 'accepted' }),
+          requestPasswordReset: async () => ({ status: 'accepted' }),
+          resetPassword: async () => undefined,
+        },
+      },
       { provide: APP_CONFIG, useValue: config },
       { provide: PASSWORD_HASHER, useValue: hasher },
       { provide: SESSION_STORE, useValue: store },

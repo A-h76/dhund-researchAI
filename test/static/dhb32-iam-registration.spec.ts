@@ -51,20 +51,19 @@ describe('DHB-32 IAM registration static checks', () => {
     expect(violations).toEqual([]);
   });
 
-  it('does not send email or import Resend from IAM', () => {
+  it('does not send email via the Resend SDK from IAM', () => {
     for (const file of collectFiles(IAM_ROOT)) {
       const content = readFileSync(file, 'utf8');
       expect(content).not.toContain("from 'resend'");
-      expect(content).not.toContain('EMAIL_SERVICE');
+      expect(content).not.toContain("from \"resend\"");
     }
   });
 
-  it('does not implement verify-email or MFA in this slice', () => {
+  it('does not implement MFA in this slice', () => {
     const controller = readFileSync(
       join(ROOT, 'src/iam/auth.controller.ts'),
       'utf8',
     );
-    expect(controller).not.toContain('verify-email');
     expect(controller).not.toContain('totp');
     expect(controller).not.toContain('mfa');
   });

@@ -23,6 +23,7 @@ const SENSITIVE_KEYS = new Set([
   'refreshtoken',
   'apikey',
   'authorization',
+  'tokenhash',
   'stack',
   'prompt',
   'prompttext',

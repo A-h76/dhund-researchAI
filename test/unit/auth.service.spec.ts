@@ -50,6 +50,7 @@ describe('AuthService', () => {
       sessionVersion: 1,
       passwordHash: STORED_HASH,
       orgId,
+      emailVerifiedAt: null,
     });
     hasher = {
       hash: jest.fn(),

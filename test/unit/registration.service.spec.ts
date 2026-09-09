@@ -42,6 +42,7 @@ function buildService(options?: {
   metrics: RegistrationMetrics;
   lines: unknown[];
   order: string[];
+  authTokens: { afterRegister: jest.Mock };
 } {
   const { logger, lines } = capturingLogger();
   const order: string[] = [];
@@ -76,6 +77,9 @@ function buildService(options?: {
     logger,
     metrics,
   );
+  const authTokens = {
+    afterRegister: jest.fn(async () => undefined),
+  };
   const service = new RegistrationService(
     policy,
     hasher,
@@ -83,14 +87,15 @@ function buildService(options?: {
     outbox,
     new OutboxWriterService(outbox),
     metrics,
+    authTokens as never,
   );
 
-  return { service, hasher, store, metrics, lines, order };
+  return { service, hasher, store, metrics, lines, order, authTokens };
 }
 
 describe('RegistrationService', () => {
   it('creates a new registration after hashing and returns the pending body', async () => {
-    const { service, hasher, store, metrics, order } = buildService();
+    const { service, hasher, store, metrics, order, authTokens } = buildService();
 
     const result = await runWithCorrelationIdAsync('cor-reg-1', () =>
       service.register({
@@ -104,6 +109,11 @@ describe('RegistrationService', () => {
     expect(hasher.hash).toHaveBeenCalledTimes(1);
     expect(store.insert).toHaveBeenCalledTimes(1);
     expect(order).toEqual(['hash', 'insert']);
+    expect(authTokens.afterRegister).toHaveBeenCalledTimes(1);
+    expect(authTokens.afterRegister).toHaveBeenCalledWith(
+      expect.any(String),
+      'new@example.com',
+    );
     expect(metrics.snapshot().success).toBe(1);
     expect(metrics.hasOracleKeys()).toBe(false);
     expect(Object.keys(metrics.snapshot())).not.toEqual(
@@ -112,7 +122,7 @@ describe('RegistrationService', () => {
   });
 
   it('hashes before the conflict path for an existing email and still returns the same body', async () => {
-    const { service, hasher, store, metrics, order, lines } = buildService({
+    const { service, hasher, store, metrics, order, lines, authTokens } = buildService({
       conflict: true,
     });
 
@@ -127,6 +137,7 @@ describe('RegistrationService', () => {
     expect(hasher.hash).toHaveBeenCalledTimes(1);
     expect(store.insert).toHaveBeenCalledTimes(1);
     expect(order).toEqual(['hash', 'insert']);
+    expect(authTokens.afterRegister).not.toHaveBeenCalled();
     expect(metrics.snapshot().success).toBe(1);
     expect(JSON.stringify(lines)).not.toContain(PASSWORD);
   });

@@ -88,6 +88,7 @@ export class MemorySessionStore implements SessionStore {
     _tx: OutboxTransaction,
     userId: string,
     revokedAt: Date,
+    _reason: string,
   ): Promise<LogoutAllResult> {
     const user = this.usersById.get(userId);
     const nextVersion = (user?.sessionVersion ?? 0) + 1;

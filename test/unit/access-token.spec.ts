@@ -1,6 +1,7 @@
 import { createHmac } from 'node:crypto';
 import { generateKeyPair, importPKCS8, SignJWT } from 'jose';
 import { AccessTokenService } from '../../src/iam/tokens/access-token.service';
+import { AuthTokenService } from '../../src/iam/tokens/auth-token.service';
 import { DomainError } from '../../src/platform/errors/domain-error';
 import { ErrorCode } from '../../src/platform/errors/error-codes';
 import { generateId } from '../../src/platform/ids/uuid-v7';
@@ -29,6 +30,7 @@ describe('AccessTokenService (GAP-JWT-01)', () => {
       sessionVersion: 1,
       passwordHash: PASSWORD_HASH,
       orgId,
+      emailVerifiedAt: null,
     });
     store.sessions.set(sessionId, {
       sessionId,
@@ -196,5 +198,18 @@ describe('AccessTokenService (GAP-JWT-01)', () => {
       sv: 1,
     });
     expect(store.getAccessSession).toBeDefined();
+  });
+
+  it('rejects an auth-token JWS at the access-token verifier', async () => {
+    const authTokens = new AuthTokenService(installTestAppConfig({ jwt }));
+    const authToken = await authTokens.sign({
+      sub: userId,
+      purpose: 'email_verification',
+      jti: generateId(),
+      ttlSeconds: 3600,
+    });
+    await expect(tokens.verify(authToken)).rejects.toMatchObject({
+      code: ErrorCode.TokenInvalid,
+    });
   });
 });
