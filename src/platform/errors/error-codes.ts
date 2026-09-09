@@ -258,6 +258,7 @@ export const ERROR_REGISTRY: Record<ErrorCode, ErrorCodeDefinition> = {
 export const ERROR_CODES: readonly ErrorCode[] = Object.values(ErrorCode);
 
 export const PASSWORD_POLICY_MIN_LENGTH = 12;
+export const PASSWORD_POLICY_MAX_LENGTH = 128;
 
 export function isErrorCode(value: unknown): value is ErrorCode {
   return typeof value === 'string' && value in ERROR_REGISTRY;

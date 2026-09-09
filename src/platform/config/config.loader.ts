@@ -4,6 +4,11 @@ import { RuntimeRole as Role } from '../runtime/role';
 import type { AppConfig } from './app-config.types';
 import { ConfigValidationError } from './config-validation.error';
 import {
+  ARGON2_MEMORY_COST,
+  ARGON2_PARALLELISM,
+  ARGON2_TIME_COST,
+} from './credential-config';
+import {
   parseLogLevel,
   parsePort,
   parseRequiredSecret,
@@ -90,6 +95,11 @@ export function loadAndValidateConfig(
     databaseUrl,
     databasePoolSize,
     redisUrl,
+    argon2: {
+      memoryCost: ARGON2_MEMORY_COST,
+      timeCost: ARGON2_TIME_COST,
+      parallelism: ARGON2_PARALLELISM,
+    },
     featureFlags,
     loadedKeyNames: [...new Set(loadedKeyNames)].sort(),
     ...(s3Provided.length === 5

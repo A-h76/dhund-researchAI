@@ -11,6 +11,11 @@ export function buildTestAppConfig(
     databasePoolSize: 10,
     redisUrl: 'redis://localhost:6379',
     featureFlags: Object.freeze({ research_runs: false }),
+    argon2: Object.freeze({
+      memoryCost: 65536,
+      timeCost: 3,
+      parallelism: 4,
+    }),
     loadedKeyNames: Object.freeze([
       'DATABASE_URL',
       'DATABASE_POOL_SIZE',

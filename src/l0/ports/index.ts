@@ -1,5 +1,6 @@
 export * from './ai-execution-ledger.port';
 export * from './audit-event.port';
+export * from './breach-list.port';
 export * from './cache.port';
 export * from './connection-config.port';
 export * from './database.port';
@@ -7,6 +8,7 @@ export * from './email.port';
 export * from './errors';
 export * from './object-storage.port';
 export * from './outbox.port';
+export * from './registration-store.port';
 export * from './pubsub.port';
 export * from './query-observer.port';
 export * from './counter.port';

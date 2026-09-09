@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BullmqQueueAdapter } from './adapters/bullmq/bullmq-queue.adapter';
 import { EnvSecretsAdapter } from './adapters/env/env-secrets.adapter';
+import { HibpBreachListAdapter } from './adapters/hibp/hibp-breach-list.adapter';
 import { PrismaDatabaseAdapter } from './adapters/prisma/prisma-database.adapter';
 import { RedisCounterAdapter } from './adapters/redis/redis-counter.adapter';
 import { RedisLeaseAdapter } from './adapters/redis/redis-lease.adapter';
@@ -11,6 +12,7 @@ import { S3ObjectStorageAdapter } from './adapters/s3-compatible/s3-object-stora
 import {
   AI_EXECUTION_LEDGER,
   AUDIT_EVENT,
+  BREACH_LIST,
   CACHE_SERVICE,
   COUNTER_SERVICE,
   DATABASE_SERVICE,
@@ -20,11 +22,13 @@ import {
   OUTBOX_SERVICE,
   PUBSUB_SERVICE,
   QUEUE_SERVICE,
+  REGISTRATION_STORE,
   SECRETS_SERVICE,
 } from './ports/tokens';
 import { PrismaAiExecutionLedgerAdapter } from './adapters/prisma/prisma-ai-execution-ledger.adapter';
 import { PrismaAuditEventAdapter } from './adapters/prisma/prisma-audit-event.adapter';
 import { PrismaOutboxAdapter } from './adapters/prisma/prisma-outbox.adapter';
+import { PrismaRegistrationAdapter } from './adapters/prisma/prisma-registration.adapter';
 
 @Module({
   providers: [
@@ -33,6 +37,8 @@ import { PrismaOutboxAdapter } from './adapters/prisma/prisma-outbox.adapter';
     PrismaAiExecutionLedgerAdapter,
     PrismaAuditEventAdapter,
     PrismaOutboxAdapter,
+    PrismaRegistrationAdapter,
+    HibpBreachListAdapter,
     RedisCacheAdapter,
     RedisCounterAdapter,
     RedisLeaseAdapter,
@@ -45,6 +51,8 @@ import { PrismaOutboxAdapter } from './adapters/prisma/prisma-outbox.adapter';
     { provide: AI_EXECUTION_LEDGER, useExisting: PrismaAiExecutionLedgerAdapter },
     { provide: AUDIT_EVENT, useExisting: PrismaAuditEventAdapter },
     { provide: OUTBOX_SERVICE, useExisting: PrismaOutboxAdapter },
+    { provide: REGISTRATION_STORE, useExisting: PrismaRegistrationAdapter },
+    { provide: BREACH_LIST, useExisting: HibpBreachListAdapter },
     { provide: CACHE_SERVICE, useExisting: RedisCacheAdapter },
     { provide: COUNTER_SERVICE, useExisting: RedisCounterAdapter },
     { provide: LEASE_SERVICE, useExisting: RedisLeaseAdapter },
@@ -59,6 +67,8 @@ import { PrismaOutboxAdapter } from './adapters/prisma/prisma-outbox.adapter';
     AI_EXECUTION_LEDGER,
     AUDIT_EVENT,
     OUTBOX_SERVICE,
+    REGISTRATION_STORE,
+    BREACH_LIST,
     CACHE_SERVICE,
     COUNTER_SERVICE,
     LEASE_SERVICE,

@@ -1,5 +1,10 @@
 export { evaluateAuthorizationDecision } from './authorization-decision';
-export type { AppConfig, EmailConfig } from './app-config.types';
+export type { AppConfig, Argon2Config, EmailConfig } from './app-config.types';
+export {
+  ARGON2_MEMORY_COST,
+  ARGON2_PARALLELISM,
+  ARGON2_TIME_COST,
+} from './credential-config';
 export { BootstrapValidationService } from './bootstrap-validation.service';
 export { ConfigValidationError } from './config-validation.error';
 export { loadAndValidateConfig } from './config.loader';

@@ -8,8 +8,7 @@ import type {
   OutboxTransaction,
 } from '../../ports/outbox.port';
 import { PrismaDatabaseAdapter } from './prisma-database.adapter';
-
-type PrismaTx = Prisma.TransactionClient;
+import { unwrapOutboxTx, wrapOutboxTx } from './outbox-transaction';
 
 @Injectable()
 export class PrismaOutboxAdapter implements OutboxPort {
@@ -19,7 +18,7 @@ export class PrismaOutboxAdapter implements OutboxPort {
     await this.ensureConnected();
     try {
       return await this.client().$transaction(async (prismaTx) => {
-        const handle = this.wrap(prismaTx);
+        const handle = wrapOutboxTx(prismaTx);
         return work(handle);
       });
     } catch (error) {
@@ -31,7 +30,7 @@ export class PrismaOutboxAdapter implements OutboxPort {
   }
 
   async append(tx: OutboxTransaction, input: OutboxInsertInput): Promise<void> {
-    const prismaTx = this.unwrap(tx);
+    const prismaTx = unwrapOutboxTx(tx);
     try {
       await prismaTx.outbox.create({
         data: {
@@ -58,7 +57,7 @@ export class PrismaOutboxAdapter implements OutboxPort {
       scope: Record<string, unknown>;
     },
   ): Promise<void> {
-    const prismaTx = this.unwrap(tx);
+    const prismaTx = unwrapOutboxTx(tx);
     try {
       await prismaTx.auditEvent.create({
         data: {
@@ -146,14 +145,6 @@ export class PrismaOutboxAdapter implements OutboxPort {
 
   private async ensureConnected(): Promise<void> {
     await this.database.connect();
-  }
-
-  private wrap(prismaTx: PrismaTx): OutboxTransaction {
-    return prismaTx as unknown as OutboxTransaction;
-  }
-
-  private unwrap(tx: OutboxTransaction): PrismaTx {
-    return tx as unknown as PrismaTx;
   }
 
   private toRow(row: {
