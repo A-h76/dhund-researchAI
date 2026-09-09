@@ -101,4 +101,62 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
     await adapter.disconnect('test-correlation');
     await minio.stop();
   });
+
+  it('enforces key namespace, TTL expiry, maxContentLength, and object reads', async () => {
+    const minio = await new GenericContainer('minio/minio:latest')
+      .withCommand(['server', '/data'])
+      .withEnvironment({
+        MINIO_ROOT_USER: 'minioadmin',
+        MINIO_ROOT_PASSWORD: 'minioadmin',
+      })
+      .withExposedPorts(9000)
+      .withWaitStrategy(Wait.forListeningPorts())
+      .start();
+
+    const endpoint = `http://${minio.getHost()}:${minio.getMappedPort(9000)}`;
+    const connectionConfig: L0ConnectionConfig = {
+      databaseUrl: 'postgres://localhost:5432/dhund',
+      redisUrl: 'redis://localhost:6379',
+      databasePoolSize: 10,
+      s3: {
+        endpoint,
+        region: 'us-east-1',
+        accessKeyId: 'minioadmin',
+        secretAccessKey: 'minioadmin',
+        bucket: 'dhund-test',
+      },
+    };
+
+    const adapter = new S3ObjectStorageAdapter(connectionConfig);
+    await adapter.connect('test-correlation');
+
+    const key = adapter.generateObjectKey(
+      'org-a',
+      'proj-a',
+      'uploads',
+      'sess-1',
+      '../../etc/passwd',
+    );
+    expect(key).toBe('org-a/proj-a/uploads/sess-1/passwd');
+
+    const limited = await adapter.getPresignedPutUrl(key, 300, 4);
+    const oversize = await fetch(limited, { method: 'PUT', body: 'hello' });
+    expect(oversize.ok).toBe(false);
+
+    const exact = await fetch(limited, { method: 'PUT', body: 'abcd' });
+    expect(exact.ok).toBe(true);
+    await expect(adapter.headObject(key)).resolves.toEqual({ contentLength: 4 });
+    await expect(adapter.getObjectBytes(key, 4)).resolves.toEqual(Buffer.from('abcd'));
+
+    const ttlKey = adapter.generateObjectKey('org-a', 'proj-a', 'uploads', 'sess-2', 'ttl.txt');
+    const shortLived = await adapter.getPresignedPutUrl(ttlKey, 1);
+    await new Promise((resolve) => {
+      setTimeout(resolve, 2500);
+    });
+    const expired = await fetch(shortLived, { method: 'PUT', body: 'x' });
+    expect(expired.ok).toBe(false);
+
+    await adapter.disconnect('test-correlation');
+    await minio.stop();
+  });
 });

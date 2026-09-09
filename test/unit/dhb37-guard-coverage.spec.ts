@@ -15,6 +15,7 @@ import { DocumentsController } from '../../src/ingestion/documents.controller';
 import { MembershipsController } from '../../src/projects/memberships.controller';
 import { OrgsController } from '../../src/projects/orgs.controller';
 import { ProjectsController } from '../../src/projects/projects.controller';
+import { UploadsController } from '../../src/ingestion/uploads.controller';
 
 const ROOT = join(__dirname, '..', '..');
 const SRC = join(ROOT, 'src');
@@ -25,6 +26,7 @@ const HTTP_CONTROLLERS = [
   CapabilityProbeController,
   AuthController,
   DocumentsController,
+  UploadsController,
   OrgsController,
   ProjectsController,
   MembershipsController,
@@ -36,6 +38,7 @@ const EXPECTED_CONTROLLER_FILES = [
   'src/apps/api/health.controller.ts',
   'src/iam/auth.controller.ts',
   'src/ingestion/documents.controller.ts',
+  'src/ingestion/uploads.controller.ts',
   'src/projects/memberships.controller.ts',
   'src/projects/orgs.controller.ts',
   'src/projects/projects.controller.ts',
@@ -205,6 +208,19 @@ describe('DHB-37 HTTP guard coverage', () => {
         (route) =>
           route.path === '/v1/projects/:projectId/documents/:documentId' &&
           route.projectRole === 'VIEWER',
+      ),
+    ).toBe(true);
+    expect(
+      routes.some(
+        (route) =>
+          route.path === '/v1/projects/:projectId/uploads' &&
+          route.projectRole === 'EDITOR',
+      ),
+    ).toBe(true);
+    expect(
+      routes.some(
+        (route) =>
+          route.path === '/v1/uploads/:sessionId/complete' && route.requireAuth,
       ),
     ).toBe(true);
   });

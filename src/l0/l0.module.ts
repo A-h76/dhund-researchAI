@@ -32,6 +32,7 @@ import {
   SCOPED_STORE,
   PROJECT_ERASURE_STORE,
   SECRETS_SERVICE,
+  UPLOAD_SESSION_STORE,
 } from './ports/tokens';
 import { PrismaAiExecutionLedgerAdapter } from './adapters/prisma/prisma-ai-execution-ledger.adapter';
 import { PrismaAuditEventAdapter } from './adapters/prisma/prisma-audit-event.adapter';
@@ -43,6 +44,7 @@ import { PrismaTenancyAdapter } from './adapters/prisma/prisma-tenancy.adapter';
 import { PrismaOutboxAdapter } from './adapters/prisma/prisma-outbox.adapter';
 import { PrismaRegistrationAdapter } from './adapters/prisma/prisma-registration.adapter';
 import { PrismaSessionAdapter } from './adapters/prisma/prisma-session.adapter';
+import { PrismaUploadSessionAdapter } from './adapters/prisma/prisma-upload-session.adapter';
 
 @Module({
   providers: [
@@ -58,6 +60,7 @@ import { PrismaSessionAdapter } from './adapters/prisma/prisma-session.adapter';
     PrismaTenancyAdapter,
     PrismaScopedStoreAdapter,
     PrismaProjectErasureAdapter,
+    PrismaUploadSessionAdapter,
     RedisAccessContextInvalidator,
     HibpBreachListAdapter,
     RedisCacheAdapter,
@@ -79,6 +82,7 @@ import { PrismaSessionAdapter } from './adapters/prisma/prisma-session.adapter';
     { provide: TENANCY_STORE, useExisting: PrismaTenancyAdapter },
     { provide: SCOPED_STORE, useExisting: PrismaScopedStoreAdapter },
     { provide: PROJECT_ERASURE_STORE, useExisting: PrismaProjectErasureAdapter },
+    { provide: UPLOAD_SESSION_STORE, useExisting: PrismaUploadSessionAdapter },
     {
       provide: ACCESS_CONTEXT_INVALIDATOR,
       useExisting: RedisAccessContextInvalidator,
@@ -105,6 +109,7 @@ import { PrismaSessionAdapter } from './adapters/prisma/prisma-session.adapter';
     TENANCY_STORE,
     SCOPED_STORE,
     PROJECT_ERASURE_STORE,
+    UPLOAD_SESSION_STORE,
     ACCESS_CONTEXT_INVALIDATOR,
     BREACH_LIST,
     CACHE_SERVICE,
