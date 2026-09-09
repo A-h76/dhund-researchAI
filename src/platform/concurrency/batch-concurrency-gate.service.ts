@@ -6,8 +6,10 @@ import {
   buildGlobalBatchCounterKey,
   buildOrgBatchCounterKey,
   buildOrgUploadCounterKey,
+  buildOcrPoolCounterKey,
   effectiveGlobalBatchLimit,
   EMBED_BACKFILL_GLOBAL_CAP,
+  OCR_POOL_CEILING,
   GATE_COUNTER_TTL_SECONDS,
   PER_ORG_BATCH_CONCURRENCY_DEFAULT,
   UPLOAD_CONCURRENCY_DEFAULT,
@@ -54,6 +56,7 @@ export class BatchConcurrencyGateService {
     const orgKey = buildOrgBatchCounterKey(orgId);
     const globalKey = buildGlobalBatchCounterKey();
     const uploadKey = isUploadGatedQueue(queueName) ? buildOrgUploadCounterKey(orgId) : null;
+    const ocrKey = queueName === 'ocr' ? buildOcrPoolCounterKey() : null;
 
     const orgInflight = await this.counters.get(orgKey);
     if (this.isOrgOverHardLimit(orgInflight, orgLimit)) {
@@ -63,6 +66,13 @@ export class BatchConcurrencyGateService {
     if (uploadKey !== null) {
       const uploadInflight = await this.counters.get(uploadKey);
       if (uploadInflight >= UPLOAD_CONCURRENCY_DEFAULT) {
+        return null;
+      }
+    }
+
+    if (ocrKey !== null) {
+      const ocrInflight = await this.counters.get(ocrKey);
+      if (ocrInflight >= OCR_POOL_CEILING) {
         return null;
       }
     }
@@ -99,7 +109,28 @@ export class BatchConcurrencyGateService {
       }
     }
 
-    const keys = uploadKey !== null ? [orgKey, globalKey, uploadKey] : [orgKey, globalKey];
+    if (ocrKey !== null) {
+      const acquiredOcr = await this.counters.incrementIfBelow(
+        ocrKey,
+        OCR_POOL_CEILING,
+        GATE_COUNTER_TTL_SECONDS,
+      );
+      if (!acquiredOcr) {
+        await this.counters.decrement(orgKey);
+        await this.counters.decrement(globalKey);
+        if (uploadKey !== null) {
+          await this.counters.decrement(uploadKey);
+        }
+        return null;
+      }
+    }
+
+    const keys = [
+      orgKey,
+      globalKey,
+      ...(uploadKey !== null ? [uploadKey] : []),
+      ...(ocrKey !== null ? [ocrKey] : []),
+    ];
     await this.refreshMetrics(orgId);
     return { kind: 'batch', orgId, keys };
   }

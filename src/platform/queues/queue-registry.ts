@@ -40,7 +40,7 @@ export const QUEUE_REGISTRY: Readonly<Record<QueueName, QueuePolicy>> = {
     fixed(3),
     EXPONENTIAL_BACKOFF,
     ['documentVersionId', 'extractorVersion', 'contentHash', 'ocr'],
-    ['projectId', 'documentVersionId', 'blockRefs'],
+    ['projectId', 'documentVersionId', 'blockRefs', 'extractorVersion', 'contentHash'],
   ),
   chunk: policy(
     'chunk',

@@ -52,7 +52,7 @@ export function buildDeterministicResult(
     case 'SYNTHESIS':
       return { capability: 'SYNTHESIS', text: '', ...base };
     case 'OCR':
-      return { capability: 'OCR', text: '', ...base };
+      return { capability: 'OCR', text: '', pages: [], meanConfidence: 0, ...base };
     default: {
       const _exhaustive: never = input.request;
       throw new Error(`Unhandled capability: ${String(_exhaustive)}`);

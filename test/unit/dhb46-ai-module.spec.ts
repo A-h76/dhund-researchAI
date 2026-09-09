@@ -8,5 +8,6 @@ describe('DHB-46 AiModule wiring', () => {
     expect(source).toMatch(/SdkVoyageClient/);
     expect(source).toMatch(/SdkOpenAiClient/);
     expect(source).toMatch(/ProviderCircuitBreakerRegistry/);
+    expect(source).toMatch(/OBJECT_STORAGE_SERVICE/);
   });
 });

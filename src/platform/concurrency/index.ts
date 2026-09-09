@@ -7,6 +7,7 @@ export {
   buildOrgUploadCounterKey,
   effectiveGlobalBatchLimit,
   EMBED_BACKFILL_GLOBAL_CAP,
+  OCR_POOL_CEILING,
   GATE_ACQUIRE_TIMEOUT_MS,
   GATE_DEMOTION_DELAY_MS,
   GATE_COUNTER_TTL_SECONDS,

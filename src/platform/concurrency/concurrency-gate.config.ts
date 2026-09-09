@@ -21,6 +21,9 @@ export const INTERACTIVE_RESERVE_SLOTS = 10;
 /** GAP-ADMIN-JOB-01 — embed-backfill uses a global cap, not per-org. */
 export const EMBED_BACKFILL_GLOBAL_CAP = 2;
 
+/** Global OCR pool ceiling — OCR is expensive beyond per-org upload gates. */
+export const OCR_POOL_CEILING = 4;
+
 /** Counter TTL — non-authoritative; Redis flush resets gates safely. */
 export const GATE_COUNTER_TTL_SECONDS = 300;
 
@@ -54,4 +57,8 @@ export function buildOrgUploadCounterKey(orgId: string): string {
 
 export function buildEmbedBackfillGlobalCounterKey(): string {
   return 'gate:embed-backfill:global';
+}
+
+export function buildOcrPoolCounterKey(): string {
+  return 'gate:ocr:global';
 }
