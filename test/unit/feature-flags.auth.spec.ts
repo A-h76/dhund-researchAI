@@ -32,6 +32,20 @@ describe('feature flags authorization conformance', () => {
     expect(evaluateAuthorizationDecision(false, flagsOn)).toBe('deny');
   });
 
+  it('keeps GAP-FEATURE-FLAG-01 independent of capability flags', () => {
+    const flagsOff = new FeatureFlagsService(
+      installTestAppConfig({ featureFlags: { research_runs: false } }),
+    );
+    const flagsOn = new FeatureFlagsService(
+      installTestAppConfig({
+        featureFlags: { research_runs: true, invite_ui: true },
+      }),
+    );
+    expect(evaluateAuthorizationDecision(true, flagsOff)).toBe(
+      evaluateAuthorizationDecision(true, flagsOn),
+    );
+  });
+
   async function startProbeApp(
     config = installTestAppConfig({ featureFlags: { research_runs: false } }),
   ): Promise<INestApplication> {

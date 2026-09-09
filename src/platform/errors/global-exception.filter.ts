@@ -155,6 +155,7 @@ function clientDetails(error: DomainError): unknown | undefined {
   if (
     error.code === ErrorCode.InvalidCredentials ||
     error.code === ErrorCode.TokenInvalid ||
+    error.code === ErrorCode.MfaInvalid ||
     error.code === ErrorCode.MfaRecoveryInvalid
   ) {
     return undefined;

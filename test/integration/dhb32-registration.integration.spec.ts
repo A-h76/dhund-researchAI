@@ -5,7 +5,10 @@ import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
-import { AuthRegisterController } from '../../src/iam/auth-register.controller';
+import { AuthController } from '../../src/iam/auth.controller';
+import { AuthService } from '../../src/iam/auth/auth.service';
+import { AuthTokensService } from '../../src/iam/auth/auth-tokens.service';
+import { stubMfaServiceProvider } from '../fixtures/stub-mfa-service';
 import { Argon2PasswordHasher } from '../../src/iam/password/argon2-hasher';
 import { PASSWORD_BREACH_LIST } from '../../src/iam/password/breach-list.port';
 import { PASSWORD_HASHER } from '../../src/iam/password/password-hasher';
@@ -84,14 +87,28 @@ const BREACHED = 'breached-pass12';
           hasherCalls += 1;
           return realHasher.hash(password);
         },
+        verify: async (password: string, encodedHash: string) =>
+          realHasher.verify(password, encodedHash),
       };
 
       const moduleRef = await Test.createTestingModule({
-        controllers: [AuthRegisterController],
+        controllers: [AuthController],
         providers: [
           RegistrationService,
           PasswordPolicy,
           RegistrationMetrics,
+          { provide: AuthService, useValue: { login: async () => undefined } },
+          stubMfaServiceProvider,
+          {
+            provide: AuthTokensService,
+            useValue: {
+              afterRegister: async () => undefined,
+              verifyEmail: async () => undefined,
+              resendVerification: async () => ({ status: 'accepted' }),
+              requestPasswordReset: async () => ({ status: 'accepted' }),
+              resetPassword: async () => undefined,
+            },
+          },
           { provide: APP_CONFIG, useValue: config },
           { provide: PASSWORD_HASHER, useValue: hasher },
           {

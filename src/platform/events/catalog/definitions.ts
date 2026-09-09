@@ -49,6 +49,23 @@ export const IAM_EVENTS: readonly CatalogEventDefinition[] = [
       },
     ],
   },
+  {
+    eventType: 'iam.refresh_token.family_revoked',
+    aggregateType: 'refresh_token_family',
+    domain: 'iam',
+    currentVersion: 1,
+    versions: [
+      {
+        schemaVersion: 1,
+        fields: [
+          orgId,
+          userId,
+          field('familyId', 'string'),
+          field('sessionId', 'string'),
+        ],
+      },
+    ],
+  },
 ];
 
 export const PROJECTS_EVENTS: readonly CatalogEventDefinition[] = [
@@ -82,6 +99,18 @@ export const PROJECTS_EVENTS: readonly CatalogEventDefinition[] = [
     domain: 'projects',
     currentVersion: 1,
     versions: [{ schemaVersion: 1, fields: [orgId, projectId, userId] }],
+  },
+  {
+    eventType: 'projects.break_glass.used',
+    aggregateType: 'project',
+    domain: 'projects',
+    currentVersion: 1,
+    versions: [
+      {
+        schemaVersion: 1,
+        fields: [orgId, userId, projectId],
+      },
+    ],
   },
 ];
 

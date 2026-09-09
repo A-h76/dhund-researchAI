@@ -15,9 +15,11 @@ import {
   CorrelationMiddleware,
   HttpLoggingInterceptor,
 } from '../../platform/logging';
+import { CsrfMiddleware } from '../../platform/http';
 import { RuntimeRole } from '../../platform/runtime/role';
 import { PlatformModule } from '../../platform/platform.module';
 import { IamModule } from '../../iam/iam.module';
+import { ProjectsModule } from '../../projects/projects.module';
 import { ApiEventsGateway } from './api-events.gateway';
 import { ApiRootController } from './api-root.controller';
 import { CapabilityProbeController } from './capability-probe.controller';
@@ -25,7 +27,7 @@ import { HealthController } from './health.controller';
 import { NoopProcessorReadiness } from './noop-processor-readiness';
 
 @Module({
-  imports: [PlatformModule, AiModule, IamModule],
+  imports: [PlatformModule, AiModule, IamModule, ProjectsModule],
   controllers: [ApiRootController, HealthController, CapabilityProbeController],
   providers: [
     ApiEventsGateway,
@@ -38,6 +40,6 @@ import { NoopProcessorReadiness } from './noop-processor-readiness';
 })
 export class ApiAppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(CorrelationMiddleware).forRoutes('*');
+    consumer.apply(CorrelationMiddleware, CsrfMiddleware).forRoutes('*');
   }
 }

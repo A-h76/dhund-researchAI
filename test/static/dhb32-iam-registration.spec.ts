@@ -26,7 +26,7 @@ describe('DHB-32 IAM registration static checks', () => {
     const api = readFileSync(join(ROOT, 'src/apps/api/api-app.module.ts'), 'utf8');
     const main = readFileSync(join(ROOT, 'src/main.ts'), 'utf8');
     const controller = readFileSync(
-      join(ROOT, 'src/iam/auth-register.controller.ts'),
+      join(ROOT, 'src/iam/auth.controller.ts'),
       'utf8',
     );
 
@@ -51,21 +51,20 @@ describe('DHB-32 IAM registration static checks', () => {
     expect(violations).toEqual([]);
   });
 
-  it('does not send email or import Resend from IAM', () => {
+  it('does not send email via the Resend SDK from IAM', () => {
     for (const file of collectFiles(IAM_ROOT)) {
       const content = readFileSync(file, 'utf8');
       expect(content).not.toContain("from 'resend'");
-      expect(content).not.toContain('EMAIL_SERVICE');
+      expect(content).not.toContain("from \"resend\"");
     }
   });
 
-  it('does not implement login, verify-email, or MFA in this slice', () => {
-    const controller = readFileSync(
-      join(ROOT, 'src/iam/auth-register.controller.ts'),
+  it('does not implement MFA in the registration slice', () => {
+    const registration = readFileSync(
+      join(ROOT, 'src/iam/registration/registration.service.ts'),
       'utf8',
     );
-    expect(controller).not.toContain('login');
-    expect(controller).not.toContain('verify-email');
-    expect(controller).not.toContain('logout');
+    expect(registration).not.toContain('totp');
+    expect(registration).not.toContain('mfa');
   });
 });
