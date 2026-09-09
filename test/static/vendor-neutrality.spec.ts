@@ -10,6 +10,7 @@ const L0_VENDOR_PACKAGE_PREFIXES = [
   'bullmq',
   '@aws-sdk/',
   'resend',
+  'pdfjs-dist',
 ] as const;
 
 const AI_ADAPTER_VENDOR_PACKAGES = ['openai', 'voyageai'] as const;
@@ -63,7 +64,7 @@ function isAiAdapterVendorPackage(importPath: string): boolean {
 
 function extractImports(content: string): string[] {
   const imports: string[] = [];
-  const importRegex = /from\s+['"]([^'"]+)['"]/g;
+  const importRegex = /(?:from\s+|import\s*\()\s*['"]([^'"]+)['"]/g;
   let match: RegExpExecArray | null;
 
   while ((match = importRegex.exec(content)) !== null) {

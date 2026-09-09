@@ -1,5 +1,5 @@
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
-import { Queue } from 'bullmq';
+import { Queue, Worker } from 'bullmq';
 import Redis from 'ioredis';
 import {
   L0_CONNECTION_CONFIG,
@@ -10,6 +10,7 @@ import { L0ConnectionError, L0OperationError } from '../../ports/errors';
 import type {
   QueueBackoffPolicy,
   QueueDepthSnapshot,
+  QueueJobHandler,
   QueueJobOptions,
   QueueService,
 } from '../../ports/queue.port';
@@ -18,6 +19,8 @@ import type {
 export class BullmqQueueAdapter implements QueueService, OnModuleDestroy {
   private connection: Redis | null = null;
   private readonly queues = new Map<string, Queue>();
+  private readonly workers: Worker[] = [];
+  private readonly workerConnections: Redis[] = [];
 
   constructor(
     @Inject(L0_CONNECTION_CONFIG) private readonly connectionConfig: L0ConnectionConfig,
@@ -45,6 +48,15 @@ export class BullmqQueueAdapter implements QueueService, OnModuleDestroy {
   }
 
   async disconnect(correlationId?: string): Promise<void> {
+    for (const worker of this.workers) {
+      await worker.close();
+    }
+    this.workers.length = 0;
+    for (const connection of this.workerConnections) {
+      await connection.quit();
+    }
+    this.workerConnections.length = 0;
+
     for (const queue of this.queues.values()) {
       await queue.close();
     }
@@ -195,6 +207,32 @@ export class BullmqQueueAdapter implements QueueService, OnModuleDestroy {
     };
   }
 
+  async consume(queueName: string, handler: QueueJobHandler): Promise<void> {
+    try {
+      const parent = await this.requireConnection();
+      const connection = parent.duplicate();
+      this.workerConnections.push(connection);
+      const worker = new Worker(
+        queueName,
+        async (job) => {
+          await handler({
+            id: job.id ?? queueName,
+            data: asJobData(job.data),
+            attemptsMade: job.attemptsMade,
+            attempts: job.opts.attempts ?? 1,
+          });
+        },
+        { connection },
+      );
+      this.workers.push(worker);
+    } catch (error) {
+      if (error instanceof L0ConnectionError || error instanceof L0OperationError) {
+        throw error;
+      }
+      throw new L0OperationError('Queue consume failed', error);
+    }
+  }
+
   private async getOrCreateQueue(queueName: string): Promise<Queue> {
     const existing = this.queues.get(queueName);
     if (existing) {
@@ -218,6 +256,13 @@ export class BullmqQueueAdapter implements QueueService, OnModuleDestroy {
 
     return this.connection;
   }
+}
+
+function asJobData(data: unknown): Record<string, unknown> {
+  if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+    return {};
+  }
+  return data as Record<string, unknown>;
 }
 
 function toBullmqBackoff(backoff: QueueBackoffPolicy): { type: 'exponential'; delay: number } {

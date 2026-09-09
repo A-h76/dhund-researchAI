@@ -52,6 +52,7 @@ describe('reaper service (DHB-41)', () => {
     getJobState: async () => 'failed',
     retryFailedJob: async () => 'retried',
     getQueueDepth: async () => ({ waiting: 0, active: 0, failed: 0, delayed: 0 }),
+    consume: async () => undefined,
   };
 
   const logger = {
@@ -120,14 +121,14 @@ describe('reaper service (DHB-41)', () => {
       correlationId: 'cor-2',
       projectId: 'proj-1',
       documentVersionId: 'dv-2',
+      chunkerVersion: 'v1',
       contentHash: 'hash-2',
-      extractorVersion: 'v1',
     };
-    const jobId = deriveJobId('extract', payload);
+    const jobId = deriveJobId('chunk', payload);
     const now = Date.now();
 
     await store.register({
-      queue: 'extract',
+      queue: 'chunk',
       jobId,
       orgId: 'org-1',
       correlationId: 'cor-2',
@@ -140,6 +141,38 @@ describe('reaper service (DHB-41)', () => {
     const result = await reaper.executeTick(new Date(now).toISOString(), 'reaper-a');
 
     expect(result.recovered).toBe(0);
+    expect(redriven).toEqual([]);
+    expect(result.skippedHealthy).toBe(1);
+  });
+
+  it('does not reap an extract job that heartbeats within the 10 minute timeout', async () => {
+    const store = new InMemoryJobLivenessStore();
+    const payload = {
+      orgId: 'org-1',
+      correlationId: 'cor-extract-live',
+      projectId: 'proj-1',
+      documentVersionId: 'dv-extract',
+      contentHash: 'hash-extract',
+      extractorVersion: 'v1',
+    };
+    const jobId = deriveJobId('extract', payload);
+    const now = Date.now();
+
+    await store.register({
+      queue: 'extract',
+      jobId,
+      orgId: 'org-1',
+      correlationId: 'cor-extract-live',
+      startedAtMs: now - 120_000,
+      lastHeartbeatAtMs: now - 5_000,
+      payload,
+    });
+
+    const reaper = buildReaper(store);
+    const result = await reaper.executeTick(new Date(now).toISOString(), 'reaper-a');
+
+    expect(result.recovered).toBe(0);
+    expect(result.timedOut).toBe(0);
     expect(redriven).toEqual([]);
     expect(result.skippedHealthy).toBe(1);
   });
