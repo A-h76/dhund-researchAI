@@ -26,6 +26,7 @@ import {
   generateCsrfToken,
   type HeaderAppendResponse,
 } from '../platform/http';
+import { RequireAuth } from './authorization/require-auth';
 
 @Controller('v1/auth')
 export class AuthController {
@@ -63,6 +64,7 @@ export class AuthController {
 
   @Post('logout-all')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @RequireAuth()
   async logoutAll(
     @Headers('authorization') authorization: string | undefined,
     @Res({ passthrough: true }) res: HeaderAppendResponse,
@@ -102,6 +104,7 @@ export class AuthController {
 
   @Post('mfa/totp/enrol')
   @HttpCode(HttpStatus.OK)
+  @RequireAuth()
   enrolTotp(
     @Headers('authorization') authorization: string | undefined,
   ): Promise<TotpEnrolResponse> {
@@ -110,6 +113,7 @@ export class AuthController {
 
   @Post('mfa/totp/confirm')
   @HttpCode(HttpStatus.OK)
+  @RequireAuth()
   confirmTotp(
     @Headers('authorization') authorization: string | undefined,
     @Body() body: unknown,
@@ -119,6 +123,7 @@ export class AuthController {
 
   @Post('mfa/totp/disable')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @RequireAuth()
   disableTotp(
     @Headers('authorization') authorization: string | undefined,
     @Body() body: unknown,
@@ -128,6 +133,7 @@ export class AuthController {
 
   @Post('mfa/recovery/issue')
   @HttpCode(HttpStatus.OK)
+  @RequireAuth()
   issueRecovery(
     @Headers('authorization') authorization: string | undefined,
     @Body() body: unknown,

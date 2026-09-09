@@ -43,6 +43,7 @@ import {
 } from '../../src/platform/logging';
 import { installTestAppConfig } from '../fixtures/app-config.fixture';
 import { generateTestJwtConfig } from '../fixtures/jwt-keys.fixture';
+import { accessAuthGuardProviders } from '../fixtures/access-auth-providers';
 
 const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
 const ROOT = join(__dirname, '..', '..');
@@ -126,6 +127,7 @@ const PASSWORD = 'integration-pass-12';
           OutboxWriterService,
           { provide: PlatformLogger, useValue: logger },
           { provide: APP_FILTER, useClass: GlobalExceptionFilter },
+          ...accessAuthGuardProviders(),
         ],
       }).compile();
 

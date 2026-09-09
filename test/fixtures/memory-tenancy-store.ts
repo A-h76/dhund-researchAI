@@ -1,6 +1,7 @@
 import type { OutboxTransaction } from '../../src/l0/ports/outbox.port';
 import { MembershipConflictError } from '../../src/l0/ports/tenancy-store.port';
 import type {
+  ListedProjectMembership,
   OrgMembershipRecord,
   OrgRecord,
   ProjectInsert,
@@ -83,6 +84,20 @@ export class MemoryTenancyStore implements TenancyStore {
     return found === undefined ? null : toOrgMembership(found);
   }
 
+  async listActiveOrgMemberships(
+    userId: string,
+  ): Promise<OrgMembershipRecord[]> {
+    return this.orgMemberships
+      .filter((row) => {
+        if (row.userId !== userId || row.revokedAt !== null) {
+          return false;
+        }
+        const org = this.orgs.get(row.orgId);
+        return org !== undefined && org.deletedAt === null;
+      })
+      .map(toOrgMembership);
+  }
+
   async updateOrgName(orgId: string, name: string): Promise<OrgRecord | null> {
     const org = this.orgs.get(orgId);
     if (org === undefined || org.deletedAt !== null) {
@@ -154,6 +169,27 @@ export class MemoryTenancyStore implements TenancyStore {
         row.revokedAt === null,
     );
     return found === undefined ? null : toProjectMembership(found);
+  }
+
+  async listActiveProjectMemberships(
+    userId: string,
+  ): Promise<ListedProjectMembership[]> {
+    const listed: ListedProjectMembership[] = [];
+    for (const row of this.projectMemberships) {
+      if (row.userId !== userId || row.revokedAt !== null) {
+        continue;
+      }
+      const project = this.projects.get(row.projectId);
+      if (project === undefined || project.deletedAt !== null) {
+        continue;
+      }
+      listed.push({
+        projectId: row.projectId,
+        orgId: project.orgId,
+        role: row.role,
+      });
+    }
+    return listed;
   }
 
   async findProjectMembershipById(

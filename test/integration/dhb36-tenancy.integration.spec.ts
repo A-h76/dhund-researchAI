@@ -24,7 +24,7 @@ import { PrismaOutboxAdapter } from '../../src/l0/adapters/prisma/prisma-outbox.
 import { PrismaRegistrationAdapter } from '../../src/l0/adapters/prisma/prisma-registration.adapter';
 import { PrismaSessionAdapter } from '../../src/l0/adapters/prisma/prisma-session.adapter';
 import { PrismaTenancyAdapter } from '../../src/l0/adapters/prisma/prisma-tenancy.adapter';
-import { NoopAccessContextInvalidator } from '../../src/l0/adapters/noop/noop-access-context-invalidator';
+import { RedisAccessContextInvalidator } from '../../src/l0/adapters/redis/redis-access-context-invalidator';
 import type { L0ConnectionConfig } from '../../src/l0/ports/connection-config.port';
 import {
   ACCESS_CONTEXT_INVALIDATOR,
@@ -52,6 +52,8 @@ import { TenancyService } from '../../src/projects/tenancy.service';
 import { installTestAppConfig } from '../fixtures/app-config.fixture';
 import { generateTestJwtConfig } from '../fixtures/jwt-keys.fixture';
 import { stubMfaServiceProvider } from '../fixtures/stub-mfa-service';
+import { tenancyGuardProviders } from '../fixtures/access-auth-providers';
+import { MemoryCacheService } from '../fixtures/memory-cache';
 
 const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
 const ROOT = join(__dirname, '..', '..');
@@ -94,6 +96,7 @@ const PASSWORD = 'integration-pass-12';
       const sessionStore = new PrismaSessionAdapter(database);
       const tenancyStore = new PrismaTenancyAdapter(database);
       const audit = new PrismaAuditEventAdapter(database);
+      const cache = new MemoryCacheService();
       const jwt = generateTestJwtConfig();
       const config = installTestAppConfig({ databaseUrl, jwt });
       const logger = {
@@ -144,12 +147,10 @@ const PASSWORD = 'integration-pass-12';
           { provide: TENANCY_STORE, useValue: tenancyStore },
           { provide: OUTBOX_SERVICE, useValue: outbox },
           { provide: AUDIT_EVENT, useValue: audit },
-          {
-            provide: ACCESS_CONTEXT_INVALIDATOR,
-            useClass: NoopAccessContextInvalidator,
-          },
+          { provide: ACCESS_CONTEXT_INVALIDATOR, useClass: RedisAccessContextInvalidator },
           { provide: PlatformLogger, useValue: logger },
           { provide: APP_FILTER, useClass: GlobalExceptionFilter },
+          ...tenancyGuardProviders(cache),
         ],
       }).compile();
 

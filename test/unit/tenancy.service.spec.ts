@@ -1,5 +1,9 @@
 import { TenancyService } from '../../src/projects/tenancy.service';
 import { TenancyAuthorizer } from '../../src/projects/authorization/tenancy-authorizer';
+import { AccessContextMetrics } from '../../src/iam/authorization/access-context.metrics';
+import { AccessContextService } from '../../src/iam/authorization/access-context.service';
+import { PlatformLogger } from '../../src/platform/logging';
+import { MemoryCacheService } from '../fixtures/memory-cache';
 import { AccessTokenService } from '../../src/iam/tokens/access-token.service';
 import { OutboxWriterService } from '../../src/platform/events';
 import { ErrorCode } from '../../src/platform/errors/error-codes';
@@ -65,7 +69,20 @@ describe('DHB-36 tenancy service', () => {
         },
       },
       new OutboxWriterService(outbox),
-      new TenancyAuthorizer(tokens, tenancy),
+      new TenancyAuthorizer(
+        tokens,
+        tenancy,
+        new AccessContextService(
+          tenancy,
+          new MemoryCacheService(),
+          new AccessContextMetrics({
+            info: () => undefined,
+            warn: () => undefined,
+            error: () => undefined,
+            debug: () => undefined,
+          } as unknown as PlatformLogger),
+        ),
+      ),
     );
   });
 

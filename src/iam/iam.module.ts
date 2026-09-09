@@ -17,6 +17,11 @@ import { RegistrationService } from './registration/registration.service';
 import { AccessTokenService } from './tokens/access-token.service';
 import { AuthTokenService } from './tokens/auth-token.service';
 import { MfaChallengeService } from './tokens/mfa-challenge.service';
+import { AccessAuthGuard } from './authorization/access-auth.guard';
+import { AccessContextMetrics } from './authorization/access-context.metrics';
+import { AccessContextService } from './authorization/access-context.service';
+import { OrgRoleGuard } from './authorization/org-role.guard';
+import { ProjectRoleGuard } from './authorization/project-role.guard';
 
 @Module({
   imports: [PlatformModule],
@@ -37,7 +42,19 @@ import { MfaChallengeService } from './tokens/mfa-challenge.service';
     AuthTokensService,
     MfaMetrics,
     MfaService,
+    AccessContextMetrics,
+    AccessContextService,
+    AccessAuthGuard,
+    OrgRoleGuard,
+    ProjectRoleGuard,
   ],
-  exports: [AccessTokenService],
+  exports: [
+    AccessTokenService,
+    AccessContextService,
+    AccessContextMetrics,
+    AccessAuthGuard,
+    OrgRoleGuard,
+    ProjectRoleGuard,
+  ],
 })
 export class IamModule {}

@@ -30,6 +30,7 @@ import { capturingOutbox } from '../fixtures/capturing-outbox';
 import { generateTestJwtConfig } from '../fixtures/jwt-keys.fixture';
 import { MemorySessionStore } from '../fixtures/memory-session-store';
 import { MemoryTenancyStore } from '../fixtures/memory-tenancy-store';
+import { tenancyGuardProviders } from '../fixtures/access-auth-providers';
 
 async function json(
   baseUrl: string,
@@ -105,6 +106,7 @@ async function startApp(featureFlags: Record<string, boolean> = {}): Promise<{
       TenancyAuthorizer,
       AccessTokenService,
       OutboxWriterService,
+      ...tenancyGuardProviders(),
       { provide: APP_CONFIG, useValue: config },
       { provide: SESSION_STORE, useValue: sessions },
       { provide: TENANCY_STORE, useValue: tenancy },
@@ -452,6 +454,33 @@ describe('DHB-36 tenancy HTTP', () => {
     );
     expect(patched.status).toBe(200);
     expect(patched.body?.role).toBe('VIEWER');
+  });
+
+  it('E7 accepted residual: revoked membership does not invalidate the access token', async () => {
+    const admin = seedActor(tenancy, orgId, projectId, 'MEMBER', 'ADMIN');
+    const target = seedActor(tenancy, orgId, projectId, 'MEMBER', 'VIEWER');
+    const adminToken = await tokenFor(tokens, sessions, admin);
+    const targetToken = await tokenFor(tokens, sessions, target);
+    const membership = tenancy.projectMemberships.find(
+      (row) => row.userId === target && row.projectId === projectId,
+    );
+    expect(membership).toBeDefined();
+    const revoked = await json(
+      baseUrl,
+      'DELETE',
+      `/v1/projects/${projectId}/memberships/${membership!.id}`,
+      { token: adminToken },
+    );
+    expect(revoked.status).toBe(204);
+    const project = await json(baseUrl, 'GET', `/v1/projects/${projectId}`, {
+      token: targetToken,
+    });
+    const org = await json(baseUrl, 'GET', `/v1/orgs/${orgId}`, {
+      token: targetToken,
+    });
+    expect(project.status).toBe(404);
+    expect(org.status).toBe(200);
+    expect(org.body?.id).toBe(orgId);
   });
 });
 

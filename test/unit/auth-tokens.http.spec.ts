@@ -39,6 +39,7 @@ import { generateTestJwtConfig } from '../fixtures/jwt-keys.fixture';
 import { MemoryAuthTokenStore } from '../fixtures/memory-auth-token-store';
 import { MemorySessionStore } from '../fixtures/memory-session-store';
 import { stubMfaServiceProvider } from '../fixtures/stub-mfa-service';
+import { accessAuthGuardProviders } from '../fixtures/access-auth-providers';
 
 const PASSWORD = 'http-reset-pass12';
 const STORED_HASH = '$argon2id$v=19$m=65536,t=3,p=4$stored';
@@ -124,6 +125,7 @@ async function startApp(): Promise<{
       { provide: OUTBOX_SERVICE, useValue: outbox },
       { provide: PlatformLogger, useValue: logger },
       { provide: APP_FILTER, useClass: GlobalExceptionFilter },
+      ...accessAuthGuardProviders(),
     ],
   }).compile();
 

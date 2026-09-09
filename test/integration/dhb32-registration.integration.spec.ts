@@ -30,6 +30,8 @@ import {
   PlatformLogger,
 } from '../../src/platform/logging';
 import { installTestAppConfig } from '../fixtures/app-config.fixture';
+import { accessAuthGuardProviders } from '../fixtures/access-auth-providers';
+import { AccessTokenService } from '../../src/iam/tokens/access-token.service';
 
 const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
 const ROOT = join(__dirname, '..', '..');
@@ -122,6 +124,11 @@ const BREACHED = 'breached-pass12';
           OutboxWriterService,
           { provide: PlatformLogger, useValue: logger },
           { provide: APP_FILTER, useClass: GlobalExceptionFilter },
+          ...accessAuthGuardProviders(),
+          {
+            provide: AccessTokenService,
+            useValue: { verify: async () => ({ sub: '', sid: '', sv: 1, jti: '' }) },
+          },
         ],
       }).compile();
 

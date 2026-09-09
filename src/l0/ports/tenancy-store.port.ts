@@ -51,6 +51,12 @@ export interface ProjectMembershipRecord {
   readonly role: ProjectRole;
 }
 
+export interface ListedProjectMembership {
+  readonly projectId: string;
+  readonly orgId: string;
+  readonly role: ProjectRole;
+}
+
 export interface ProjectInsert {
   readonly id: string;
   readonly orgId: string;
@@ -71,6 +77,7 @@ export interface TenancyStore {
     orgId: string,
     userId: string,
   ): Promise<OrgMembershipRecord | null>;
+  listActiveOrgMemberships(userId: string): Promise<OrgMembershipRecord[]>;
   updateOrgName(orgId: string, name: string): Promise<OrgRecord | null>;
   insertProjectWithOwner(
     tx: OutboxTransaction,
@@ -87,6 +94,9 @@ export interface TenancyStore {
     projectId: string,
     userId: string,
   ): Promise<ProjectMembershipRecord | null>;
+  listActiveProjectMemberships(
+    userId: string,
+  ): Promise<ListedProjectMembership[]>;
   findProjectMembershipById(
     membershipId: string,
   ): Promise<ProjectMembershipRecord | null>;
