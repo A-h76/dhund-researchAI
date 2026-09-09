@@ -94,6 +94,10 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
     expect(getResponse.ok).toBe(true);
     await expect(getResponse.text()).resolves.toBe(payload);
 
+    await adapter.delete(key);
+    const missing = await fetch(await adapter.getPresignedGetUrl(key, 300));
+    expect(missing.ok).toBe(false);
+
     await adapter.disconnect('test-correlation');
     await minio.stop();
   });

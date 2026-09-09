@@ -222,9 +222,11 @@ describe('DHB-36 tenancy service', () => {
 
     expect(await tenancy.findLiveProject(projectId)).toBeNull();
     expect(appended.map((row) => row.eventType)).toEqual([
+      'projects.project.deleted',
       'projects.break_glass.used',
     ]);
     expect(audits.map((row) => row.action)).toEqual([
+      'projects.project.deleted',
       'projects.break_glass.used',
     ]);
   });
@@ -256,7 +258,9 @@ describe('DHB-36 tenancy service', () => {
       service.deleteProject(authorization, projectId),
     );
 
-    expect(appended).toEqual([]);
-    expect(audits).toEqual([]);
+    expect(appended.map((row) => row.eventType)).toEqual([
+      'projects.project.deleted',
+    ]);
+    expect(audits.map((row) => row.action)).toEqual(['projects.project.deleted']);
   });
 });

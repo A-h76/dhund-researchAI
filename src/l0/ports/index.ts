@@ -16,6 +16,7 @@ export * from './tenancy-store.port';
 export * from './access-context-invalidator.port';
 export * from './access-context-cache';
 export * from './scoped-store.port';
+export * from './project-erasure.port';
 export * from './pubsub.port';
 export * from './query-observer.port';
 export * from './counter.port';
