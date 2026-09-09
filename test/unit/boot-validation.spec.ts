@@ -7,6 +7,7 @@ import {
   setAppConfig,
 } from '../../src/platform/config';
 import { jwtSecretRecord } from '../fixtures/jwt-keys.fixture';
+import { generateTestTotpWrapKey } from '../fixtures/totp-wrap.fixture';
 
 describe('boot validation', () => {
   const originalEnv = { ...process.env };
@@ -52,6 +53,7 @@ describe('boot validation', () => {
     process.env.REDIS_URL = 'redis://localhost:6379';
     process.env.AUTH_JWT_PRIVATE_KEY = jwt.AUTH_JWT_PRIVATE_KEY;
     process.env.AUTH_JWT_KID = jwt.AUTH_JWT_KID;
+    process.env.AUTH_TOTP_WRAP_KEY = generateTestTotpWrapKey();
 
     const secrets = new EnvSecretsAdapter();
     const config = loadAndValidateConfig(secrets, RuntimeRole.Api);

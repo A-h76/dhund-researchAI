@@ -6,6 +6,7 @@ import { AuthMetrics } from '../../src/iam/auth/auth.metrics';
 import { AuthService } from '../../src/iam/auth/auth.service';
 import { AuthTokenMetrics } from '../../src/iam/auth/auth-token.metrics';
 import { AuthTokensService } from '../../src/iam/auth/auth-tokens.service';
+import { MfaMetrics } from '../../src/iam/auth/mfa.metrics';
 import { PASSWORD_BREACH_LIST } from '../../src/iam/password/breach-list.port';
 import { PASSWORD_HASHER } from '../../src/iam/password/password-hasher';
 import { PasswordPolicy } from '../../src/iam/password/password-policy';
@@ -13,6 +14,7 @@ import { RegistrationMetrics } from '../../src/iam/registration/registration.met
 import { RegistrationService } from '../../src/iam/registration/registration.service';
 import { AccessTokenService } from '../../src/iam/tokens/access-token.service';
 import { AuthTokenService } from '../../src/iam/tokens/auth-token.service';
+import { MfaChallengeService } from '../../src/iam/tokens/mfa-challenge.service';
 import { hashAuthToken } from '../../src/iam/tokens/auth-token';
 import {
   AUTH_TOKEN_STORE,
@@ -36,6 +38,7 @@ import { capturingOutbox } from '../fixtures/capturing-outbox';
 import { generateTestJwtConfig } from '../fixtures/jwt-keys.fixture';
 import { MemoryAuthTokenStore } from '../fixtures/memory-auth-token-store';
 import { MemorySessionStore } from '../fixtures/memory-session-store';
+import { stubMfaServiceProvider } from '../fixtures/stub-mfa-service';
 
 const PASSWORD = 'http-reset-pass12';
 const STORED_HASH = '$argon2id$v=19$m=65536,t=3,p=4$stored';
@@ -98,6 +101,8 @@ async function startApp(): Promise<{
     providers: [
       AuthService,
       AuthMetrics,
+      MfaMetrics,
+      MfaChallengeService,
       AuthTokenMetrics,
       AccessTokenService,
       AuthTokenService,
@@ -106,6 +111,7 @@ async function startApp(): Promise<{
       RegistrationMetrics,
       OutboxWriterService,
       { provide: RegistrationService, useValue: { register: async () => undefined } },
+      stubMfaServiceProvider,
       { provide: APP_CONFIG, useValue: config },
       { provide: PASSWORD_HASHER, useValue: hasher },
       { provide: PASSWORD_BREACH_LIST, useValue: { check: async () => 'clear' as const } },

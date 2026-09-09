@@ -4,6 +4,7 @@ import type { INestApplication } from '@nestjs/common';
 import { AuthController } from '../../src/iam/auth.controller';
 import { AuthService } from '../../src/iam/auth/auth.service';
 import { AuthTokensService } from '../../src/iam/auth/auth-tokens.service';
+import { stubMfaServiceProvider } from '../fixtures/stub-mfa-service';
 import { PASSWORD_BREACH_LIST } from '../../src/iam/password/breach-list.port';
 import { PASSWORD_HASHER } from '../../src/iam/password/password-hasher';
 import { PasswordPolicy } from '../../src/iam/password/password-policy';
@@ -70,6 +71,7 @@ async function startApp(conflictEmails: Set<string> = new Set()): Promise<{
       PasswordPolicy,
       RegistrationMetrics,
       { provide: AuthService, useValue: { login: async () => undefined } },
+      stubMfaServiceProvider,
       {
         provide: AuthTokensService,
         useValue: {

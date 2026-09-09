@@ -12,6 +12,7 @@ import type { SecretsService } from '../../src/l0/ports/secrets.port';
 import { RuntimeRole } from '../../src/platform/runtime/role';
 import { loadAndValidateConfig } from '../../src/platform/config';
 import { jwtSecretRecord } from '../fixtures/jwt-keys.fixture';
+import { generateTestTotpWrapKey } from '../fixtures/totp-wrap.fixture';
 
 function createSecrets(values: Record<string, string | undefined>): SecretsService {
   return {
@@ -38,6 +39,7 @@ describe('database pool configuration (DHB-28)', () => {
         REDIS_URL: 'redis://localhost:6379',
         DATABASE_POOL_SIZE: '25',
         ...jwtSecretRecord(),
+        AUTH_TOTP_WRAP_KEY: generateTestTotpWrapKey(),
       }),
       RuntimeRole.Api,
     );

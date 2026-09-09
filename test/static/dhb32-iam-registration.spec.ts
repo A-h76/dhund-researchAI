@@ -59,12 +59,12 @@ describe('DHB-32 IAM registration static checks', () => {
     }
   });
 
-  it('does not implement MFA in this slice', () => {
-    const controller = readFileSync(
-      join(ROOT, 'src/iam/auth.controller.ts'),
+  it('does not implement MFA in the registration slice', () => {
+    const registration = readFileSync(
+      join(ROOT, 'src/iam/registration/registration.service.ts'),
       'utf8',
     );
-    expect(controller).not.toContain('totp');
-    expect(controller).not.toContain('mfa');
+    expect(registration).not.toContain('totp');
+    expect(registration).not.toContain('mfa');
   });
 });

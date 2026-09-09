@@ -10,6 +10,7 @@ import { AuthMetrics } from '../../src/iam/auth/auth.metrics';
 import { AuthService } from '../../src/iam/auth/auth.service';
 import { AuthTokenMetrics } from '../../src/iam/auth/auth-token.metrics';
 import { AuthTokensService } from '../../src/iam/auth/auth-tokens.service';
+import { MfaMetrics } from '../../src/iam/auth/mfa.metrics';
 import { Argon2PasswordHasher } from '../../src/iam/password/argon2-hasher';
 import { PASSWORD_BREACH_LIST } from '../../src/iam/password/breach-list.port';
 import { PASSWORD_HASHER } from '../../src/iam/password/password-hasher';
@@ -19,6 +20,7 @@ import { RegistrationService } from '../../src/iam/registration/registration.ser
 import { AccessTokenService } from '../../src/iam/tokens/access-token.service';
 import { hashAuthToken } from '../../src/iam/tokens/auth-token';
 import { AuthTokenService } from '../../src/iam/tokens/auth-token.service';
+import { MfaChallengeService } from '../../src/iam/tokens/mfa-challenge.service';
 import { PrismaAuthTokenAdapter } from '../../src/l0/adapters/prisma/prisma-auth-token.adapter';
 import { PrismaDatabaseAdapter } from '../../src/l0/adapters/prisma/prisma-database.adapter';
 import { PrismaOutboxAdapter } from '../../src/l0/adapters/prisma/prisma-outbox.adapter';
@@ -50,6 +52,7 @@ import {
 import { generateId } from '../../src/platform/ids/uuid-v7';
 import { installTestAppConfig } from '../fixtures/app-config.fixture';
 import { generateTestJwtConfig } from '../fixtures/jwt-keys.fixture';
+import { stubMfaServiceProvider } from '../fixtures/stub-mfa-service';
 
 const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
 const ROOT = join(__dirname, '..', '..');
@@ -162,11 +165,14 @@ function tokenFromHtml(html: string): string {
           RegistrationMetrics,
           AuthService,
           AuthMetrics,
+          MfaMetrics,
+          MfaChallengeService,
           AuthTokenMetrics,
           AccessTokenService,
           AuthTokenService,
           AuthTokensService,
           { provide: APP_CONFIG, useValue: config },
+          stubMfaServiceProvider,
           { provide: PASSWORD_HASHER, useClass: Argon2PasswordHasher },
           {
             provide: PASSWORD_BREACH_LIST,

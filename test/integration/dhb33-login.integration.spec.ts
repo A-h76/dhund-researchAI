@@ -9,6 +9,7 @@ import { AuthController } from '../../src/iam/auth.controller';
 import { AuthMetrics } from '../../src/iam/auth/auth.metrics';
 import { AuthService } from '../../src/iam/auth/auth.service';
 import { AuthTokensService } from '../../src/iam/auth/auth-tokens.service';
+import { MfaMetrics } from '../../src/iam/auth/mfa.metrics';
 import { Argon2PasswordHasher } from '../../src/iam/password/argon2-hasher';
 import { PASSWORD_BREACH_LIST } from '../../src/iam/password/breach-list.port';
 import { PASSWORD_HASHER } from '../../src/iam/password/password-hasher';
@@ -16,6 +17,7 @@ import { PasswordPolicy } from '../../src/iam/password/password-policy';
 import { RegistrationMetrics } from '../../src/iam/registration/registration.metrics';
 import { RegistrationService } from '../../src/iam/registration/registration.service';
 import { AccessTokenService } from '../../src/iam/tokens/access-token.service';
+import { MfaChallengeService } from '../../src/iam/tokens/mfa-challenge.service';
 import { hashRefreshToken } from '../../src/iam/tokens/refresh-token';
 import { PrismaDatabaseAdapter } from '../../src/l0/adapters/prisma/prisma-database.adapter';
 import { PrismaOutboxAdapter } from '../../src/l0/adapters/prisma/prisma-outbox.adapter';
@@ -38,6 +40,7 @@ import {
 } from '../../src/platform/logging';
 import { installTestAppConfig } from '../fixtures/app-config.fixture';
 import { generateTestJwtConfig } from '../fixtures/jwt-keys.fixture';
+import { stubMfaServiceProvider } from '../fixtures/stub-mfa-service';
 
 const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
 const ROOT = join(__dirname, '..', '..');
@@ -106,6 +109,8 @@ const PASSWORD = 'integration-pass-12';
           RegistrationMetrics,
           AuthService,
           AuthMetrics,
+          MfaMetrics,
+          MfaChallengeService,
           AccessTokenService,
           {
             provide: AuthTokensService,
@@ -117,6 +122,7 @@ const PASSWORD = 'integration-pass-12';
               resetPassword: async () => undefined,
             },
           },
+          stubMfaServiceProvider,
           { provide: APP_CONFIG, useValue: config },
           { provide: PASSWORD_HASHER, useValue: hasher },
           {

@@ -9,6 +9,7 @@ import {
   parseRequiredSecret,
 } from '../../src/platform/config';
 import { jwtSecretRecord } from '../fixtures/jwt-keys.fixture';
+import { generateTestTotpWrapKey } from '../fixtures/totp-wrap.fixture';
 
 function createSecrets(values: Record<string, string | undefined>): SecretsService {
   return {
@@ -26,6 +27,7 @@ function apiSecrets(
     DATABASE_URL: 'postgres://user:pass@localhost:5432/db',
     REDIS_URL: 'redis://localhost:6379',
     ...JWT,
+    AUTH_TOTP_WRAP_KEY: generateTestTotpWrapKey(),
     ...overrides,
   };
 }
@@ -168,7 +170,7 @@ describe('app config schema', () => {
     ).toThrow(new ConfigValidationError('Missing required configuration: AUTH_JWT_KID'));
   });
 
-  it('does not require JWT keys for the worker role', () => {
+  it('does not require JWT keys or a TOTP wrap key for the worker role', () => {
     const config = loadAndValidateConfig(
       createSecrets({
         DATABASE_URL: 'postgres://user:pass@localhost:5432/db',
@@ -177,6 +179,7 @@ describe('app config schema', () => {
       RuntimeRole.Worker,
     );
     expect(config.jwt).toBeUndefined();
+    expect(config.totpWrapKey).toBeUndefined();
   });
 
   it('loads jwt config on the API role', () => {
@@ -184,7 +187,22 @@ describe('app config schema', () => {
     expect(config.jwt?.kid).toBe(JWT.AUTH_JWT_KID);
     expect(config.jwt?.privateKey).toContain('BEGIN PRIVATE KEY');
     expect(config.loadedKeyNames).toEqual(
-      expect.arrayContaining(['AUTH_JWT_PRIVATE_KEY', 'AUTH_JWT_KID']),
+      expect.arrayContaining(['AUTH_JWT_PRIVATE_KEY', 'AUTH_JWT_KID', 'AUTH_TOTP_WRAP_KEY']),
     );
+    expect(config.totpWrapKey).toHaveLength(32);
+  });
+
+  it('requires AUTH_TOTP_WRAP_KEY for the API role', () => {
+    expect(() =>
+      loadAndValidateConfig(
+        createSecrets({
+          DATABASE_URL: 'postgres://user:pass@localhost:5432/db',
+          REDIS_URL: 'redis://localhost:6379',
+          AUTH_JWT_PRIVATE_KEY: JWT.AUTH_JWT_PRIVATE_KEY,
+          AUTH_JWT_KID: JWT.AUTH_JWT_KID,
+        }),
+        RuntimeRole.Api,
+      ),
+    ).toThrow(new ConfigValidationError('Missing required configuration: AUTH_TOTP_WRAP_KEY'));
   });
 });

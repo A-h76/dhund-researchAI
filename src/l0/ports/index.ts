@@ -11,6 +11,7 @@ export * from './outbox.port';
 export * from './registration-store.port';
 export * from './session-store.port';
 export * from './auth-token-store.port';
+export * from './mfa-store.port';
 export * from './pubsub.port';
 export * from './query-observer.port';
 export * from './counter.port';

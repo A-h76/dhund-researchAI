@@ -36,6 +36,33 @@ export function parseJwtConfig(
   return validatedJwtConfig(privateKey!, kidRaw!);
 }
 
+const TOTP_WRAP_KEY_BYTES = 32;
+
+export function parseTotpWrapKey(
+  secrets: SecretsService,
+  role: RuntimeRole,
+): Uint8Array | undefined {
+  const raw = secrets.getSecret('AUTH_TOTP_WRAP_KEY');
+  if (role === RuntimeRole.Api) {
+    if (raw === undefined) {
+      throw new ConfigValidationError('Missing required configuration: AUTH_TOTP_WRAP_KEY');
+    }
+    return validatedTotpWrapKey(raw);
+  }
+  if (raw === undefined) {
+    return undefined;
+  }
+  return validatedTotpWrapKey(raw);
+}
+
+function validatedTotpWrapKey(raw: string): Uint8Array {
+  const decoded = Buffer.from(raw, 'base64');
+  if (decoded.length !== TOTP_WRAP_KEY_BYTES) {
+    throw new ConfigValidationError('AUTH_TOTP_WRAP_KEY must be 32 bytes of base64');
+  }
+  return new Uint8Array(decoded);
+}
+
 function validatedJwtConfig(privateKey: string, kidRaw: string): JwtConfig {
   const kid = kidRaw.trim();
   if (kid.length === 0) {

@@ -23,11 +23,13 @@ import {
   parseRefreshToken,
 } from '../tokens/refresh-token';
 import { AuthMetrics } from './auth.metrics';
+import { MfaMetrics } from './mfa.metrics';
 import {
   parseLoginRequest,
-  parseRefreshRequest,
+  parseRefreshCredential,
   readBearerToken,
 } from './parse-auth-request';
+import { MfaChallengeService } from '../tokens/mfa-challenge.service';
 
 export interface TokenPairResponse {
   readonly accessToken: string;
@@ -45,6 +47,8 @@ export class AuthService {
     private readonly outboxWriter: OutboxWriterService,
     private readonly accessTokens: AccessTokenService,
     private readonly metrics: AuthMetrics,
+    private readonly challenges: MfaChallengeService,
+    private readonly mfaMetrics: MfaMetrics,
   ) {}
 
   jwks(): ReturnType<AccessTokenService['jwks']> {
@@ -59,6 +63,28 @@ export class AuthService {
     const ok = await this.hasher.verify(parsed.password, hashToCheck);
 
     if (identity === null || storedHash === null || identity.orgId === null || !ok) {
+      this.metrics.recordLoginFailure();
+      throw new DomainError(ErrorCode.InvalidCredentials, { module: 'iam' });
+    }
+
+    if (identity.mfaEnabled) {
+      const challengeToken = await this.challenges.sign(identity.userId);
+      this.mfaMetrics.recordChallenge();
+      throw new DomainError(ErrorCode.MfaRequired, {
+        module: 'iam',
+        details: { challengeToken },
+      });
+    }
+
+    return this.issueSession(identity);
+  }
+
+  async issueSession(identity: {
+    readonly userId: string;
+    readonly sessionVersion: number;
+    readonly orgId: string | null;
+  }): Promise<TokenPairResponse> {
+    if (identity.orgId === null) {
       this.metrics.recordLoginFailure();
       throw new DomainError(ErrorCode.InvalidCredentials, { module: 'iam' });
     }
@@ -103,8 +129,8 @@ export class AuthService {
     return tokenPair(accessToken, refreshToken);
   }
 
-  async refresh(body: unknown): Promise<TokenPairResponse> {
-    const { refreshToken } = parseRefreshRequest(body);
+  async refresh(body: unknown, cookieHeader?: string): Promise<TokenPairResponse> {
+    const refreshToken = parseRefreshCredential(body, cookieHeader);
     const parsed = parseRefreshToken(refreshToken);
     if (parsed === undefined) {
       throw new DomainError(ErrorCode.RefreshInvalid, { module: 'iam' });

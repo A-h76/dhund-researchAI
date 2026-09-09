@@ -8,6 +8,7 @@ import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import { AuthController } from '../../src/iam/auth.controller';
 import { AuthService } from '../../src/iam/auth/auth.service';
 import { AuthTokensService } from '../../src/iam/auth/auth-tokens.service';
+import { stubMfaServiceProvider } from '../fixtures/stub-mfa-service';
 import { Argon2PasswordHasher } from '../../src/iam/password/argon2-hasher';
 import { PASSWORD_BREACH_LIST } from '../../src/iam/password/breach-list.port';
 import { PASSWORD_HASHER } from '../../src/iam/password/password-hasher';
@@ -97,6 +98,7 @@ const BREACHED = 'breached-pass12';
           PasswordPolicy,
           RegistrationMetrics,
           { provide: AuthService, useValue: { login: async () => undefined } },
+          stubMfaServiceProvider,
           {
             provide: AuthTokensService,
             useValue: {

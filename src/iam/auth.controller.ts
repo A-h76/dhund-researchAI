@@ -6,14 +6,26 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Res,
 } from '@nestjs/common';
 import { AuthService, type TokenPairResponse } from './auth/auth.service';
 import { AuthTokensService, type AuthAcceptedResponse } from './auth/auth-tokens.service';
+import {
+  MfaService,
+  type RecoveryCodesResponse,
+  type TotpEnrolResponse,
+} from './auth/mfa.service';
 import {
   RegistrationService,
   type RegisterResponse,
 } from './registration/registration.service';
 import type { JwksResponse } from './tokens/access-token.service';
+import {
+  attachAuthCookies,
+  clearAuthCookies,
+  generateCsrfToken,
+  type HeaderAppendResponse,
+} from '../platform/http';
 
 @Controller('v1/auth')
 export class AuthController {
@@ -21,6 +33,7 @@ export class AuthController {
     private readonly registration: RegistrationService,
     private readonly auth: AuthService,
     private readonly tokens: AuthTokensService,
+    private readonly mfa: MfaService,
   ) {}
 
   @Post('register')
@@ -31,22 +44,31 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  login(@Body() body: unknown): Promise<TokenPairResponse> {
-    return this.auth.login(body);
+  async login(
+    @Body() body: unknown,
+    @Res({ passthrough: true }) res: HeaderAppendResponse,
+  ): Promise<TokenPairResponse> {
+    return withCookies(res, await this.auth.login(body));
   }
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  refresh(@Body() body: unknown): Promise<TokenPairResponse> {
-    return this.auth.refresh(body);
+  async refresh(
+    @Body() body: unknown,
+    @Headers('cookie') cookie: string | undefined,
+    @Res({ passthrough: true }) res: HeaderAppendResponse,
+  ): Promise<TokenPairResponse> {
+    return withCookies(res, await this.auth.refresh(body, cookie));
   }
 
   @Post('logout-all')
   @HttpCode(HttpStatus.NO_CONTENT)
-  logoutAll(
+  async logoutAll(
     @Headers('authorization') authorization: string | undefined,
+    @Res({ passthrough: true }) res: HeaderAppendResponse,
   ): Promise<void> {
-    return this.auth.logoutAll(authorization);
+    await this.auth.logoutAll(authorization);
+    clearAuthCookies(res);
   }
 
   @Get('jwks')
@@ -77,4 +99,56 @@ export class AuthController {
   resetPassword(@Body() body: unknown): Promise<void> {
     return this.tokens.resetPassword(body);
   }
+
+  @Post('mfa/totp/enrol')
+  @HttpCode(HttpStatus.OK)
+  enrolTotp(
+    @Headers('authorization') authorization: string | undefined,
+  ): Promise<TotpEnrolResponse> {
+    return this.mfa.enrol(authorization);
+  }
+
+  @Post('mfa/totp/confirm')
+  @HttpCode(HttpStatus.OK)
+  confirmTotp(
+    @Headers('authorization') authorization: string | undefined,
+    @Body() body: unknown,
+  ): Promise<RecoveryCodesResponse> {
+    return this.mfa.confirm(authorization, body);
+  }
+
+  @Post('mfa/totp/disable')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  disableTotp(
+    @Headers('authorization') authorization: string | undefined,
+    @Body() body: unknown,
+  ): Promise<void> {
+    return this.mfa.disable(authorization, body);
+  }
+
+  @Post('mfa/recovery/issue')
+  @HttpCode(HttpStatus.OK)
+  issueRecovery(
+    @Headers('authorization') authorization: string | undefined,
+    @Body() body: unknown,
+  ): Promise<RecoveryCodesResponse> {
+    return this.mfa.issueRecovery(authorization, body);
+  }
+
+  @Post('mfa/verify')
+  @HttpCode(HttpStatus.OK)
+  async verifyMfa(
+    @Body() body: unknown,
+    @Res({ passthrough: true }) res: HeaderAppendResponse,
+  ): Promise<TokenPairResponse> {
+    return withCookies(res, await this.mfa.verify(body));
+  }
+}
+
+function withCookies(
+  res: HeaderAppendResponse,
+  pair: TokenPairResponse,
+): TokenPairResponse {
+  attachAuthCookies(res, pair.refreshToken, generateCsrfToken());
+  return pair;
 }

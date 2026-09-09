@@ -1,7 +1,9 @@
 import { AuthMetrics } from '../../src/iam/auth/auth.metrics';
 import { AuthService } from '../../src/iam/auth/auth.service';
+import { MfaMetrics } from '../../src/iam/auth/mfa.metrics';
 import { DUMMY_ARGON2_HASH } from '../../src/iam/password/dummy-hash';
 import { AccessTokenService } from '../../src/iam/tokens/access-token.service';
+import { MfaChallengeService } from '../../src/iam/tokens/mfa-challenge.service';
 import { hashRefreshToken, parseRefreshToken } from '../../src/iam/tokens/refresh-token';
 import { OutboxWriterService } from '../../src/platform/events';
 import { ErrorCode } from '../../src/platform/errors/error-codes';
@@ -72,6 +74,8 @@ describe('AuthService', () => {
       new OutboxWriterService(outbox),
       tokens,
       metrics,
+      new MfaChallengeService(config),
+      new MfaMetrics(logger),
     );
   });
 
@@ -271,5 +275,32 @@ describe('AuthService', () => {
     expect(
       appended.filter((row) => row.eventType === 'iam.session.revoked').length,
     ).toBeGreaterThanOrEqual(2);
+  });
+
+  it('issues an MFA challenge and no session when TOTP is enrolled', async () => {
+    hasher.verify.mockResolvedValue(true);
+    store.seedUser(email, {
+      userId,
+      sessionVersion: 1,
+      passwordHash: STORED_HASH,
+      orgId,
+      emailVerifiedAt: null,
+      mfaEnabled: true,
+      privileged: true,
+    });
+
+    await expect(
+      runWithCorrelationIdAsync('cor-mfa-login', () =>
+        service.login({ email, password: PASSWORD }),
+      ),
+    ).rejects.toMatchObject({
+      code: ErrorCode.MfaRequired,
+      details: { challengeToken: expect.any(String) },
+    });
+
+    expect(store.sessions.size).toBe(0);
+    expect(store.families.size).toBe(0);
+    expect(appended).toEqual([]);
+    expect(JSON.stringify(lines)).not.toMatch(/challengeToken/);
   });
 });

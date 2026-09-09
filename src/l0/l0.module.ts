@@ -25,11 +25,13 @@ import {
   REGISTRATION_STORE,
   SESSION_STORE,
   AUTH_TOKEN_STORE,
+  MFA_STORE,
   SECRETS_SERVICE,
 } from './ports/tokens';
 import { PrismaAiExecutionLedgerAdapter } from './adapters/prisma/prisma-ai-execution-ledger.adapter';
 import { PrismaAuditEventAdapter } from './adapters/prisma/prisma-audit-event.adapter';
 import { PrismaAuthTokenAdapter } from './adapters/prisma/prisma-auth-token.adapter';
+import { PrismaMfaAdapter } from './adapters/prisma/prisma-mfa.adapter';
 import { PrismaOutboxAdapter } from './adapters/prisma/prisma-outbox.adapter';
 import { PrismaRegistrationAdapter } from './adapters/prisma/prisma-registration.adapter';
 import { PrismaSessionAdapter } from './adapters/prisma/prisma-session.adapter';
@@ -44,6 +46,7 @@ import { PrismaSessionAdapter } from './adapters/prisma/prisma-session.adapter';
     PrismaRegistrationAdapter,
     PrismaSessionAdapter,
     PrismaAuthTokenAdapter,
+    PrismaMfaAdapter,
     HibpBreachListAdapter,
     RedisCacheAdapter,
     RedisCounterAdapter,
@@ -60,6 +63,7 @@ import { PrismaSessionAdapter } from './adapters/prisma/prisma-session.adapter';
     { provide: REGISTRATION_STORE, useExisting: PrismaRegistrationAdapter },
     { provide: SESSION_STORE, useExisting: PrismaSessionAdapter },
     { provide: AUTH_TOKEN_STORE, useExisting: PrismaAuthTokenAdapter },
+    { provide: MFA_STORE, useExisting: PrismaMfaAdapter },
     { provide: BREACH_LIST, useExisting: HibpBreachListAdapter },
     { provide: CACHE_SERVICE, useExisting: RedisCacheAdapter },
     { provide: COUNTER_SERVICE, useExisting: RedisCounterAdapter },
@@ -78,6 +82,7 @@ import { PrismaSessionAdapter } from './adapters/prisma/prisma-session.adapter';
     REGISTRATION_STORE,
     SESSION_STORE,
     AUTH_TOKEN_STORE,
+    MFA_STORE,
     BREACH_LIST,
     CACHE_SERVICE,
     COUNTER_SERVICE,

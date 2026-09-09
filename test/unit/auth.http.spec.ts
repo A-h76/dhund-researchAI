@@ -5,11 +5,13 @@ import { decodeProtectedHeader, importJWK, jwtVerify } from 'jose';
 import { AuthController } from '../../src/iam/auth.controller';
 import { AuthMetrics } from '../../src/iam/auth/auth.metrics';
 import { AuthService } from '../../src/iam/auth/auth.service';
+import { MfaMetrics } from '../../src/iam/auth/mfa.metrics';
 import { AuthTokensService } from '../../src/iam/auth/auth-tokens.service';
 import { DUMMY_ARGON2_HASH } from '../../src/iam/password/dummy-hash';
 import { PASSWORD_HASHER } from '../../src/iam/password/password-hasher';
 import { RegistrationService } from '../../src/iam/registration/registration.service';
 import { AccessTokenService } from '../../src/iam/tokens/access-token.service';
+import { MfaChallengeService } from '../../src/iam/tokens/mfa-challenge.service';
 import { ACCESS_TOKEN_ALGORITHMS } from '../../src/iam/tokens/access-token.constants';
 import { hashRefreshToken } from '../../src/iam/tokens/refresh-token';
 import { OUTBOX_SERVICE, SESSION_STORE } from '../../src/l0/ports';
@@ -27,6 +29,7 @@ import { installTestAppConfig } from '../fixtures/app-config.fixture';
 import { capturingOutbox } from '../fixtures/capturing-outbox';
 import { generateTestJwtConfig } from '../fixtures/jwt-keys.fixture';
 import { MemorySessionStore } from '../fixtures/memory-session-store';
+import { stubMfaServiceProvider } from '../fixtures/stub-mfa-service';
 
 const PASSWORD = 'http-login-pass12';
 const STORED_HASH = '$argon2id$v=19$m=65536,t=3,p=4$stored';
@@ -78,8 +81,11 @@ async function startApp(): Promise<{
     providers: [
       AuthService,
       AuthMetrics,
+      MfaMetrics,
+      MfaChallengeService,
       AccessTokenService,
       OutboxWriterService,
+      stubMfaServiceProvider,
       { provide: RegistrationService, useValue: { register: async () => undefined } },
       {
         provide: AuthTokensService,

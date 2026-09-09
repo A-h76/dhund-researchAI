@@ -14,14 +14,27 @@ export class MemorySessionStore implements SessionStore {
   readonly sessions = new Map<string, AccessSession>();
   readonly families = new Map<string, RefreshFamilyRecord>();
 
-  seedUser(email: string, identity: LoginIdentity): void {
-    const copy = { ...identity };
+  seedUser(
+    email: string,
+    identity: Omit<LoginIdentity, 'mfaEnabled' | 'privileged'> &
+      Partial<Pick<LoginIdentity, 'mfaEnabled' | 'privileged'>>,
+  ): void {
+    const copy: LoginIdentity = {
+      mfaEnabled: false,
+      privileged: true,
+      ...identity,
+    };
     this.usersByEmail.set(email.toLowerCase(), copy);
     this.usersById.set(identity.userId, copy);
   }
 
   async findLoginByEmail(email: string): Promise<LoginIdentity | null> {
     const found = this.usersByEmail.get(email.toLowerCase());
+    return found === undefined ? null : { ...found };
+  }
+
+  async findLoginByUserId(userId: string): Promise<LoginIdentity | null> {
+    const found = this.usersById.get(userId);
     return found === undefined ? null : { ...found };
   }
 
@@ -120,5 +133,19 @@ export class MemorySessionStore implements SessionStore {
     }
 
     return { orgId: user?.orgId ?? null, sessionIds };
+  }
+
+  setMfaEnabled(userId: string, enabled: boolean): void {
+    const user = this.usersById.get(userId);
+    if (user === undefined) {
+      return;
+    }
+    const next = { ...user, mfaEnabled: enabled };
+    this.usersById.set(userId, next);
+    for (const [email, identity] of this.usersByEmail.entries()) {
+      if (identity.userId === userId) {
+        this.usersByEmail.set(email, next);
+      }
+    }
   }
 }

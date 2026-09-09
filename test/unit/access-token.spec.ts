@@ -2,6 +2,7 @@ import { createHmac } from 'node:crypto';
 import { generateKeyPair, importPKCS8, SignJWT } from 'jose';
 import { AccessTokenService } from '../../src/iam/tokens/access-token.service';
 import { AuthTokenService } from '../../src/iam/tokens/auth-token.service';
+import { MfaChallengeService } from '../../src/iam/tokens/mfa-challenge.service';
 import { DomainError } from '../../src/platform/errors/domain-error';
 import { ErrorCode } from '../../src/platform/errors/error-codes';
 import { generateId } from '../../src/platform/ids/uuid-v7';
@@ -209,6 +210,14 @@ describe('AccessTokenService (GAP-JWT-01)', () => {
       ttlSeconds: 3600,
     });
     await expect(tokens.verify(authToken)).rejects.toMatchObject({
+      code: ErrorCode.TokenInvalid,
+    });
+  });
+
+  it('rejects an MFA challenge JWS at the access-token verifier', async () => {
+    const challenges = new MfaChallengeService(installTestAppConfig({ jwt }));
+    const challenge = await challenges.sign(userId);
+    await expect(tokens.verify(challenge)).rejects.toMatchObject({
       code: ErrorCode.TokenInvalid,
     });
   });

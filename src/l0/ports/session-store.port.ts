@@ -6,6 +6,8 @@ export interface LoginIdentity {
   readonly passwordHash: string | null;
   readonly orgId: string | null;
   readonly emailVerifiedAt: Date | null;
+  readonly mfaEnabled: boolean;
+  readonly privileged: boolean;
 }
 
 export interface AccessSession {
@@ -41,6 +43,7 @@ export interface LogoutAllResult {
 
 export interface SessionStore {
   findLoginByEmail(email: string): Promise<LoginIdentity | null>;
+  findLoginByUserId(userId: string): Promise<LoginIdentity | null>;
   getAccessSession(sessionId: string): Promise<AccessSession | null>;
   getRefreshFamily(familyId: string): Promise<RefreshFamilyRecord | null>;
   createSessionFamily(tx: OutboxTransaction, records: SessionFamilyInsert): Promise<void>;

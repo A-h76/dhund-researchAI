@@ -6,6 +6,8 @@ import { AuthMetrics } from './auth/auth.metrics';
 import { AuthService } from './auth/auth.service';
 import { AuthTokenMetrics } from './auth/auth-token.metrics';
 import { AuthTokensService } from './auth/auth-tokens.service';
+import { MfaMetrics } from './auth/mfa.metrics';
+import { MfaService } from './auth/mfa.service';
 import { Argon2PasswordHasher } from './password/argon2-hasher';
 import { PASSWORD_BREACH_LIST } from './password/breach-list.port';
 import { PASSWORD_HASHER } from './password/password-hasher';
@@ -14,6 +16,7 @@ import { RegistrationMetrics } from './registration/registration.metrics';
 import { RegistrationService } from './registration/registration.service';
 import { AccessTokenService } from './tokens/access-token.service';
 import { AuthTokenService } from './tokens/auth-token.service';
+import { MfaChallengeService } from './tokens/mfa-challenge.service';
 
 @Module({
   imports: [PlatformModule],
@@ -29,8 +32,11 @@ import { AuthTokenService } from './tokens/auth-token.service';
     AuthTokenMetrics,
     AccessTokenService,
     AuthTokenService,
+    MfaChallengeService,
     AuthService,
     AuthTokensService,
+    MfaMetrics,
+    MfaService,
   ],
 })
 export class IamModule {}

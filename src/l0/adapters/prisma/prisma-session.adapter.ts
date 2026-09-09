@@ -21,34 +21,24 @@ export class PrismaSessionAdapter implements SessionStore {
     try {
       const user = await this.client().user.findUnique({
         where: { email },
-        include: {
-          credential: true,
-          ownedOrganizations: {
-            where: { kind: 'PERSONAL' },
-            select: { id: true },
-            take: 1,
-          },
-          orgMemberships: {
-            where: { revokedAt: null },
-            select: { orgId: true },
-            take: 1,
-          },
-        },
+        include: LOGIN_INCLUDE,
       });
-
-      if (user === null || user.deletedAt !== null) {
-        return null;
-      }
-
-      return {
-        userId: user.id,
-        sessionVersion: user.sessionVersion,
-        passwordHash: user.credential?.passwordHash ?? null,
-        orgId: resolveOrgId(user.ownedOrganizations, user.orgMemberships),
-        emailVerifiedAt: user.emailVerifiedAt,
-      };
+      return toLoginIdentity(user);
     } catch (error) {
       throw new L0OperationError('Login lookup failed', error);
+    }
+  }
+
+  async findLoginByUserId(userId: string): Promise<LoginIdentity | null> {
+    await this.ensureConnected();
+    try {
+      const user = await this.client().user.findUnique({
+        where: { id: userId },
+        include: LOGIN_INCLUDE,
+      });
+      return toLoginIdentity(user);
+    } catch (error) {
+      throw new L0OperationError('Login lookup by id failed', error);
     }
   }
 
@@ -241,9 +231,56 @@ export class PrismaSessionAdapter implements SessionStore {
   }
 }
 
+const LOGIN_INCLUDE = {
+  credential: true,
+  ownedOrganizations: {
+    where: { kind: 'PERSONAL' as const },
+    select: { id: true },
+    take: 1,
+  },
+  orgMemberships: {
+    where: { revokedAt: null },
+    select: { orgId: true, role: true },
+  },
+  totpSecret: { select: { enabledAt: true } },
+};
+
+type LoginUser = {
+  id: string;
+  deletedAt: Date | null;
+  sessionVersion: number;
+  emailVerifiedAt: Date | null;
+  credential: { passwordHash: string } | null;
+  ownedOrganizations: readonly { id: string }[];
+  orgMemberships: readonly { orgId: string; role: string }[];
+  totpSecret: { enabledAt: Date | null } | null;
+};
+
+function toLoginIdentity(user: LoginUser | null): LoginIdentity | null {
+  if (user === null || user.deletedAt !== null) {
+    return null;
+  }
+
+  return {
+    userId: user.id,
+    sessionVersion: user.sessionVersion,
+    passwordHash: user.credential?.passwordHash ?? null,
+    orgId: resolveOrgId(user.ownedOrganizations, user.orgMemberships),
+    emailVerifiedAt: user.emailVerifiedAt,
+    mfaEnabled: user.totpSecret?.enabledAt != null,
+    privileged: isPrivileged(user.orgMemberships),
+  };
+}
+
 function resolveOrgId(
   ownedOrganizations: readonly { id: string }[],
   memberships: readonly { orgId: string }[],
 ): string | null {
   return ownedOrganizations[0]?.id ?? memberships[0]?.orgId ?? null;
+}
+
+const PRIVILEGED_ROLES = new Set(['OWNER', 'ADMIN', 'BILLING']);
+
+function isPrivileged(memberships: readonly { role: string }[]): boolean {
+  return memberships.some((membership) => PRIVILEGED_ROLES.has(membership.role));
 }

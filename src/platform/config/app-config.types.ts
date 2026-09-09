@@ -22,6 +22,7 @@ export interface AppConfig {
   readonly redisUrl: string;
   readonly argon2: Argon2Config;
   readonly jwt?: JwtConfig;
+  readonly totpWrapKey?: Uint8Array;
   readonly s3?: {
     readonly endpoint: string;
     readonly region: string;

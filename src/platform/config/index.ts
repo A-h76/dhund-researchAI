@@ -19,6 +19,7 @@ export {
   parseLogLevel,
   parsePort,
   parseJwtConfig,
+  parseTotpWrapKey,
   parseRequiredSecret,
   DEFAULT_DATABASE_POOL_SIZE,
   MAX_DATABASE_POOL_SIZE,
