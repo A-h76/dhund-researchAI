@@ -41,6 +41,7 @@ import { capturingOutbox } from '../fixtures/capturing-outbox';
 import { generateTestJwtConfig } from '../fixtures/jwt-keys.fixture';
 import { MemoryMfaStore } from '../fixtures/memory-mfa-store';
 import { MemorySessionStore } from '../fixtures/memory-session-store';
+import { accessAuthGuardProviders } from '../fixtures/access-auth-providers';
 
 const PASSWORD = 'http-mfa-pass-12';
 const STORED_HASH = '$argon2id$v=19$m=65536,t=3,p=4$stored';
@@ -130,6 +131,7 @@ async function startApp(): Promise<{
       { provide: OUTBOX_SERVICE, useValue: outbox },
       { provide: PlatformLogger, useValue: logger },
       { provide: APP_FILTER, useClass: GlobalExceptionFilter },
+      ...accessAuthGuardProviders(),
     ],
   }).compile();
 

@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
-import { ProjectsModule } from '../projects/projects.module';
+import { PlatformModule } from '../platform/platform.module';
+import { AnnSearch } from './ann-search';
 
 @Module({
-  imports: [ProjectsModule],
-  exports: [ProjectsModule],
+  imports: [PlatformModule],
+  providers: [AnnSearch],
+  exports: [AnnSearch],
 })
 export class RetrievalModule {}

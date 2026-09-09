@@ -5,6 +5,7 @@ import { ConcurrencyModule } from './concurrency/concurrency.module';
 import { ConfigModule } from './config/config.module';
 import { EventsModule } from './events/events.module';
 import { LoggerModule } from './logging/logger.module';
+import { PersistenceModule } from './persistence/persistence.module';
 import { QueuesModule } from './queues/queues.module';
 import { ReliabilityModule } from './reliability/reliability.module';
 
@@ -18,6 +19,7 @@ import { ReliabilityModule } from './reliability/reliability.module';
     ReliabilityModule,
     ConcurrencyModule,
     EventsModule,
+    PersistenceModule,
   ],
   exports: [
     ConfigModule,
@@ -28,6 +30,7 @@ import { ReliabilityModule } from './reliability/reliability.module';
     ReliabilityModule,
     ConcurrencyModule,
     EventsModule,
+    PersistenceModule,
   ],
 })
 export class PlatformModule {}

@@ -19,6 +19,7 @@ import { CsrfMiddleware } from '../../platform/http';
 import { RuntimeRole } from '../../platform/runtime/role';
 import { PlatformModule } from '../../platform/platform.module';
 import { IamModule } from '../../iam/iam.module';
+import { IngestionModule } from '../../ingestion/ingestion.module';
 import { ProjectsModule } from '../../projects/projects.module';
 import { ApiEventsGateway } from './api-events.gateway';
 import { ApiRootController } from './api-root.controller';
@@ -27,7 +28,7 @@ import { HealthController } from './health.controller';
 import { NoopProcessorReadiness } from './noop-processor-readiness';
 
 @Module({
-  imports: [PlatformModule, AiModule, IamModule, ProjectsModule],
+  imports: [PlatformModule, AiModule, IamModule, ProjectsModule, IngestionModule],
   controllers: [ApiRootController, HealthController, CapabilityProbeController],
   providers: [
     ApiEventsGateway,

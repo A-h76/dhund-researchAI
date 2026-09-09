@@ -53,6 +53,7 @@ import { generateId } from '../../src/platform/ids/uuid-v7';
 import { installTestAppConfig } from '../fixtures/app-config.fixture';
 import { generateTestJwtConfig } from '../fixtures/jwt-keys.fixture';
 import { stubMfaServiceProvider } from '../fixtures/stub-mfa-service';
+import { accessAuthGuardProviders } from '../fixtures/access-auth-providers';
 
 const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
 const ROOT = join(__dirname, '..', '..');
@@ -197,6 +198,7 @@ function tokenFromHtml(html: string): string {
           OutboxWriterService,
           { provide: PlatformLogger, useValue: logger },
           { provide: APP_FILTER, useClass: GlobalExceptionFilter },
+          ...accessAuthGuardProviders(),
         ],
       }).compile();
 

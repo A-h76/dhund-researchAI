@@ -4,6 +4,7 @@ import { L0OperationError } from '../../ports/errors';
 import type { OutboxTransaction } from '../../ports/outbox.port';
 import {
   MembershipConflictError,
+  type ListedProjectMembership,
   type OrgMembershipRecord,
   type OrgRecord,
   type ProjectInsert,
@@ -44,6 +45,24 @@ export class PrismaTenancyAdapter implements TenancyStore {
       return row === null ? null : toOrgMembership(row);
     } catch (error) {
       throw new L0OperationError('Org membership lookup failed', error);
+    }
+  }
+
+  async listActiveOrgMemberships(
+    userId: string,
+  ): Promise<OrgMembershipRecord[]> {
+    await this.database.connect();
+    try {
+      const rows = await this.client().orgMembership.findMany({
+        where: {
+          userId,
+          revokedAt: null,
+          organization: { deletedAt: null },
+        },
+      });
+      return rows.map(toOrgMembership);
+    } catch (error) {
+      throw new L0OperationError('Org membership list failed', error);
     }
   }
 
@@ -155,6 +174,29 @@ export class PrismaTenancyAdapter implements TenancyStore {
       return row === null ? null : toProjectMembership(row);
     } catch (error) {
       throw new L0OperationError('Project membership lookup failed', error);
+    }
+  }
+
+  async listActiveProjectMemberships(
+    userId: string,
+  ): Promise<ListedProjectMembership[]> {
+    await this.database.connect();
+    try {
+      const rows = await this.client().projectMembership.findMany({
+        where: {
+          userId,
+          revokedAt: null,
+          project: { deletedAt: null },
+        },
+        include: { project: { select: { orgId: true } } },
+      });
+      return rows.map((row) => ({
+        projectId: row.projectId,
+        orgId: row.project.orgId,
+        role: row.role,
+      }));
+    } catch (error) {
+      throw new L0OperationError('Project membership list failed', error);
     }
   }
 

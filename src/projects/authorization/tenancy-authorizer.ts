@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { AccessContextService } from '../../iam/authorization/access-context.service';
 import { readBearerToken } from '../../iam/auth/parse-auth-request';
 import { AccessTokenService } from '../../iam/tokens/access-token.service';
 import {
@@ -10,11 +11,10 @@ import {
   type TenancyStore,
 } from '../../l0/ports';
 import {
-  orgRoleAtLeast,
-  projectRoleAtLeast,
-  type OrgDataRole,
-  type ProjectRole,
-} from '../../platform/authorization/roles';
+  authorizeOrg,
+  authorizeProject,
+} from '../../platform/authorization/authorize';
+import type { OrgDataRole, ProjectRole } from '../../platform/authorization/roles';
 import { DomainError, ErrorCode, notFound } from '../../platform/errors';
 import { isUuid } from '../../platform/ids/uuid-v7';
 
@@ -29,6 +29,7 @@ export class TenancyAuthorizer {
   constructor(
     private readonly accessTokens: AccessTokenService,
     @Inject(TENANCY_STORE) private readonly tenancy: TenancyStore,
+    private readonly accessContext: AccessContextService,
   ) {}
 
   async requireUser(authorization: string | undefined) {
@@ -44,17 +45,20 @@ export class TenancyAuthorizer {
       throw notFound({ module: MODULE });
     }
     const org = await this.tenancy.findLiveOrg(orgId);
+    const context = await this.accessContext.resolve(userId);
+    const authorized = authorizeOrg(context, orgId, org, minimum, MODULE);
     if (org === null) {
       throw notFound({ module: MODULE });
     }
-    const membership = await this.tenancy.findActiveOrgMembership(orgId, userId);
-    if (membership === null) {
-      throw notFound({ module: MODULE });
-    }
-    if (!orgRoleAtLeast(membership.role, minimum)) {
-      throw forbidden();
-    }
-    return { org, membership };
+    return {
+      org,
+      membership: {
+        id: `${orgId}:${userId}`,
+        orgId: authorized.orgId,
+        userId,
+        role: authorized.role,
+      },
+    };
   }
 
   async requireProject(
@@ -65,15 +69,26 @@ export class TenancyAuthorizer {
     project: ProjectRecord;
     membership: ProjectMembershipRecord;
   }> {
-    const { project, orgMembership, membership } =
-      await this.loadProjectAccess(userId, projectId);
-    if (orgMembership?.role === 'BILLING' || membership === null) {
+    if (!isUuid(projectId)) {
       throw notFound({ module: MODULE });
     }
-    if (!projectRoleAtLeast(membership.role, minimum)) {
-      throw forbidden();
+    const project = await this.tenancy.findLiveProject(projectId);
+    const context = await this.accessContext.resolve(userId);
+    const authorized = authorizeProject(context, projectId, project, minimum, {
+      module: MODULE,
+    });
+    if (project === null) {
+      throw notFound({ module: MODULE });
     }
-    return { project, membership };
+    return {
+      project,
+      membership: {
+        id: `${projectId}:${userId}`,
+        projectId,
+        userId,
+        role: authorized.role,
+      },
+    };
   }
 
   async loadProjectAccess(
@@ -91,14 +106,31 @@ export class TenancyAuthorizer {
     if (project === null) {
       throw notFound({ module: MODULE });
     }
-    const orgMembership = await this.tenancy.findActiveOrgMembership(
-      project.orgId,
-      userId,
+    const context = await this.accessContext.resolve(userId);
+    const org = context.orgs.find((row) => row.orgId === project.orgId);
+    const projectMembership = context.projects.find(
+      (row) => row.projectId === projectId,
     );
-    const membership = await this.tenancy.findActiveProjectMembership(
-      projectId,
-      userId,
-    );
-    return { project, orgMembership, membership };
+    return {
+      project,
+      orgMembership:
+        org === undefined
+          ? null
+          : {
+              id: `${project.orgId}:${userId}`,
+              orgId: org.orgId,
+              userId,
+              role: org.role,
+            },
+      membership:
+        projectMembership === undefined
+          ? null
+          : {
+              id: `${projectId}:${userId}`,
+              projectId,
+              userId,
+              role: projectMembership.role,
+            },
+    };
   }
 }

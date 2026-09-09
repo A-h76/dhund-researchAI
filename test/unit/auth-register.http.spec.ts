@@ -5,6 +5,8 @@ import { AuthController } from '../../src/iam/auth.controller';
 import { AuthService } from '../../src/iam/auth/auth.service';
 import { AuthTokensService } from '../../src/iam/auth/auth-tokens.service';
 import { stubMfaServiceProvider } from '../fixtures/stub-mfa-service';
+import { accessAuthGuardProviders } from '../fixtures/access-auth-providers';
+import { AccessTokenService } from '../../src/iam/tokens/access-token.service';
 import { PASSWORD_BREACH_LIST } from '../../src/iam/password/breach-list.port';
 import { PASSWORD_HASHER } from '../../src/iam/password/password-hasher';
 import { PasswordPolicy } from '../../src/iam/password/password-policy';
@@ -89,6 +91,11 @@ async function startApp(conflictEmails: Set<string> = new Set()): Promise<{
       OutboxWriterService,
       { provide: PlatformLogger, useValue: logger },
       { provide: APP_FILTER, useClass: GlobalExceptionFilter },
+      ...accessAuthGuardProviders(),
+      {
+        provide: AccessTokenService,
+        useValue: { verify: async () => ({ sub: '', sid: '', sv: 1, jti: '' }) },
+      },
     ],
   }).compile();
 

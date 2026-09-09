@@ -6,6 +6,7 @@ import { PrismaDatabaseAdapter } from './adapters/prisma/prisma-database.adapter
 import { RedisCounterAdapter } from './adapters/redis/redis-counter.adapter';
 import { RedisLeaseAdapter } from './adapters/redis/redis-lease.adapter';
 import { RedisCacheAdapter } from './adapters/redis/redis-cache.adapter';
+import { RedisAccessContextInvalidator } from './adapters/redis/redis-access-context-invalidator';
 import { RedisPubSubAdapter } from './adapters/redis/redis-pubsub.adapter';
 import { ResendEmailAdapter } from './adapters/resend/resend-email.adapter';
 import { S3ObjectStorageAdapter } from './adapters/s3-compatible/s3-object-storage.adapter';
@@ -28,14 +29,15 @@ import {
   MFA_STORE,
   TENANCY_STORE,
   ACCESS_CONTEXT_INVALIDATOR,
+  SCOPED_STORE,
   SECRETS_SERVICE,
 } from './ports/tokens';
 import { PrismaAiExecutionLedgerAdapter } from './adapters/prisma/prisma-ai-execution-ledger.adapter';
 import { PrismaAuditEventAdapter } from './adapters/prisma/prisma-audit-event.adapter';
 import { PrismaAuthTokenAdapter } from './adapters/prisma/prisma-auth-token.adapter';
 import { PrismaMfaAdapter } from './adapters/prisma/prisma-mfa.adapter';
+import { PrismaScopedStoreAdapter } from './adapters/prisma/prisma-scoped-store.adapter';
 import { PrismaTenancyAdapter } from './adapters/prisma/prisma-tenancy.adapter';
-import { NoopAccessContextInvalidator } from './adapters/noop/noop-access-context-invalidator';
 import { PrismaOutboxAdapter } from './adapters/prisma/prisma-outbox.adapter';
 import { PrismaRegistrationAdapter } from './adapters/prisma/prisma-registration.adapter';
 import { PrismaSessionAdapter } from './adapters/prisma/prisma-session.adapter';
@@ -52,7 +54,8 @@ import { PrismaSessionAdapter } from './adapters/prisma/prisma-session.adapter';
     PrismaAuthTokenAdapter,
     PrismaMfaAdapter,
     PrismaTenancyAdapter,
-    NoopAccessContextInvalidator,
+    PrismaScopedStoreAdapter,
+    RedisAccessContextInvalidator,
     HibpBreachListAdapter,
     RedisCacheAdapter,
     RedisCounterAdapter,
@@ -71,9 +74,10 @@ import { PrismaSessionAdapter } from './adapters/prisma/prisma-session.adapter';
     { provide: AUTH_TOKEN_STORE, useExisting: PrismaAuthTokenAdapter },
     { provide: MFA_STORE, useExisting: PrismaMfaAdapter },
     { provide: TENANCY_STORE, useExisting: PrismaTenancyAdapter },
+    { provide: SCOPED_STORE, useExisting: PrismaScopedStoreAdapter },
     {
       provide: ACCESS_CONTEXT_INVALIDATOR,
-      useExisting: NoopAccessContextInvalidator,
+      useExisting: RedisAccessContextInvalidator,
     },
     { provide: BREACH_LIST, useExisting: HibpBreachListAdapter },
     { provide: CACHE_SERVICE, useExisting: RedisCacheAdapter },
@@ -95,6 +99,7 @@ import { PrismaSessionAdapter } from './adapters/prisma/prisma-session.adapter';
     AUTH_TOKEN_STORE,
     MFA_STORE,
     TENANCY_STORE,
+    SCOPED_STORE,
     ACCESS_CONTEXT_INVALIDATOR,
     BREACH_LIST,
     CACHE_SERVICE,

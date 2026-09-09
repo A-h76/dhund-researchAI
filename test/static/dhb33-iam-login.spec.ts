@@ -63,14 +63,15 @@ describe('DHB-33 IAM login static checks', () => {
     const violations: string[] = [];
     for (const file of collectFiles(IAM_ROOT)) {
       const content = readFileSync(file, 'utf8');
+      const authorization = file.replace(/\\/g, '/').includes('/iam/authorization/');
       if (
         content.includes('@prisma/client') ||
         content.includes('PrismaClient') ||
-        content.includes('CanActivate') ||
-        content.includes('AuthGuard') ||
         content.includes('@Public(') ||
         content.includes('Set-Cookie') ||
-        content.includes('dhund_refresh')
+        content.includes('dhund_refresh') ||
+        (!authorization &&
+          (content.includes('CanActivate') || /\bAuthGuard\b/.test(content)))
       ) {
         violations.push(relative(process.cwd(), file));
       }

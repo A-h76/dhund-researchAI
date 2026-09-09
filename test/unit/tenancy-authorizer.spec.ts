@@ -1,4 +1,8 @@
 import { TenancyAuthorizer } from '../../src/projects/authorization/tenancy-authorizer';
+import { AccessContextMetrics } from '../../src/iam/authorization/access-context.metrics';
+import { AccessContextService } from '../../src/iam/authorization/access-context.service';
+import { PlatformLogger } from '../../src/platform/logging';
+import { MemoryCacheService } from '../fixtures/memory-cache';
 import { AccessTokenService } from '../../src/iam/tokens/access-token.service';
 import { ErrorCode } from '../../src/platform/errors/error-codes';
 import { DomainError } from '../../src/platform/errors';
@@ -36,7 +40,17 @@ describe('DHB-36 tenancy authorizer', () => {
     sessions = new MemorySessionStore();
     const config = installTestAppConfig({ jwt: generateTestJwtConfig() });
     tokens = new AccessTokenService(config, sessions);
-    authorizer = new TenancyAuthorizer(tokens, tenancy);
+    const accessContext = new AccessContextService(
+      tenancy,
+      new MemoryCacheService(),
+      new AccessContextMetrics({
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+        debug: () => undefined,
+      } as unknown as PlatformLogger),
+    );
+    authorizer = new TenancyAuthorizer(tokens, tenancy, accessContext);
     tenancy.seedOrg({
       id: orgId,
       kind: 'TEAM',

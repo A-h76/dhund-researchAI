@@ -47,9 +47,14 @@ describe('DHB-36 tenancy static checks (GAP-CAT-A-01 / P-a)', () => {
     'utf8',
   );
   const invalidator = readFileSync(
+    join(ROOT, 'src/l0/adapters/redis/redis-access-context-invalidator.ts'),
+    'utf8',
+  );
+  const noopInvalidator = readFileSync(
     join(ROOT, 'src/l0/adapters/noop/noop-access-context-invalidator.ts'),
     'utf8',
   );
+  const l0Module = readFileSync(join(ROOT, 'src/l0/l0.module.ts'), 'utf8');
 
   it('keeps the four project roles and org BILLING off the data ladder', () => {
     const projectEnum = schema.match(/enum ProjectRole \{[\s\S]*?\n\}/)?.[0];
@@ -106,14 +111,18 @@ describe('DHB-36 tenancy static checks (GAP-CAT-A-01 / P-a)', () => {
     for (const root of roots) {
       for (const file of collectFiles(root)) {
         const content = readFileSync(file, 'utf8');
+        const authorization = file
+          .replace(/\\/g, '/')
+          .includes('/iam/authorization/');
         if (
           content.includes('@prisma/client') ||
           content.includes('PrismaClient') ||
-          content.includes('CACHE_SERVICE') ||
           content.includes('ioredis') ||
-          content.includes('CanActivate') ||
-          content.includes('AuthGuard') ||
-          content.includes('UseGuards')
+          (!authorization &&
+            (content.includes('CACHE_SERVICE') ||
+              content.includes('CanActivate') ||
+              /\bAuthGuard\b/.test(content) ||
+              content.includes('UseGuards')))
         ) {
           violations.push(relative(process.cwd(), file));
         }
@@ -126,14 +135,17 @@ describe('DHB-36 tenancy static checks (GAP-CAT-A-01 / P-a)', () => {
     expect(service).not.toContain('getPrismaClient');
   });
 
-  it('does not add a schema migration and uses the no-op invalidation seam', () => {
+  it('does not add a schema migration and invalidates AccessContext through cache', () => {
     const migrations = readdirSync(join(ROOT, 'prisma/migrations'));
     expect(migrations.some((name) => name.toLowerCase().includes('dhb36'))).toBe(
       false,
     );
     expect(service).toContain('invalidateAccessContext');
     expect(invalidator).toContain('invalidateAccessContext');
-    expect(invalidator).not.toContain('CACHE_SERVICE');
+    expect(invalidator).toContain('CACHE_SERVICE');
+    expect(l0Module).toContain('RedisAccessContextInvalidator');
+    expect(l0Module).not.toContain('useExisting: NoopAccessContextInvalidator');
+    expect(noopInvalidator).not.toContain('CACHE_SERVICE');
     expect(catalog).toContain("eventType: 'projects.break_glass.used'");
     expect(service).toContain('projects.project.created');
     expect(service).toContain('projects.membership.added');
