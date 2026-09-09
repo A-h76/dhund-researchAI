@@ -11,6 +11,7 @@ import {
   REQUIRE_ORG_ROLE_KEY,
   REQUIRE_PROJECT_ROLE_KEY,
 } from '../../src/iam/authorization/metadata';
+import { DocumentsController } from '../../src/ingestion/documents.controller';
 import { MembershipsController } from '../../src/projects/memberships.controller';
 import { OrgsController } from '../../src/projects/orgs.controller';
 import { ProjectsController } from '../../src/projects/projects.controller';
@@ -23,6 +24,7 @@ const HTTP_CONTROLLERS = [
   HealthController,
   CapabilityProbeController,
   AuthController,
+  DocumentsController,
   OrgsController,
   ProjectsController,
   MembershipsController,
@@ -33,6 +35,7 @@ const EXPECTED_CONTROLLER_FILES = [
   'src/apps/api/capability-probe.controller.ts',
   'src/apps/api/health.controller.ts',
   'src/iam/auth.controller.ts',
+  'src/ingestion/documents.controller.ts',
   'src/projects/memberships.controller.ts',
   'src/projects/orgs.controller.ts',
   'src/projects/projects.controller.ts',
@@ -194,6 +197,13 @@ describe('DHB-37 HTTP guard coverage', () => {
       routes.some(
         (route) =>
           route.path === '/v1/projects/:projectId' &&
+          route.projectRole === 'VIEWER',
+      ),
+    ).toBe(true);
+    expect(
+      routes.some(
+        (route) =>
+          route.path === '/v1/projects/:projectId/documents/:documentId' &&
           route.projectRole === 'VIEWER',
       ),
     ).toBe(true);

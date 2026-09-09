@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
-import { ProjectsModule } from '../projects/projects.module';
+import { PlatformModule } from '../platform/platform.module';
+import { ClaimsRepository, EvidenceRepository } from './scoped-repos';
 
 @Module({
-  imports: [ProjectsModule],
-  exports: [ProjectsModule],
+  imports: [PlatformModule],
+  providers: [EvidenceRepository, ClaimsRepository],
+  exports: [EvidenceRepository, ClaimsRepository],
 })
 export class EvidenceModule {}
