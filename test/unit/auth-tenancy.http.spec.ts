@@ -371,6 +371,10 @@ describe('DHB-36 tenancy HTTP', () => {
     expect(deleted.status).toBe(204);
     expect(read.status).toBe(404);
     expect(patched.status).toBe(404);
+    const deletedAgain = await json(baseUrl, 'DELETE', `/v1/projects/${doomed}`, {
+      token,
+    });
+    expect(deletedAgain.status).toBe(404);
   });
 
   it('allows org OWNER break-glass delete and 404s GET/PATCH without membership', async () => {

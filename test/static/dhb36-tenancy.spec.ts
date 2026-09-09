@@ -147,6 +147,7 @@ describe('DHB-36 tenancy static checks (GAP-CAT-A-01 / P-a)', () => {
     expect(l0Module).not.toContain('useExisting: NoopAccessContextInvalidator');
     expect(noopInvalidator).not.toContain('CACHE_SERVICE');
     expect(catalog).toContain("eventType: 'projects.break_glass.used'");
+    expect(catalog).toContain("eventType: 'projects.project.deleted'");
     expect(service).toContain('projects.project.created');
     expect(service).toContain('projects.membership.added');
     expect(service).toContain('projects.membership.removed');

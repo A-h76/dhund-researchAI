@@ -10,6 +10,7 @@ import { RuntimeRole } from '../../platform/runtime/role';
 import { OutboxRelayProcessor } from './outbox-relay.processor';
 import { PlaceholderProcessor } from './placeholder.processor';
 import { ProcessorRegistry } from './processor-registry';
+import { ProjectDeletionProcessor } from './project-deletion.processor';
 import { ReaperProcessor } from './reaper.processor';
 import { WorkerBootstrapService } from './worker-bootstrap.service';
 
@@ -21,6 +22,7 @@ import { WorkerBootstrapService } from './worker-bootstrap.service';
     PlaceholderProcessor,
     ReaperProcessor,
     OutboxRelayProcessor,
+    ProjectDeletionProcessor,
     { provide: PROCESSOR_READINESS, useExisting: ProcessorRegistry },
     BootstrapValidationService,
     WorkerBootstrapService,

@@ -10,4 +10,6 @@ export interface ObjectStorageService {
   ): string;
   getPresignedPutUrl(key: string, expiresInSeconds?: number): Promise<string>;
   getPresignedGetUrl(key: string, expiresInSeconds?: number): Promise<string>;
+  delete(key: string): Promise<void>;
+  listKeys(prefix: string): Promise<readonly string[]>;
 }

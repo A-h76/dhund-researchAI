@@ -101,6 +101,18 @@ export const PROJECTS_EVENTS: readonly CatalogEventDefinition[] = [
     versions: [{ schemaVersion: 1, fields: [orgId, projectId, userId] }],
   },
   {
+    eventType: 'projects.project.deleted',
+    aggregateType: 'project',
+    domain: 'projects',
+    currentVersion: 1,
+    versions: [
+      {
+        schemaVersion: 1,
+        fields: [orgId, projectId, field('deletedBy', 'string')],
+      },
+    ],
+  },
+  {
     eventType: 'projects.break_glass.used',
     aggregateType: 'project',
     domain: 'projects',

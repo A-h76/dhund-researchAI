@@ -189,9 +189,7 @@ export class TenancyService {
       throw forbidden();
     }
 
-    await this.outbox.withTransaction(async (tx) => {
-      await this.tenancy.softDeleteProject(tx, project.id);
-    });
+    await this.tombstoneAndEnqueue(user.sub, project);
   }
 
   async grantMembership(
@@ -356,28 +354,53 @@ export class TenancyService {
     actorUserId: string,
     project: ProjectRecord,
   ): Promise<void> {
+    await this.tombstoneAndEnqueue(actorUserId, project, {
+      breakGlass: true,
+    });
+  }
+
+  private async tombstoneAndEnqueue(
+    actorUserId: string,
+    project: ProjectRecord,
+    options: { readonly breakGlass?: boolean } = {},
+  ): Promise<void> {
     await this.outbox.withTransaction(async (tx) => {
       const deleted = await this.tenancy.softDeleteProject(tx, project.id);
       if (!deleted) {
         throw notFound({ module: MODULE });
       }
       await this.outboxWriter.appendInTransaction(tx, {
-        eventType: 'projects.break_glass.used',
+        eventType: 'projects.project.deleted',
         aggregateType: 'project',
         aggregateId: project.id,
         orgId: project.orgId,
         projectId: project.id,
         payload: {
           orgId: project.orgId,
-          userId: actorUserId,
           projectId: project.id,
+          deletedBy: actorUserId,
         },
       });
+      if (options.breakGlass === true) {
+        await this.outboxWriter.appendInTransaction(tx, {
+          eventType: 'projects.break_glass.used',
+          aggregateType: 'project',
+          aggregateId: project.id,
+          orgId: project.orgId,
+          projectId: project.id,
+          payload: {
+            orgId: project.orgId,
+            userId: actorUserId,
+            projectId: project.id,
+          },
+        });
+      }
     });
     await this.audit.append({
       id: generateId(),
       actorType: 'user',
-      action: 'projects.break_glass.used',
+      actorId: actorUserId,
+      action: 'projects.project.deleted',
       correlationId: requireCorrelationId(),
       scope: {
         actorUserId,
@@ -385,6 +408,20 @@ export class TenancyService {
         projectId: project.id,
       },
     });
+    if (options.breakGlass === true) {
+      await this.audit.append({
+        id: generateId(),
+        actorType: 'user',
+        actorId: actorUserId,
+        action: 'projects.break_glass.used',
+        correlationId: requireCorrelationId(),
+        scope: {
+          actorUserId,
+          orgId: project.orgId,
+          projectId: project.id,
+        },
+      });
+    }
   }
 
   private async auditMembership(
@@ -397,6 +434,7 @@ export class TenancyService {
     await this.audit.append({
       id: generateId(),
       actorType: 'user',
+      actorId: actorUserId,
       action,
       correlationId: requireCorrelationId(),
       scope: {

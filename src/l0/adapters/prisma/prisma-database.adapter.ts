@@ -169,6 +169,7 @@ export class PrismaDatabaseAdapter implements DatabaseService, OnModuleDestroy {
         action: input.action,
         scope: input.scope as Prisma.InputJsonValue,
         correlationId: input.correlationId,
+        ...(input.actorId !== undefined ? { actorId: input.actorId } : {}),
       },
     });
   }

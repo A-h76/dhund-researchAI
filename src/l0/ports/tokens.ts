@@ -18,3 +18,4 @@ export const MFA_STORE = Symbol('MFA_STORE');
 export const TENANCY_STORE = Symbol('TENANCY_STORE');
 export const ACCESS_CONTEXT_INVALIDATOR = Symbol('ACCESS_CONTEXT_INVALIDATOR');
 export const SCOPED_STORE = Symbol('SCOPED_STORE');
+export const PROJECT_ERASURE_STORE = Symbol('PROJECT_ERASURE_STORE');

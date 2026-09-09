@@ -1,8 +1,10 @@
 import { Inject, Injectable, OnModuleDestroy } from '@nestjs/common';
 import {
   CreateBucketCommand,
+  DeleteObjectCommand,
   GetObjectCommand,
   HeadBucketCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
@@ -116,6 +118,46 @@ export class S3ObjectStorageAdapter implements ObjectStorageService, OnModuleDes
       return await getSignedUrl(client, command, { expiresIn: expiresInSeconds });
     } catch (error) {
       throw new L0OperationError('Presigned GET URL generation failed', error);
+    }
+  }
+
+  async delete(key: string): Promise<void> {
+    const client = await this.requireClient();
+    try {
+      await client.send(
+        new DeleteObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+        }),
+      );
+    } catch (error) {
+      throw new L0OperationError('Object delete failed', error);
+    }
+  }
+
+  async listKeys(prefix: string): Promise<readonly string[]> {
+    const client = await this.requireClient();
+    const keys: string[] = [];
+    let token: string | undefined;
+    try {
+      do {
+        const page = await client.send(
+          new ListObjectsV2Command({
+            Bucket: this.bucket,
+            Prefix: prefix,
+            ...(token === undefined ? {} : { ContinuationToken: token }),
+          }),
+        );
+        for (const object of page.Contents ?? []) {
+          if (typeof object.Key === 'string' && object.Key.length > 0) {
+            keys.push(object.Key);
+          }
+        }
+        token = page.IsTruncated === true ? page.NextContinuationToken : undefined;
+      } while (token !== undefined);
+      return keys;
+    } catch (error) {
+      throw new L0OperationError('Object list failed', error);
     }
   }
 
