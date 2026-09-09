@@ -4,6 +4,7 @@ import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadBucketCommand,
+  HeadObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
@@ -16,7 +17,10 @@ import {
 import { logAdapterLifecycle } from '../adapter-logger';
 import { generateObjectKey } from './object-key.util';
 import { L0ConnectionError, L0OperationError } from '../../ports/errors';
-import type { ObjectStorageService } from '../../ports/object-storage.port';
+import type {
+  ObjectStorageService,
+  ObjectStorageStat,
+} from '../../ports/object-storage.port';
 
 @Injectable()
 export class S3ObjectStorageAdapter implements ObjectStorageService, OnModuleDestroy {
@@ -91,13 +95,18 @@ export class S3ObjectStorageAdapter implements ObjectStorageService, OnModuleDes
     return generateObjectKey(orgId, projectId, category, id, filename);
   }
 
-  async getPresignedPutUrl(key: string, expiresInSeconds = 900): Promise<string> {
+  async getPresignedPutUrl(
+    key: string,
+    expiresInSeconds = 900,
+    contentLength?: number,
+  ): Promise<string> {
     const client = await this.requireClient();
 
     try {
       const command = new PutObjectCommand({
         Bucket: this.bucket,
         Key: key,
+        ...(contentLength !== undefined ? { ContentLength: contentLength } : {}),
       });
 
       return await getSignedUrl(client, command, { expiresIn: expiresInSeconds });
@@ -118,6 +127,48 @@ export class S3ObjectStorageAdapter implements ObjectStorageService, OnModuleDes
       return await getSignedUrl(client, command, { expiresIn: expiresInSeconds });
     } catch (error) {
       throw new L0OperationError('Presigned GET URL generation failed', error);
+    }
+  }
+
+  async headObject(key: string): Promise<ObjectStorageStat | null> {
+    const client = await this.requireClient();
+    try {
+      const result = await client.send(
+        new HeadObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+        }),
+      );
+      return { contentLength: result.ContentLength ?? 0 };
+    } catch (error) {
+      if (isS3MissingObject(error)) {
+        return null;
+      }
+      throw new L0OperationError('Object head failed', error);
+    }
+  }
+
+  async getObjectBytes(key: string, maxBytes: number): Promise<Buffer | null> {
+    const client = await this.requireClient();
+    const end = Math.max(0, maxBytes - 1);
+    try {
+      const result = await client.send(
+        new GetObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+          Range: `bytes=0-${String(end)}`,
+        }),
+      );
+      const bytes = await result.Body?.transformToByteArray();
+      if (bytes === undefined) {
+        return Buffer.alloc(0);
+      }
+      return Buffer.from(bytes).subarray(0, Math.max(0, maxBytes));
+    } catch (error) {
+      if (isS3MissingObject(error)) {
+        return null;
+      }
+      throw new L0OperationError('Object read failed', error);
     }
   }
 
@@ -172,4 +223,29 @@ export class S3ObjectStorageAdapter implements ObjectStorageService, OnModuleDes
 
     return this.client;
   }
+}
+
+function isS3MissingObject(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) {
+    return false;
+  }
+  const record = error as {
+    name?: unknown;
+    Code?: unknown;
+    $metadata?: { httpStatusCode?: unknown };
+  };
+  const name = typeof record.name === 'string' ? record.name : '';
+  const code = typeof record.Code === 'string' ? record.Code : '';
+  if (name === 'NoSuchBucket' || code === 'NoSuchBucket') {
+    return false;
+  }
+  if (
+    name === 'NotFound' ||
+    name === 'NoSuchKey' ||
+    code === 'NotFound' ||
+    code === 'NoSuchKey'
+  ) {
+    return true;
+  }
+  return record.$metadata?.httpStatusCode === 404;
 }
