@@ -33,6 +33,7 @@ import {
   PROJECT_ERASURE_STORE,
   SECRETS_SERVICE,
   UPLOAD_SESSION_STORE,
+  ORPHAN_SWEEP_STORE,
 } from './ports/tokens';
 import { PrismaAiExecutionLedgerAdapter } from './adapters/prisma/prisma-ai-execution-ledger.adapter';
 import { PrismaAuditEventAdapter } from './adapters/prisma/prisma-audit-event.adapter';
@@ -45,6 +46,7 @@ import { PrismaOutboxAdapter } from './adapters/prisma/prisma-outbox.adapter';
 import { PrismaRegistrationAdapter } from './adapters/prisma/prisma-registration.adapter';
 import { PrismaSessionAdapter } from './adapters/prisma/prisma-session.adapter';
 import { PrismaUploadSessionAdapter } from './adapters/prisma/prisma-upload-session.adapter';
+import { PrismaOrphanSweepAdapter } from './adapters/prisma/prisma-orphan-sweep.adapter';
 
 @Module({
   providers: [
@@ -61,6 +63,7 @@ import { PrismaUploadSessionAdapter } from './adapters/prisma/prisma-upload-sess
     PrismaScopedStoreAdapter,
     PrismaProjectErasureAdapter,
     PrismaUploadSessionAdapter,
+    PrismaOrphanSweepAdapter,
     RedisAccessContextInvalidator,
     HibpBreachListAdapter,
     RedisCacheAdapter,
@@ -83,6 +86,7 @@ import { PrismaUploadSessionAdapter } from './adapters/prisma/prisma-upload-sess
     { provide: SCOPED_STORE, useExisting: PrismaScopedStoreAdapter },
     { provide: PROJECT_ERASURE_STORE, useExisting: PrismaProjectErasureAdapter },
     { provide: UPLOAD_SESSION_STORE, useExisting: PrismaUploadSessionAdapter },
+    { provide: ORPHAN_SWEEP_STORE, useExisting: PrismaOrphanSweepAdapter },
     {
       provide: ACCESS_CONTEXT_INVALIDATOR,
       useExisting: RedisAccessContextInvalidator,
@@ -110,6 +114,7 @@ import { PrismaUploadSessionAdapter } from './adapters/prisma/prisma-upload-sess
     SCOPED_STORE,
     PROJECT_ERASURE_STORE,
     UPLOAD_SESSION_STORE,
+    ORPHAN_SWEEP_STORE,
     ACCESS_CONTEXT_INVALIDATOR,
     BREACH_LIST,
     CACHE_SERVICE,

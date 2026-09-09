@@ -1,15 +1,22 @@
 import { L0ConnectionError, L0OperationError } from '../../src/l0/ports/errors';
 import type {
+  ObjectStorageListing,
   ObjectStorageService,
   ObjectStorageStat,
 } from '../../src/l0/ports/object-storage.port';
 import { generateObjectKey } from '../../src/l0/adapters/s3-compatible/object-key.util';
 
+interface StoredObject {
+  readonly body: Buffer;
+  readonly lastModified: Date;
+}
+
 export class MemoryObjectStorage implements ObjectStorageService {
-  readonly objects = new Map<string, Buffer>();
+  readonly objects = new Map<string, StoredObject>();
   failDeletes = false;
   failPuts = false;
   failReads = false;
+  failLists = false;
 
   async connect(): Promise<void> {
     return;
@@ -48,22 +55,22 @@ export class MemoryObjectStorage implements ObjectStorageService {
     if (this.failReads) {
       throw new L0ConnectionError('Object storage connection failed');
     }
-    const body = this.objects.get(key);
-    if (body === undefined) {
+    const stored = this.objects.get(key);
+    if (stored === undefined) {
       return null;
     }
-    return { contentLength: body.byteLength };
+    return { contentLength: stored.body.byteLength };
   }
 
   async getObjectBytes(key: string, maxBytes: number): Promise<Buffer | null> {
     if (this.failReads) {
       throw new L0ConnectionError('Object storage connection failed');
     }
-    const body = this.objects.get(key);
-    if (body === undefined) {
+    const stored = this.objects.get(key);
+    if (stored === undefined) {
       return null;
     }
-    return body.subarray(0, Math.max(0, maxBytes));
+    return stored.body.subarray(0, Math.max(0, maxBytes));
   }
 
   async delete(key: string): Promise<void> {
@@ -77,7 +84,21 @@ export class MemoryObjectStorage implements ObjectStorageService {
     return [...this.objects.keys()].filter((key) => key.startsWith(prefix));
   }
 
-  put(key: string, body: string | Buffer = 'payload'): void {
-    this.objects.set(key, typeof body === 'string' ? Buffer.from(body) : body);
+  async listObjects(prefix: string): Promise<readonly ObjectStorageListing[]> {
+    if (this.failLists) {
+      throw new L0OperationError('Object list failed');
+    }
+    return [...this.objects.entries()]
+      .filter(([key]) => key.startsWith(prefix))
+      .map(([key, stored]) => ({
+        key,
+        lastModified: stored.lastModified,
+        size: stored.body.byteLength,
+      }));
+  }
+
+  put(key: string, body: string | Buffer = 'payload', lastModified: Date = new Date()): void {
+    const buffer = typeof body === 'string' ? Buffer.from(body) : body;
+    this.objects.set(key, { body: buffer, lastModified });
   }
 }

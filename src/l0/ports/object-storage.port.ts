@@ -2,6 +2,12 @@ export interface ObjectStorageStat {
   readonly contentLength: number;
 }
 
+export interface ObjectStorageListing {
+  readonly key: string;
+  readonly lastModified: Date;
+  readonly size: number;
+}
+
 export interface ObjectStorageService {
   connect(correlationId?: string): Promise<void>;
   disconnect(correlationId?: string): Promise<void>;
@@ -22,4 +28,6 @@ export interface ObjectStorageService {
   getObjectBytes(key: string, maxBytes: number): Promise<Buffer | null>;
   delete(key: string): Promise<void>;
   listKeys(prefix: string): Promise<readonly string[]>;
+  listObjects(prefix: string): Promise<readonly ObjectStorageListing[]>;
 }
+

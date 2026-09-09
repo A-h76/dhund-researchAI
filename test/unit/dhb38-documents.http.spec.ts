@@ -9,13 +9,20 @@ import {
 } from '@nestjs/common';
 import { AccessTokenService } from '../../src/iam/tokens/access-token.service';
 import { RequireAuth } from '../../src/iam/authorization/require-auth';
-import { SESSION_STORE, TENANCY_STORE, SCOPED_STORE } from '../../src/l0/ports';
+import {
+  OBJECT_STORAGE_SERVICE,
+  ORPHAN_SWEEP_STORE,
+  SESSION_STORE,
+  TENANCY_STORE,
+  SCOPED_STORE,
+} from '../../src/l0/ports';
 import { APP_CONFIG } from '../../src/platform/config';
 import { ErrorCode } from '../../src/platform/errors/error-codes';
 import { CORRELATION_ID_HEADER } from '../../src/platform/errors/error-envelope';
 import { GlobalExceptionFilter } from '../../src/platform/errors/global-exception.filter';
 import {
   correlationExpressMiddleware,
+  JobEnqueueService,
   PlatformLogger,
 } from '../../src/platform/logging';
 import { generateId } from '../../src/platform/ids/uuid-v7';
@@ -184,6 +191,9 @@ describe('DHB-38 documents HTTP and Layer 2', () => {
         { provide: SESSION_STORE, useValue: sessions },
         { provide: TENANCY_STORE, useValue: tenancy },
         { provide: SCOPED_STORE, useValue: store },
+        { provide: ORPHAN_SWEEP_STORE, useValue: { findLiveById: async () => null } },
+        { provide: OBJECT_STORAGE_SERVICE, useValue: { getPresignedGetUrl: async () => 'memory://get' } },
+        { provide: JobEnqueueService, useValue: { enqueue: async () => 'job-1' } },
         { provide: PlatformLogger, useValue: logger },
         { provide: APP_FILTER, useClass: GlobalExceptionFilter },
       ],
