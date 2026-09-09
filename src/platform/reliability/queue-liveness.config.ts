@@ -22,7 +22,7 @@ const INFINITE = { timeoutMs: 86_400_000, heartbeatIntervalMs: 60_000, leaseTtlS
 
 export const QUEUE_LIVENESS_REGISTRY: Readonly<Record<QueueName, QueueLivenessPolicy>> =
   Object.freeze({
-    extract: LONG,
+    extract: MEDIUM,
     ocr: MEDIUM,
     chunk: LONG,
     embed: LONG,

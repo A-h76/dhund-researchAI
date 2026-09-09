@@ -34,6 +34,8 @@ import {
   SECRETS_SERVICE,
   UPLOAD_SESSION_STORE,
   ORPHAN_SWEEP_STORE,
+  EXTRACT_STORE,
+  PDF_PARSE_SERVICE,
 } from './ports/tokens';
 import { PrismaAiExecutionLedgerAdapter } from './adapters/prisma/prisma-ai-execution-ledger.adapter';
 import { PrismaAuditEventAdapter } from './adapters/prisma/prisma-audit-event.adapter';
@@ -47,6 +49,8 @@ import { PrismaRegistrationAdapter } from './adapters/prisma/prisma-registration
 import { PrismaSessionAdapter } from './adapters/prisma/prisma-session.adapter';
 import { PrismaUploadSessionAdapter } from './adapters/prisma/prisma-upload-session.adapter';
 import { PrismaOrphanSweepAdapter } from './adapters/prisma/prisma-orphan-sweep.adapter';
+import { PrismaExtractStoreAdapter } from './adapters/prisma/prisma-extract-store.adapter';
+import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
 
 @Module({
   providers: [
@@ -64,6 +68,8 @@ import { PrismaOrphanSweepAdapter } from './adapters/prisma/prisma-orphan-sweep.
     PrismaProjectErasureAdapter,
     PrismaUploadSessionAdapter,
     PrismaOrphanSweepAdapter,
+    PrismaExtractStoreAdapter,
+    PdfjsParseAdapter,
     RedisAccessContextInvalidator,
     HibpBreachListAdapter,
     RedisCacheAdapter,
@@ -87,6 +93,8 @@ import { PrismaOrphanSweepAdapter } from './adapters/prisma/prisma-orphan-sweep.
     { provide: PROJECT_ERASURE_STORE, useExisting: PrismaProjectErasureAdapter },
     { provide: UPLOAD_SESSION_STORE, useExisting: PrismaUploadSessionAdapter },
     { provide: ORPHAN_SWEEP_STORE, useExisting: PrismaOrphanSweepAdapter },
+    { provide: EXTRACT_STORE, useExisting: PrismaExtractStoreAdapter },
+    { provide: PDF_PARSE_SERVICE, useExisting: PdfjsParseAdapter },
     {
       provide: ACCESS_CONTEXT_INVALIDATOR,
       useExisting: RedisAccessContextInvalidator,
@@ -115,6 +123,8 @@ import { PrismaOrphanSweepAdapter } from './adapters/prisma/prisma-orphan-sweep.
     PROJECT_ERASURE_STORE,
     UPLOAD_SESSION_STORE,
     ORPHAN_SWEEP_STORE,
+    EXTRACT_STORE,
+    PDF_PARSE_SERVICE,
     ACCESS_CONTEXT_INVALIDATOR,
     BREACH_LIST,
     CACHE_SERVICE,

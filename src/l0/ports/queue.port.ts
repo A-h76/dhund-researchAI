@@ -17,6 +17,15 @@ export interface QueueDepthSnapshot {
   readonly delayed: number;
 }
 
+export interface QueueJob {
+  readonly id: string;
+  readonly data: Record<string, unknown>;
+  readonly attemptsMade: number;
+  readonly attempts: number;
+}
+
+export type QueueJobHandler = (job: QueueJob) => Promise<void>;
+
 export interface QueueService {
   connect(correlationId?: string): Promise<void>;
   disconnect(correlationId?: string): Promise<void>;
@@ -34,4 +43,5 @@ export interface QueueService {
   getJobState(queueName: string, jobId: string): Promise<string | null>;
   retryFailedJob(queueName: string, jobId: string): Promise<'retried' | 'noop' | 'not_found'>;
   getQueueDepth(queueName: string): Promise<QueueDepthSnapshot>;
+  consume(queueName: string, handler: QueueJobHandler): Promise<void>;
 }

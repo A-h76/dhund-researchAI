@@ -345,7 +345,9 @@ describe('filter registration and existing role behavior', () => {
     addJob: jest.fn().mockResolvedValue('job-1'),
     addDlqJob: jest.fn().mockResolvedValue('dlq-1'),
     getJobState: jest.fn().mockResolvedValue(null),
+    retryFailedJob: jest.fn().mockResolvedValue('noop'),
     getQueueDepth: jest.fn().mockResolvedValue({ waiting: 0, active: 0, failed: 0, delayed: 0 }),
+    consume: jest.fn().mockResolvedValue(undefined),
   };
   const mockBootstrapValidation = {
     onApplicationBootstrap: jest.fn().mockResolvedValue(undefined),

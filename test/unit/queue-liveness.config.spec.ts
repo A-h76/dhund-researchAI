@@ -21,6 +21,7 @@ describe('queue liveness config (DHB-41, GAP-TIMEOUT-01)', () => {
     expect(getQueueLivenessPolicy('reaper').timeoutMs).not.toBe(
       getQueueLivenessPolicy('extract').timeoutMs,
     );
+    expect(getQueueLivenessPolicy('extract').timeoutMs).toBe(600_000);
   });
 
   it('documents the stalled threshold minimum floor', () => {
