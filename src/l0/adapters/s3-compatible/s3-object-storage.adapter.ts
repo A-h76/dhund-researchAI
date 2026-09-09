@@ -18,6 +18,7 @@ import { logAdapterLifecycle } from '../adapter-logger';
 import { generateObjectKey } from './object-key.util';
 import { L0ConnectionError, L0OperationError } from '../../ports/errors';
 import type {
+  ObjectStorageListing,
   ObjectStorageService,
   ObjectStorageStat,
 } from '../../ports/object-storage.port';
@@ -207,6 +208,40 @@ export class S3ObjectStorageAdapter implements ObjectStorageService, OnModuleDes
         token = page.IsTruncated === true ? page.NextContinuationToken : undefined;
       } while (token !== undefined);
       return keys;
+    } catch (error) {
+      throw new L0OperationError('Object list failed', error);
+    }
+  }
+
+  async listObjects(prefix: string): Promise<readonly ObjectStorageListing[]> {
+    const client = await this.requireClient();
+    const objects: ObjectStorageListing[] = [];
+    let token: string | undefined;
+    try {
+      do {
+        const page = await client.send(
+          new ListObjectsV2Command({
+            Bucket: this.bucket,
+            Prefix: prefix,
+            ...(token === undefined ? {} : { ContinuationToken: token }),
+          }),
+        );
+        for (const object of page.Contents ?? []) {
+          if (typeof object.Key !== 'string' || object.Key.length === 0) {
+            continue;
+          }
+          if (!(object.LastModified instanceof Date)) {
+            continue;
+          }
+          objects.push({
+            key: object.Key,
+            lastModified: object.LastModified,
+            size: object.Size ?? 0,
+          });
+        }
+        token = page.IsTruncated === true ? page.NextContinuationToken : undefined;
+      } while (token !== undefined);
+      return objects;
     } catch (error) {
       throw new L0OperationError('Object list failed', error);
     }

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { IamModule } from '../iam/iam.module';
 import { PlatformModule } from '../platform/platform.module';
+import { DocumentAccessController } from './document-access.controller';
 import { DocumentsController } from './documents.controller';
 import { DocumentsRepository } from './documents.repository';
 import { DocumentsService } from './documents.service';
@@ -11,7 +12,7 @@ import { UploadsService } from './uploads.service';
 
 @Module({
   imports: [PlatformModule, IamModule],
-  controllers: [DocumentsController, UploadsController],
+  controllers: [DocumentsController, DocumentAccessController, UploadsController],
   providers: [
     DocumentsService,
     DocumentsRepository,

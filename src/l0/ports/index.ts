@@ -18,6 +18,7 @@ export * from './access-context-cache';
 export * from './scoped-store.port';
 export * from './project-erasure.port';
 export * from './upload-session-store.port';
+export * from './orphan-sweep-store.port';
 export * from './pubsub.port';
 export * from './query-observer.port';
 export * from './counter.port';

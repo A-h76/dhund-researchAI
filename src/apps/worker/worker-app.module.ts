@@ -7,6 +7,7 @@ import {
 } from '../../platform/config';
 import { PlatformModule } from '../../platform/platform.module';
 import { RuntimeRole } from '../../platform/runtime/role';
+import { OrphanSweepProcessor } from './orphan-sweep.processor';
 import { OutboxRelayProcessor } from './outbox-relay.processor';
 import { PlaceholderProcessor } from './placeholder.processor';
 import { ProcessorRegistry } from './processor-registry';
@@ -22,6 +23,7 @@ import { WorkerBootstrapService } from './worker-bootstrap.service';
     PlaceholderProcessor,
     ReaperProcessor,
     OutboxRelayProcessor,
+    OrphanSweepProcessor,
     ProjectDeletionProcessor,
     { provide: PROCESSOR_READINESS, useExisting: ProcessorRegistry },
     BootstrapValidationService,
