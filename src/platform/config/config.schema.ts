@@ -1,7 +1,51 @@
 import type { SecretsService } from '../../l0/ports/secrets.port';
+import { RuntimeRole } from '../runtime/role';
+import type { JwtConfig } from './app-config.types';
 import { ConfigValidationError } from './config-validation.error';
 
 const LOG_LEVELS = new Set(['trace', 'debug', 'info', 'warn', 'error', 'fatal']);
+
+export function parseJwtConfig(
+  secrets: SecretsService,
+  role: RuntimeRole,
+): JwtConfig | undefined {
+  const privateKey = secrets.getSecret('AUTH_JWT_PRIVATE_KEY');
+  const kidRaw = secrets.getSecret('AUTH_JWT_KID');
+  const provided = [privateKey, kidRaw].filter((value) => value !== undefined);
+
+  if (role === RuntimeRole.Api) {
+    if (privateKey === undefined) {
+      throw new ConfigValidationError('Missing required configuration: AUTH_JWT_PRIVATE_KEY');
+    }
+    if (kidRaw === undefined) {
+      throw new ConfigValidationError('Missing required configuration: AUTH_JWT_KID');
+    }
+    return validatedJwtConfig(privateKey, kidRaw);
+  }
+
+  if (provided.length === 1) {
+    throw new ConfigValidationError(
+      'JWT configuration is incomplete: provide both AUTH_JWT_PRIVATE_KEY and AUTH_JWT_KID together',
+    );
+  }
+
+  if (provided.length === 0) {
+    return undefined;
+  }
+
+  return validatedJwtConfig(privateKey!, kidRaw!);
+}
+
+function validatedJwtConfig(privateKey: string, kidRaw: string): JwtConfig {
+  const kid = kidRaw.trim();
+  if (kid.length === 0) {
+    throw new ConfigValidationError('AUTH_JWT_KID must be a non-empty key id');
+  }
+  if (!privateKey.includes('BEGIN PRIVATE KEY')) {
+    throw new ConfigValidationError('AUTH_JWT_PRIVATE_KEY must be a PKCS8 private key');
+  }
+  return { privateKey, kid };
+}
 
 export function parseRequiredSecret(
   secrets: SecretsService,

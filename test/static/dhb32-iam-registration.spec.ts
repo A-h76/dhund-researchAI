@@ -26,7 +26,7 @@ describe('DHB-32 IAM registration static checks', () => {
     const api = readFileSync(join(ROOT, 'src/apps/api/api-app.module.ts'), 'utf8');
     const main = readFileSync(join(ROOT, 'src/main.ts'), 'utf8');
     const controller = readFileSync(
-      join(ROOT, 'src/iam/auth-register.controller.ts'),
+      join(ROOT, 'src/iam/auth.controller.ts'),
       'utf8',
     );
 
@@ -59,13 +59,13 @@ describe('DHB-32 IAM registration static checks', () => {
     }
   });
 
-  it('does not implement login, verify-email, or MFA in this slice', () => {
+  it('does not implement verify-email or MFA in this slice', () => {
     const controller = readFileSync(
-      join(ROOT, 'src/iam/auth-register.controller.ts'),
+      join(ROOT, 'src/iam/auth.controller.ts'),
       'utf8',
     );
-    expect(controller).not.toContain('login');
     expect(controller).not.toContain('verify-email');
-    expect(controller).not.toContain('logout');
+    expect(controller).not.toContain('totp');
+    expect(controller).not.toContain('mfa');
   });
 });

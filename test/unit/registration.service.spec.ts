@@ -50,6 +50,7 @@ function buildService(options?: {
       order.push('hash');
       return HASH;
     }),
+    verify: jest.fn(async () => false),
   };
   const store = {
     insert: jest.fn(async () => {

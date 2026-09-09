@@ -14,6 +14,7 @@ import {
   parseRequiredSecret,
   parseFeatureFlags,
   parseDatabasePoolSize,
+  parseJwtConfig,
 } from './config.schema';
 
 export function loadAndValidateConfig(
@@ -84,6 +85,10 @@ export function loadAndValidateConfig(
     );
   }
 
+  const jwt = parseJwtConfig(secrets, role);
+  track('AUTH_JWT_PRIVATE_KEY', secrets.getSecret('AUTH_JWT_PRIVATE_KEY'));
+  track('AUTH_JWT_KID', secrets.getSecret('AUTH_JWT_KID'));
+
   const featureFlags = parseFeatureFlags(secrets);
   for (const flagName of Object.keys(featureFlags)) {
     loadedKeyNames.push(`FEATURE_${flagName.toUpperCase()}`);
@@ -102,6 +107,7 @@ export function loadAndValidateConfig(
     },
     featureFlags,
     loadedKeyNames: [...new Set(loadedKeyNames)].sort(),
+    ...(jwt !== undefined ? { jwt } : {}),
     ...(s3Provided.length === 5
       ? {
           s3: {

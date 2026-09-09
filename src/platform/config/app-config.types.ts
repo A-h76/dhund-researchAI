@@ -9,6 +9,11 @@ export interface Argon2Config {
   readonly parallelism: number;
 }
 
+export interface JwtConfig {
+  readonly privateKey: string;
+  readonly kid: string;
+}
+
 export interface AppConfig {
   readonly port: number;
   readonly logLevel: string;
@@ -16,6 +21,7 @@ export interface AppConfig {
   readonly databasePoolSize: number;
   readonly redisUrl: string;
   readonly argon2: Argon2Config;
+  readonly jwt?: JwtConfig;
   readonly s3?: {
     readonly endpoint: string;
     readonly region: string;

@@ -6,6 +6,7 @@ import {
   resetAppConfigForTests,
   setAppConfig,
 } from '../../src/platform/config';
+import { jwtSecretRecord } from '../fixtures/jwt-keys.fixture';
 
 describe('boot validation', () => {
   const originalEnv = { ...process.env };
@@ -46,8 +47,11 @@ describe('boot validation', () => {
   });
 
   it('loads a frozen configuration after successful validation', () => {
+    const jwt = jwtSecretRecord();
     process.env.DATABASE_URL = 'postgres://dhund:dhund@localhost:5432/dhund';
     process.env.REDIS_URL = 'redis://localhost:6379';
+    process.env.AUTH_JWT_PRIVATE_KEY = jwt.AUTH_JWT_PRIVATE_KEY;
+    process.env.AUTH_JWT_KID = jwt.AUTH_JWT_KID;
 
     const secrets = new EnvSecretsAdapter();
     const config = loadAndValidateConfig(secrets, RuntimeRole.Api);

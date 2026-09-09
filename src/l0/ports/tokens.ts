@@ -12,3 +12,4 @@ export const OUTBOX_SERVICE = Symbol('OUTBOX_SERVICE');
 export const PUBSUB_SERVICE = Symbol('PUBSUB_SERVICE');
 export const BREACH_LIST = Symbol('BREACH_LIST');
 export const REGISTRATION_STORE = Symbol('REGISTRATION_STORE');
+export const SESSION_STORE = Symbol('SESSION_STORE');

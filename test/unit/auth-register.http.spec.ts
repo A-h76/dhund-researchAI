@@ -1,7 +1,8 @@
 import { APP_FILTER } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
-import { AuthRegisterController } from '../../src/iam/auth-register.controller';
+import { AuthController } from '../../src/iam/auth.controller';
+import { AuthService } from '../../src/iam/auth/auth.service';
 import { PASSWORD_BREACH_LIST } from '../../src/iam/password/breach-list.port';
 import { PASSWORD_HASHER } from '../../src/iam/password/password-hasher';
 import { PasswordPolicy } from '../../src/iam/password/password-policy';
@@ -39,7 +40,8 @@ async function startApp(conflictEmails: Set<string> = new Set()): Promise<{
   } as unknown as PlatformLogger;
 
   const hasher = {
-    hash: jest.fn(async () => '$argon2id$v=19$m=65536,t=3,p=4$abc'),
+      hash: jest.fn(async () => '$argon2id$v=19$m=65536,t=3,p=4$abc'),
+      verify: jest.fn(async () => false),
   };
   const store = {
     insert: jest.fn(async (_tx: unknown, records: { user: { email: string } }) => {
@@ -61,11 +63,12 @@ async function startApp(conflictEmails: Set<string> = new Set()): Promise<{
   };
 
   const moduleRef = await Test.createTestingModule({
-    controllers: [AuthRegisterController],
+    controllers: [AuthController],
     providers: [
       RegistrationService,
       PasswordPolicy,
       RegistrationMetrics,
+      { provide: AuthService, useValue: { login: async () => undefined } },
       { provide: PASSWORD_HASHER, useValue: hasher },
       { provide: PASSWORD_BREACH_LIST, useValue: { check: async () => 'clear' } },
       { provide: REGISTRATION_STORE, useValue: store },

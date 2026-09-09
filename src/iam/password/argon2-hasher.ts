@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { argon2id, hash } from 'argon2';
+import { argon2id, hash, verify } from 'argon2';
 import { APP_CONFIG, type FrozenAppConfig } from '../../platform/config';
 import type { PasswordHasher } from './password-hasher';
 
@@ -15,5 +15,13 @@ export class Argon2PasswordHasher implements PasswordHasher {
       timeCost,
       parallelism,
     });
+  }
+
+  async verify(password: string, encodedHash: string): Promise<boolean> {
+    try {
+      return await verify(encodedHash, password);
+    } catch {
+      return false;
+    }
   }
 }

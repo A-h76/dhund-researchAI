@@ -1,5 +1,8 @@
 import type { AppConfig } from '../../src/platform/config/app-config.types';
 import { setAppConfig } from '../../src/platform/config/config.runtime';
+import { generateTestJwtConfig } from './jwt-keys.fixture';
+
+const TEST_JWT = generateTestJwtConfig();
 
 export function buildTestAppConfig(
   overrides: Partial<AppConfig> = {},
@@ -16,7 +19,10 @@ export function buildTestAppConfig(
       timeCost: 3,
       parallelism: 4,
     }),
+    jwt: TEST_JWT,
     loadedKeyNames: Object.freeze([
+      'AUTH_JWT_KID',
+      'AUTH_JWT_PRIVATE_KEY',
       'DATABASE_URL',
       'DATABASE_POOL_SIZE',
       'REDIS_URL',

@@ -8,9 +8,10 @@ import {
   withPrismaPoolSize,
 } from '../../src/l0/adapters/prisma/prisma-pool-url';
 import { PrismaDatabaseAdapter } from '../../src/l0/adapters/prisma/prisma-database.adapter';
+import type { SecretsService } from '../../src/l0/ports/secrets.port';
 import { RuntimeRole } from '../../src/platform/runtime/role';
 import { loadAndValidateConfig } from '../../src/platform/config';
-import type { SecretsService } from '../../src/l0/ports/secrets.port';
+import { jwtSecretRecord } from '../fixtures/jwt-keys.fixture';
 
 function createSecrets(values: Record<string, string | undefined>): SecretsService {
   return {
@@ -36,6 +37,7 @@ describe('database pool configuration (DHB-28)', () => {
         DATABASE_URL: 'postgres://user:pass@localhost:5432/db',
         REDIS_URL: 'redis://localhost:6379',
         DATABASE_POOL_SIZE: '25',
+        ...jwtSecretRecord(),
       }),
       RuntimeRole.Api,
     );

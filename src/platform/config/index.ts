@@ -1,5 +1,5 @@
 export { evaluateAuthorizationDecision } from './authorization-decision';
-export type { AppConfig, Argon2Config, EmailConfig } from './app-config.types';
+export type { AppConfig, Argon2Config, EmailConfig, JwtConfig } from './app-config.types';
 export {
   ARGON2_MEMORY_COST,
   ARGON2_PARALLELISM,
@@ -18,6 +18,7 @@ export {
   parseFeatureFlags,
   parseLogLevel,
   parsePort,
+  parseJwtConfig,
   parseRequiredSecret,
   DEFAULT_DATABASE_POOL_SIZE,
   MAX_DATABASE_POOL_SIZE,
