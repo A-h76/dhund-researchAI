@@ -52,6 +52,7 @@ const DIRECT = new Set<TenantEntity>([
   'conversation',
   'screening_decision',
   'external_record',
+  'source',
 ]);
 
 interface ScopedDelegate {
@@ -278,6 +279,8 @@ export class PrismaScopedStoreAdapter implements ScopedStore {
         return client.screeningDecision as unknown as ScopedDelegate;
       case 'external_record':
         return client.externalRecord as unknown as ScopedDelegate;
+      case 'source':
+        return client.source as unknown as ScopedDelegate;
       default: {
         const exhaustive: never = entity;
         throw new L0OperationError(`Unknown scoped entity ${String(exhaustive)}`);

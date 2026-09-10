@@ -9,6 +9,7 @@ export const TENANT_ENTITIES = [
   'research_artifact',
   'screening_decision',
   'external_record',
+  'source',
 ] as const;
 
 export type TenantEntity = (typeof TENANT_ENTITIES)[number];

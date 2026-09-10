@@ -5,8 +5,10 @@ import type {
   ChunkCharSpan,
   ChunkCommitInput,
   ChunkStore,
+  ProjectChunk,
   StoredChunk,
 } from '../../ports/chunk-store.port';
+import type { ProjectScope } from '../../ports/scoped-store.port';
 import {
   allowedDocumentSources,
   DocumentTransitionError,
@@ -137,6 +139,41 @@ export class PrismaChunkStoreAdapter implements ChunkStore {
         throw error;
       }
       throw new L0OperationError('Chunk commit failed', error);
+    }
+  }
+
+  async findInProject(
+    scope: ProjectScope,
+    chunkId: string,
+  ): Promise<ProjectChunk | null> {
+    await this.database.connect();
+    try {
+      const row = await this.client().chunk.findFirst({
+        where: { id: chunkId, projectId: scope.projectId },
+        select: {
+          id: true,
+          projectId: true,
+          documentVersionId: true,
+          text: true,
+          blockIds: true,
+          page: true,
+          documentVersion: { select: { documentId: true } },
+        },
+      });
+      if (row === null) {
+        return null;
+      }
+      return {
+        id: row.id,
+        projectId: row.projectId,
+        documentId: row.documentVersion.documentId,
+        documentVersionId: row.documentVersionId,
+        text: row.text,
+        blockIds: row.blockIds,
+        page: row.page,
+      };
+    } catch (error) {
+      throw new L0OperationError('Chunk project lookup failed', error);
     }
   }
 
