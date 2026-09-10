@@ -63,7 +63,32 @@ export type GatewayRequest =
   | {
       readonly capability: 'OCR';
       readonly objectKey: string;
+    }
+  | {
+      readonly capability: 'EVIDENCE_EXTRACT';
+      readonly documentContent: string;
+      readonly locatorCatalog: readonly EvidenceLocatorCatalogEntry[];
     };
+
+export interface EvidenceLocatorCatalogEntry {
+  readonly documentVersionId: string;
+  readonly blockId: string;
+  readonly page: number;
+  readonly chunkId?: string;
+}
+
+export type GatewayStanceLabel = 'support' | 'oppose' | 'neutral' | 'unresolved';
+
+export interface EvidenceExtractCandidate {
+  readonly text: string;
+  readonly locator?: {
+    readonly documentVersionId: string;
+    readonly blockId: string;
+    readonly page: number;
+  };
+  readonly type?: 'body_grounded' | 'metadata_only';
+  readonly chunkId?: string;
+}
 
 export interface AssembledProviderPayload {
   readonly capability: GatewayRequest['capability'];
@@ -143,7 +168,7 @@ export type CapabilityInvokeResult =
     }
   | {
       readonly capability: 'STANCE';
-      readonly stance: 'support' | 'oppose' | 'neutral';
+      readonly stance: GatewayStanceLabel;
       readonly metrics: GatewayExecutionMetrics;
       readonly inputFingerprint: string;
       readonly promptVersion: string;
@@ -162,6 +187,15 @@ export type CapabilityInvokeResult =
   | {
       readonly capability: 'OCR';
       readonly text: string;
+      readonly metrics: GatewayExecutionMetrics;
+      readonly inputFingerprint: string;
+      readonly promptVersion: string;
+      readonly provider: string;
+      readonly model: string;
+    }
+  | {
+      readonly capability: 'EVIDENCE_EXTRACT';
+      readonly candidates: readonly EvidenceExtractCandidate[];
       readonly metrics: GatewayExecutionMetrics;
       readonly inputFingerprint: string;
       readonly promptVersion: string;

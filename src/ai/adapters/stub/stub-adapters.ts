@@ -196,6 +196,40 @@ export class StubOcrAdapter extends StubCapabilityAdapter {
   }
 }
 
+export class StubEvidenceExtractAdapter extends StubCapabilityAdapter {
+  readonly capability = 'EVIDENCE_EXTRACT' as const;
+
+  protected async buildResult(input: AdapterInvokeInput): Promise<CapabilityInvokeResult> {
+    if (input.request.capability !== 'EVIDENCE_EXTRACT') {
+      throw new Error('StubEvidenceExtractAdapter received non-EVIDENCE_EXTRACT request');
+    }
+
+    const locator = input.request.locatorCatalog[0];
+    const snippet = input.request.documentContent.trim().slice(0, 120);
+    const candidates =
+      locator === undefined || snippet.length === 0
+        ? []
+        : [
+            {
+              text: snippet,
+              locator: {
+                documentVersionId: locator.documentVersionId,
+                blockId: locator.blockId,
+                page: locator.page,
+              },
+              type: 'body_grounded' as const,
+              ...(locator.chunkId !== undefined ? { chunkId: locator.chunkId } : {}),
+            },
+          ];
+
+    return {
+      capability: 'EVIDENCE_EXTRACT',
+      candidates,
+      ...this.baseFields(input),
+    };
+  }
+}
+
 export const STUB_ADAPTERS: readonly CapabilityAdapter[] = [
   new StubChatAdapter(),
   new StubEmbedAdapter(),
@@ -206,6 +240,7 @@ export const STUB_ADAPTERS: readonly CapabilityAdapter[] = [
   new StubStanceAdapter(),
   new StubSynthesisAdapter(),
   new StubOcrAdapter(),
+  new StubEvidenceExtractAdapter(),
 ];
 
 export type StubAdapterInstance = InstanceType<
@@ -218,4 +253,5 @@ export type StubAdapterInstance = InstanceType<
   | typeof StubStanceAdapter
   | typeof StubSynthesisAdapter
   | typeof StubOcrAdapter
+  | typeof StubEvidenceExtractAdapter
 >;

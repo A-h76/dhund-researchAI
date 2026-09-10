@@ -4,12 +4,14 @@ import { EnvSecretsAdapter } from './adapters/env/env-secrets.adapter';
 import { PrismaAiExecutionLedgerAdapter } from './adapters/prisma/prisma-ai-execution-ledger.adapter';
 import { PrismaDatabaseAdapter } from './adapters/prisma/prisma-database.adapter';
 import { PrismaDocumentIngestionAdapter } from './adapters/prisma/prisma-document-ingestion.adapter';
+import { PrismaEvidenceSpineAdapter } from './adapters/prisma/prisma-evidence-spine.adapter';
 import { RedisCounterAdapter } from './adapters/redis/redis-counter.adapter';
 import { RedisLeaseAdapter } from './adapters/redis/redis-lease.adapter';
 import { RedisCacheAdapter } from './adapters/redis/redis-cache.adapter';
 import { ResendEmailAdapter } from './adapters/resend/resend-email.adapter';
 import { S3ObjectStorageAdapter } from './adapters/s3-compatible/s3-object-storage.adapter';
 import { DOCUMENT_INGESTION_STORE } from './ports/document-ingestion.port';
+import { EVIDENCE_SPINE } from './ports/evidence-spine.port';
 import {
   AI_EXECUTION_LEDGER,
   CACHE_SERVICE,
@@ -28,6 +30,7 @@ import {
     PrismaDatabaseAdapter,
     PrismaAiExecutionLedgerAdapter,
     PrismaDocumentIngestionAdapter,
+    PrismaEvidenceSpineAdapter,
     RedisCacheAdapter,
     RedisCounterAdapter,
     RedisLeaseAdapter,
@@ -38,6 +41,7 @@ import {
     { provide: DATABASE_SERVICE, useExisting: PrismaDatabaseAdapter },
     { provide: AI_EXECUTION_LEDGER, useExisting: PrismaAiExecutionLedgerAdapter },
     { provide: DOCUMENT_INGESTION_STORE, useExisting: PrismaDocumentIngestionAdapter },
+    { provide: EVIDENCE_SPINE, useExisting: PrismaEvidenceSpineAdapter },
     { provide: CACHE_SERVICE, useExisting: RedisCacheAdapter },
     { provide: COUNTER_SERVICE, useExisting: RedisCounterAdapter },
     { provide: LEASE_SERVICE, useExisting: RedisLeaseAdapter },
@@ -50,6 +54,7 @@ import {
     DATABASE_SERVICE,
     AI_EXECUTION_LEDGER,
     DOCUMENT_INGESTION_STORE,
+    EVIDENCE_SPINE,
     CACHE_SERVICE,
     COUNTER_SERVICE,
     LEASE_SERVICE,

@@ -110,6 +110,18 @@ function requestForCapability(capability: GatewayRequest['capability']): Gateway
       return { capability, evidenceSummaries: ['evidence one'] };
     case 'OCR':
       return { capability, objectKey: 'uploads/doc.pdf' };
+    case 'EVIDENCE_EXTRACT':
+      return {
+        capability,
+        documentContent: 'quoted finding',
+        locatorCatalog: [
+          {
+            documentVersionId: '00000000-0000-7000-8000-000000000009',
+            blockId: '00000000-0000-7000-8000-00000000000a',
+            page: 1,
+          },
+        ],
+      };
     default: {
       const _exhaustive: never = capability;
       throw new Error(String(_exhaustive));
@@ -135,7 +147,7 @@ describe('GatewayService (DHB-44)', () => {
     expect(first.inputType).toBe('document');
   });
 
-  it('routes all nine capabilities through execute and dispatches adapters', async () => {
+  it('routes all registered capabilities through execute and dispatches adapters', async () => {
     const { gateway, boundary } = createGateway();
 
     for (const capability of AI_CAPABILITIES) {
@@ -146,7 +158,8 @@ describe('GatewayService (DHB-44)', () => {
         capability === 'SCREENING' ||
         capability === 'STANCE' ||
         capability === 'SYNTHESIS' ||
-        capability === 'OCR'
+        capability === 'OCR' ||
+        capability === 'EVIDENCE_EXTRACT'
           ? workerContext({ correlationId: `worker-${capability}` })
           : apiContext({ correlationId: `api-${capability}` });
 
@@ -331,7 +344,7 @@ describe('GatewayService (DHB-44)', () => {
     ).toThrow(GatewayError);
   });
 
-  it('invokes the boundary hook for all nine capabilities', async () => {
+  it('invokes the boundary hook for all registered capabilities', async () => {
     const { gateway, boundary } = createGateway();
     boundary.resetInvocations();
 
@@ -342,7 +355,8 @@ describe('GatewayService (DHB-44)', () => {
         capability === 'SCREENING' ||
         capability === 'STANCE' ||
         capability === 'SYNTHESIS' ||
-        capability === 'OCR'
+        capability === 'OCR' ||
+        capability === 'EVIDENCE_EXTRACT'
           ? workerContext()
           : apiContext();
 
