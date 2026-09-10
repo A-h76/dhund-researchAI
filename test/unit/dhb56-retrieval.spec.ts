@@ -4,29 +4,16 @@ import { QueryRerankAdapter } from '../../src/ai/rerank/rerank.adapter';
 import { FILTERED_RECALL_SHORTFALL_THRESHOLD } from '../../src/retrieval/filtered-recall';
 import { authzRecheck } from '../../src/retrieval/authz-recheck';
 import { bm25Scores } from '../../src/retrieval/bm25';
-import { AnnSearch } from '../../src/retrieval/ann-search';
-import { LexicalSearch } from '../../src/retrieval/lexical-search';
 import { ineligibleCountAtFusionBoundary, fuseRrf, RRF_K } from '../../src/retrieval/rrf';
 import type { RetrievalCandidate } from '../../src/retrieval/retrieval.port';
 import { RetrievalMetrics } from '../../src/retrieval/retrieval.metrics';
-import { RetrievalService } from '../../src/retrieval/retrieval.service';
-import type { PlatformLogger } from '../../src/platform/logging';
+import type { RetrievalService } from '../../src/retrieval/retrieval.service';
 import { RuntimeRole } from '../../src/platform/runtime/role';
 import { generateId } from '../../src/platform/ids/uuid-v7';
-import { buildTestAppConfig } from '../fixtures/app-config.fixture';
-import { MemoryQueryEmbed } from '../fixtures/memory-query-embed';
 import { MemoryRerank } from '../fixtures/memory-rerank';
 import { MemoryRetrievalIndexStore } from '../fixtures/memory-retrieval-index';
 import { MemoryScopedStore } from '../fixtures/memory-scoped-store';
-
-function stubLogger(): PlatformLogger {
-  return {
-    info: () => undefined,
-    warn: () => undefined,
-    error: () => undefined,
-    debug: () => undefined,
-  } as unknown as PlatformLogger;
-}
+import { buildRetrievalService, stubLogger } from '../fixtures/memory-retrieval-service';
 
 function hit(
   chunkId: string,
@@ -34,7 +21,15 @@ function hit(
   text: string,
   arm: RetrievalCandidate['arm'] = 'vector',
 ): RetrievalCandidate {
-  return { chunkId, projectId, documentId: `doc-${chunkId}`, text, arm };
+  return {
+    chunkId,
+    projectId,
+    documentId: `doc-${chunkId}`,
+    text,
+    arm,
+    vectorScore: arm === 'vector' ? 0.1 : null,
+    ftsScore: arm === 'fts' ? 0.2 : null,
+  };
 }
 
 function service(input: {
@@ -43,18 +38,16 @@ function service(input: {
   readonly rerank?: MemoryRerank;
   readonly metrics?: RetrievalMetrics;
 }): { service: RetrievalService; rerank: MemoryRerank; metrics: RetrievalMetrics } {
-  const metrics = input.metrics ?? new RetrievalMetrics(stubLogger());
-  const rerank = input.rerank ?? new MemoryRerank();
+  const built = buildRetrievalService({
+    store: input.store,
+    fts: input.fts,
+    rerank: input.rerank,
+    metrics: input.metrics,
+  });
   return {
-    rerank,
-    metrics,
-    service: new RetrievalService(
-      new MemoryQueryEmbed(),
-      new AnnSearch(input.store, buildTestAppConfig(), metrics),
-      new LexicalSearch(input.fts, metrics),
-      rerank,
-      metrics,
-    ),
+    rerank: built.rerank as MemoryRerank,
+    metrics: built.metrics,
+    service: built.service,
   };
 }
 

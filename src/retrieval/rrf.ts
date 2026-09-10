@@ -16,6 +16,8 @@ export interface FusedCandidate {
   readonly documentId: string;
   readonly text: string;
   readonly rrfScore: number;
+  readonly vectorScore: number | null;
+  readonly ftsScore: number | null;
 }
 
 /**
@@ -65,6 +67,8 @@ export function orderByScores(
       text: candidate.text,
       rrfScore: candidate.rrfScore,
       rerankScore: scores[index] ?? 0,
+      vectorScore: candidate.vectorScore,
+      ftsScore: candidate.ftsScore,
     }))
     .sort(compareRanked);
 }
@@ -87,6 +91,8 @@ function addArm(
         documentId: hit.documentId,
         text: hit.text,
         rrfScore: contribution,
+        vectorScore: hit.arm === 'vector' ? hit.vectorScore : null,
+        ftsScore: hit.arm === 'fts' ? hit.ftsScore : null,
       });
       continue;
     }
@@ -94,6 +100,8 @@ function addArm(
       ...existing,
       text: existing.text.length > 0 ? existing.text : hit.text,
       rrfScore: existing.rrfScore + contribution,
+      vectorScore: existing.vectorScore ?? (hit.arm === 'vector' ? hit.vectorScore : null),
+      ftsScore: existing.ftsScore ?? (hit.arm === 'fts' ? hit.ftsScore : null),
     });
   }
 }

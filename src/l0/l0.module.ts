@@ -38,6 +38,8 @@ import {
   CHUNK_STORE,
   EMBEDDING_STORE,
   RETRIEVAL_INDEX,
+  EVIDENCE_LOOKUP,
+  RETRIEVAL_TRACE,
   IDENTITY_LOOKUP,
   PDF_PARSE_SERVICE,
 } from './ports/tokens';
@@ -58,6 +60,8 @@ import { PrismaChunkStoreAdapter } from './adapters/prisma/prisma-chunk-store.ad
 import { PrismaEmbeddingStoreAdapter } from './adapters/prisma/prisma-embedding-store.adapter';
 import { PrismaRetrievalIndexAdapter } from './adapters/prisma/prisma-retrieval-index.adapter';
 import { PrismaIdentityLookupAdapter } from './adapters/prisma/prisma-identity-lookup.adapter';
+import { PrismaEvidenceLookupAdapter } from './adapters/prisma/prisma-evidence-lookup.adapter';
+import { PrismaRetrievalTraceAdapter } from './adapters/prisma/prisma-retrieval-trace.adapter';
 import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
 
 @Module({
@@ -80,6 +84,8 @@ import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
     PrismaChunkStoreAdapter,
     PrismaEmbeddingStoreAdapter,
     PrismaRetrievalIndexAdapter,
+    PrismaEvidenceLookupAdapter,
+    PrismaRetrievalTraceAdapter,
     PrismaIdentityLookupAdapter,
     PdfjsParseAdapter,
     RedisAccessContextInvalidator,
@@ -109,6 +115,8 @@ import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
     { provide: CHUNK_STORE, useExisting: PrismaChunkStoreAdapter },
     { provide: EMBEDDING_STORE, useExisting: PrismaEmbeddingStoreAdapter },
     { provide: RETRIEVAL_INDEX, useExisting: PrismaRetrievalIndexAdapter },
+    { provide: EVIDENCE_LOOKUP, useExisting: PrismaEvidenceLookupAdapter },
+    { provide: RETRIEVAL_TRACE, useExisting: PrismaRetrievalTraceAdapter },
     { provide: IDENTITY_LOOKUP, useExisting: PrismaIdentityLookupAdapter },
     { provide: PDF_PARSE_SERVICE, useExisting: PdfjsParseAdapter },
     {
@@ -143,6 +151,8 @@ import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
     CHUNK_STORE,
     EMBEDDING_STORE,
     RETRIEVAL_INDEX,
+    EVIDENCE_LOOKUP,
+    RETRIEVAL_TRACE,
     IDENTITY_LOOKUP,
     PDF_PARSE_SERVICE,
     ACCESS_CONTEXT_INVALIDATOR,

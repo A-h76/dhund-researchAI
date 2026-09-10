@@ -22,6 +22,7 @@ import { IamModule } from '../../iam/iam.module';
 import { IngestionModule } from '../../ingestion/ingestion.module';
 import { ProjectsModule } from '../../projects/projects.module';
 import { RetrievalModule } from '../../retrieval/retrieval.module';
+import { RetrievalApiModule } from '../../retrieval/retrieval-api.module';
 import { ApiEventsGateway } from './api-events.gateway';
 import { ApiRootController } from './api-root.controller';
 import { CapabilityProbeController } from './capability-probe.controller';
@@ -29,7 +30,7 @@ import { HealthController } from './health.controller';
 import { NoopProcessorReadiness } from './noop-processor-readiness';
 
 @Module({
-  imports: [PlatformModule, AiModule, IamModule, ProjectsModule, IngestionModule, RetrievalModule],
+  imports: [PlatformModule, AiModule, IamModule, ProjectsModule, IngestionModule, RetrievalModule, RetrievalApiModule],
   controllers: [ApiRootController, HealthController, CapabilityProbeController],
   providers: [
     ApiEventsGateway,

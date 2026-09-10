@@ -17,6 +17,7 @@ import { MembershipsController } from '../../src/projects/memberships.controller
 import { OrgsController } from '../../src/projects/orgs.controller';
 import { ProjectsController } from '../../src/projects/projects.controller';
 import { UploadsController } from '../../src/ingestion/uploads.controller';
+import { RetrievalSearchController } from '../../src/retrieval/retrieval-search.controller';
 
 const ROOT = join(__dirname, '..', '..');
 const SRC = join(ROOT, 'src');
@@ -32,6 +33,7 @@ const HTTP_CONTROLLERS = [
   OrgsController,
   ProjectsController,
   MembershipsController,
+  RetrievalSearchController,
 ] as const;
 
 const EXPECTED_CONTROLLER_FILES = [
@@ -45,6 +47,7 @@ const EXPECTED_CONTROLLER_FILES = [
   'src/projects/memberships.controller.ts',
   'src/projects/orgs.controller.ts',
   'src/projects/projects.controller.ts',
+  'src/retrieval/retrieval-search.controller.ts',
 ];
 
 const PUBLIC_ROUTES = new Set([
@@ -240,7 +243,9 @@ describe('DHB-37 HTTP guard coverage', () => {
     ).toBe(true);
     expect(
       routes.some(
-        (route) => route.path === '/v1/documents/:id' && route.requireAuth,
+        (route) =>
+          route.path === '/v1/projects/:projectId/retrieval/search' &&
+          route.projectRole === 'VIEWER',
       ),
     ).toBe(true);
   });

@@ -3,29 +3,16 @@ import type { IGatewayService } from '../../src/ai/gateway/gateway.port';
 import type { GatewayResult } from '../../src/ai/gateway/gateway.types';
 import { EmbeddingDimensionMismatchError } from '../../src/l0/ports';
 import { RETRIEVAL_ELIGIBILITY_SQL } from '../../src/l0/ports/retrieval-eligibility';
-import type { PlatformLogger } from '../../src/platform/logging';
 import { RuntimeRole } from '../../src/platform/runtime/role';
 import { generateId } from '../../src/platform/ids/uuid-v7';
-import { AnnSearch } from '../../src/retrieval/ann-search';
-import { LexicalSearch } from '../../src/retrieval/lexical-search';
 import { RETRIEVAL_OVER_FETCH_FACTOR, armLimit } from '../../src/retrieval/over-fetch';
 import { EmptyRetrievalQueryError, understandQuery } from '../../src/retrieval/query-understanding';
 import { RetrievalMetrics } from '../../src/retrieval/retrieval.metrics';
-import { RetrievalService } from '../../src/retrieval/retrieval.service';
-import { buildTestAppConfig } from '../fixtures/app-config.fixture';
 import { MemoryQueryEmbed } from '../fixtures/memory-query-embed';
 import { MemoryRerank } from '../fixtures/memory-rerank';
 import { MemoryRetrievalIndexStore } from '../fixtures/memory-retrieval-index';
 import { MemoryScopedStore } from '../fixtures/memory-scoped-store';
-
-function stubLogger(): PlatformLogger {
-  return {
-    info: () => undefined,
-    warn: () => undefined,
-    error: () => undefined,
-    debug: () => undefined,
-  } as unknown as PlatformLogger;
-}
+import { buildRetrievalService, stubLogger } from '../fixtures/memory-retrieval-service';
 
 function vector(dimensions: number, value = 0.02): number[] {
   return Array.from({ length: dimensions }, () => value);
@@ -52,15 +39,15 @@ describe('DHB-55 RetrievalService arms', () => {
         text: 'randomized trial',
       },
     ];
-    const service = new RetrievalService(
+    const built = buildRetrievalService({
+      store,
+      fts,
       embed,
-      new AnnSearch(store, buildTestAppConfig(), metrics),
-      new LexicalSearch(fts, metrics),
-      new MemoryRerank(),
       metrics,
-    );
+      rerank: new MemoryRerank(),
+    });
 
-    const result = await service.retrieve({
+    const result = await built.service.retrieve({
       orgId: generateId(),
       projectId,
       query: '  randomized   trial ',
@@ -74,10 +61,26 @@ describe('DHB-55 RetrievalService arms', () => {
     expect(store.lastLimit).toBe(15);
     expect(fts.lastLimit).toBe(15);
     expect(result.vectorHits).toEqual([
-      { chunkId, projectId, documentId, text: '', arm: 'vector' },
+      {
+        chunkId,
+        projectId,
+        documentId,
+        text: '',
+        arm: 'vector',
+        vectorScore: null,
+        ftsScore: null,
+      },
     ]);
     expect(result.ftsHits).toEqual([
-      { chunkId, projectId, documentId, text: 'randomized trial', arm: 'fts' },
+      {
+        chunkId,
+        projectId,
+        documentId,
+        text: 'randomized trial',
+        arm: 'fts',
+        vectorScore: null,
+        ftsScore: 1,
+      },
     ]);
     expect(result.timings.vectorMs).toBeGreaterThanOrEqual(0);
     expect(result.timings.ftsMs).toBeGreaterThanOrEqual(0);
@@ -96,15 +99,9 @@ describe('DHB-55 RetrievalService arms', () => {
       { chunkId: 'v2', projectId, documentId: 'd1' },
     ];
     fts.chunks = [{ chunkId: 'f1', projectId, documentId: 'd1', text: 'metformin adults' }];
-    const service = new RetrievalService(
-      new MemoryQueryEmbed(),
-      new AnnSearch(store, buildTestAppConfig(), metrics),
-      new LexicalSearch(fts, metrics),
-      new MemoryRerank(),
-      metrics,
-    );
+    const built = buildRetrievalService({ store, fts, metrics, rerank: new MemoryRerank() });
 
-    const result = await service.retrieve({
+    const result = await built.service.retrieve({
       orgId: generateId(),
       projectId,
       query: 'metformin adults',

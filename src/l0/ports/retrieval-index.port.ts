@@ -7,6 +7,7 @@ export interface FtsHit {
   readonly projectId: string;
   readonly documentId: string;
   readonly text?: string;
+  readonly ftsScore?: number | null;
 }
 
 export interface FtsSearchInput {

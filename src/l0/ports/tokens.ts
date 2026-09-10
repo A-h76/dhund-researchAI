@@ -25,5 +25,7 @@ export const EXTRACT_STORE = Symbol('EXTRACT_STORE');
 export const CHUNK_STORE = Symbol('CHUNK_STORE');
 export const EMBEDDING_STORE = Symbol('EMBEDDING_STORE');
 export const RETRIEVAL_INDEX = Symbol('RETRIEVAL_INDEX');
+export const EVIDENCE_LOOKUP = Symbol('EVIDENCE_LOOKUP');
+export const RETRIEVAL_TRACE = Symbol('RETRIEVAL_TRACE');
 export const IDENTITY_LOOKUP = Symbol('IDENTITY_LOOKUP');
 export const PDF_PARSE_SERVICE = Symbol('PDF_PARSE_SERVICE');
