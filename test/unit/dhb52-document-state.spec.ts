@@ -34,6 +34,8 @@ const ALLOWED: ReadonlySet<string> = new Set(
     ['partial', 'failed'],
     ['partial', 'cancelled'],
     ['partial', 'stale'],
+    // DHB-53: a failed embed degrades a completed document to partial.
+    ['completed', 'partial'],
     ['completed', 'stale'],
     ['failed', 'processing'],
     ['failed', 'cancelled'],
@@ -63,12 +65,13 @@ describe('DHB-52 document state machine', () => {
     for (const to of ALL_STATUSES.filter((status) => status !== 'cancelled')) {
       expect(canTransitionDocument('cancelled', to)).toBe(false);
     }
-    // completed may only go stale (re-ingest); never back to processing/queued.
+    // completed may go stale (re-ingest) or partial (DHB-53 embed failure);
+    // never back to processing/queued.
     expect(canTransitionDocument('completed', 'processing')).toBe(false);
     expect(canTransitionDocument('completed', 'queued')).toBe(false);
-    expect(canTransitionDocument('completed', 'partial')).toBe(false);
     expect(canTransitionDocument('completed', 'failed')).toBe(false);
     expect(canTransitionDocument('completed', 'stale')).toBe(true);
+    expect(canTransitionDocument('completed', 'partial')).toBe(true);
     // nothing ever returns to queued.
     for (const from of ALL_STATUSES.filter((status) => status !== 'queued')) {
       expect(canTransitionDocument(from, 'queued')).toBe(false);

@@ -3,9 +3,14 @@ import type { DocumentLifecycleStatus } from './extract-store.port';
 /**
  * Document lifecycle state machine (Phase 7 §1).
  *
- * Backward moves are forbidden. `cancelled` is terminal. `completed` may only
- * become `stale` (a newer version arrived via DOI re-ingest). `partial` may
- * never become `completed` — a partial chain never completes.
+ * Backward moves are forbidden. `cancelled` is terminal. `partial` may never
+ * become `completed` — a partial chain never completes.
+ *
+ * `completed` may become `stale` (a newer version arrived via DOI re-ingest) or
+ * `partial`: chunking completes a document before its chunks are embedded, so a
+ * failed embed (DHB-53 §25.2) degrades a completed document rather than leaving
+ * it advertised as fully retrievable. Because `partial` never returns to
+ * `completed`, the degradation is one-way until the document is re-ingested.
  */
 export const DOCUMENT_STATUS_TRANSITIONS: Readonly<
   Record<DocumentLifecycleStatus, readonly DocumentLifecycleStatus[]>
@@ -13,7 +18,7 @@ export const DOCUMENT_STATUS_TRANSITIONS: Readonly<
   queued: ['processing', 'failed', 'cancelled', 'stale'],
   processing: ['partial', 'completed', 'failed', 'cancelled', 'stale'],
   partial: ['processing', 'failed', 'cancelled', 'stale'],
-  completed: ['stale'],
+  completed: ['partial', 'stale'],
   failed: ['processing', 'cancelled', 'stale'],
   stale: ['processing', 'failed', 'cancelled'],
   cancelled: [],
