@@ -31,6 +31,7 @@ export interface ScopedListQuery {
 export interface AnnHit {
   readonly chunkId: string;
   readonly projectId: string;
+  readonly documentId: string;
 }
 
 export interface ScopedStore {

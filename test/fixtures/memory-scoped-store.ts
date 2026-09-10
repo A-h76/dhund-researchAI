@@ -105,15 +105,17 @@ export class MemoryScopedStore implements ScopedStore {
   }
 
   lastEfSearch: number | undefined;
+  lastLimit: number | undefined;
   annHits: AnnHit[] = [];
 
   annNearest(
     _scope: ProjectScope,
     _vector: string,
-    _limit: number,
+    limit: number,
     options?: { readonly efSearch?: number },
   ): Promise<readonly AnnHit[]> {
     this.lastEfSearch = options?.efSearch;
+    this.lastLimit = limit;
     return Promise.resolve(this.annHits);
   }
 

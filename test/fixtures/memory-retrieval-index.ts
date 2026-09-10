@@ -16,11 +16,13 @@ export class MemoryRetrievalIndexStore implements RetrievalIndexStore {
   chunks: MemoryFtsChunk[] = [];
   ftsUnavailable = false;
   lastEfSearch: number | null = null;
+  lastLimit: number | undefined;
 
   ftsSearch(input: FtsSearchInput): Promise<readonly FtsHit[]> {
     if (this.ftsUnavailable) {
       return Promise.reject(new Error('fts down'));
     }
+    this.lastLimit = input.limit;
     const needle = input.query.toLowerCase();
     const hits = this.chunks
       .filter(

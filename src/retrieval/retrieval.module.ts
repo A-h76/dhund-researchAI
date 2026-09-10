@@ -3,11 +3,27 @@ import { PlatformModule } from '../platform/platform.module';
 import { AnnSearch } from './ann-search';
 import { LexicalSearch } from './lexical-search';
 import { RetrievalMetrics } from './retrieval.metrics';
+import { RETRIEVAL_SERVICE } from './retrieval.port';
+import { RetrievalService } from './retrieval.service';
 import { TrigramIdentityLookup } from './trigram-identity';
 
 @Module({
   imports: [PlatformModule],
-  providers: [AnnSearch, LexicalSearch, TrigramIdentityLookup, RetrievalMetrics],
-  exports: [AnnSearch, LexicalSearch, TrigramIdentityLookup, RetrievalMetrics],
+  providers: [
+    AnnSearch,
+    LexicalSearch,
+    TrigramIdentityLookup,
+    RetrievalMetrics,
+    RetrievalService,
+    { provide: RETRIEVAL_SERVICE, useExisting: RetrievalService },
+  ],
+  exports: [
+    AnnSearch,
+    LexicalSearch,
+    TrigramIdentityLookup,
+    RetrievalMetrics,
+    RetrievalService,
+    RETRIEVAL_SERVICE,
+  ],
 })
 export class RetrievalModule {}

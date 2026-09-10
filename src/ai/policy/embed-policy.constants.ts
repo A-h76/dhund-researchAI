@@ -9,6 +9,7 @@ export type EmbedInputType = 'query' | 'document';
 
 /** Stored chunks embed as documents; retrieval embeds queries. The split is never mixed. */
 export const EMBED_DOCUMENT_INPUT_TYPE: EmbedInputType = 'document';
+export const EMBED_QUERY_INPUT_TYPE: EmbedInputType = 'query';
 
 /**
  * Exactly one embedding version is write-active. The embed job refuses any

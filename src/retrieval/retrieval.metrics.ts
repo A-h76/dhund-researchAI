@@ -13,6 +13,8 @@ export interface RetrievalMetricsSnapshot {
   readonly vectorUnavailable: number;
   readonly ftsUnavailable: number;
   readonly lastEfSearch: number | null;
+  readonly lastVectorMs: number | null;
+  readonly lastFtsMs: number | null;
   readonly filteredRecallShortfall: number;
   readonly filteredRecallDropRate: number;
 }
@@ -24,6 +26,8 @@ export class RetrievalMetrics {
   private vectorUnavailable = 0;
   private ftsUnavailable = 0;
   private lastEfSearch: number | null = null;
+  private lastVectorMs: number | null = null;
+  private lastFtsMs: number | null = null;
   private shortfall = 0;
   private retrieved = 0;
   private surviving = 0;
@@ -70,10 +74,27 @@ export class RetrievalMetrics {
     });
   }
 
-  /**
-   * Record the canonical shortfall. Callers pass arm-returned count vs count
-   * surviving eligibility + authorization, before top-k.
-   */
+  recordStageLatency(stage: 'vector' | 'fts', latencyMs: number): void {
+    switch (stage) {
+      case 'vector':
+        this.lastVectorMs = latencyMs;
+        break;
+      case 'fts':
+        this.lastFtsMs = latencyMs;
+        break;
+      default: {
+        const exhaustive: never = stage;
+        throw new Error(`unknown retrieval stage ${String(exhaustive)}`);
+      }
+    }
+    this.logger.info({
+      module: 'retrieval',
+      message: 'retrieval.stage.latency',
+      stage,
+      latencyMs,
+    });
+  }
+
   recordFilteredRecall(retrievedCount: number, survivingCount: number): number {
     const shortfall = filteredRecallShortfall(retrievedCount, survivingCount);
     const dropRate = filteredRecallDropRate(retrievedCount, survivingCount);
@@ -97,6 +118,8 @@ export class RetrievalMetrics {
       vectorUnavailable: this.vectorUnavailable,
       ftsUnavailable: this.ftsUnavailable,
       lastEfSearch: this.lastEfSearch,
+      lastVectorMs: this.lastVectorMs,
+      lastFtsMs: this.lastFtsMs,
       filteredRecallShortfall: this.shortfall,
       filteredRecallDropRate: filteredRecallDropRate(this.retrieved, this.surviving),
     };

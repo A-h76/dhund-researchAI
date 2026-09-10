@@ -26,6 +26,7 @@ export * from './embedding-store.port';
 export * from './hnsw.constants';
 export * from './hnsw-ef-search';
 export * from './retrieval-index.port';
+export * from './retrieval-eligibility';
 export * from './identity-lookup.port';
 export * from './pdf-parse.port';
 export * from './pubsub.port';

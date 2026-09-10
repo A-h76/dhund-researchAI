@@ -167,9 +167,24 @@ describe('GatewayService (DHB-44)', () => {
       gateway.execute(apiContext(), {
         capability: 'EMBED',
         texts: ['hello'],
-        inputType: 'query',
+        inputType: 'document',
       }),
     ).rejects.toMatchObject({ code: 'capability_role_mismatch' });
+  });
+
+  it('allows query EMBED on the api role', async () => {
+    const { gateway } = createGateway();
+
+    const result = await gateway.execute(apiContext(), {
+      capability: 'EMBED',
+      texts: ['hello'],
+      inputType: 'query',
+    });
+    expect(result.capability).toBe('EMBED');
+    if (result.capability !== 'EMBED') {
+      throw new Error('expected embed result');
+    }
+    expect(result.inputType).toBe('query');
   });
 
   it('rejects interactive capabilities on worker role', async () => {

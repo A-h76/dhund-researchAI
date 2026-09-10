@@ -94,6 +94,7 @@ function vectorLiteral(dimensions: number, value = 0.1): string {
           orgId,
           title,
           storageKey: `doc/${id}`,
+          status: 'completed',
         },
       });
       return id;

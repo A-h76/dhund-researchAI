@@ -33,7 +33,7 @@ export class GatewayService implements IGatewayService {
     const started = Date.now();
 
     await this.boundary.assertAllowed(ctx, request);
-    assertRoleAllowed(ctx.runtimeRole, request.capability);
+    assertRoleAllowed(ctx.runtimeRole, request.capability, request);
 
     const policy = this.policyResolver.resolve(request);
     validateGatewayRequest(request);
