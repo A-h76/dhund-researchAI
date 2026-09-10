@@ -3,6 +3,7 @@ import { GatewayExecutionFailedError } from '../../src/ai/gateway/gateway-execut
 import { StanceService } from '../../src/apps/worker/stance.service';
 import { EvidenceMetrics } from '../../src/evidence/evidence.metrics';
 import type {
+  ClaimRecord,
   EvidenceRecord,
   EvidenceSpinePort,
   ExtractionSetRecord,
@@ -33,7 +34,14 @@ describe('DHB-59 stance service (§11.4)', () => {
     for (const row of evidenceRows) {
       spine.evidence.set(row.id, row);
     }
-    spine.claims.set(claimId, { id: claimId, projectId, text: 'Treatment reduces events' });
+    spine.claims.set(claimId, {
+      id: claimId,
+      projectId,
+      text: 'Treatment reduces events',
+      method: 'deterministic',
+      aiExecutionId: null,
+      coverageAnnotation: { method: 'deterministic' },
+    });
     return spine;
   }
 
@@ -107,7 +115,14 @@ describe('DHB-59 stance service (§11.4)', () => {
       logger(),
     );
 
-    spine.claims.set(claimId, { id: claimId, projectId, text: 'Treatment reduces events' });
+    spine.claims.set(claimId, {
+      id: claimId,
+      projectId,
+      text: 'Treatment reduces events',
+      method: 'deterministic',
+      aiExecutionId: null,
+      coverageAnnotation: { method: 'deterministic' },
+    });
     await service.execute({
       orgId,
       projectId,
@@ -117,7 +132,14 @@ describe('DHB-59 stance service (§11.4)', () => {
       correlationId: 'cor-a',
     });
 
-    spine.claims.set(claimId, { id: claimId, projectId, text: 'oppose-marker' });
+    spine.claims.set(claimId, {
+      id: claimId,
+      projectId,
+      text: 'oppose-marker',
+      method: 'deterministic',
+      aiExecutionId: null,
+      coverageAnnotation: { method: 'deterministic' },
+    });
     await service.execute({
       orgId,
       projectId,
@@ -193,7 +215,7 @@ describe('DHB-59 stance service (§11.4)', () => {
 
 class StanceSpine implements EvidenceSpinePort {
   readonly evidence = new Map<string, EvidenceRecord>();
-  readonly claims = new Map<string, { id: string; projectId: string; text: string }>();
+  readonly claims = new Map<string, ClaimRecord>();
   readonly stanceLabels: StanceLabelRecord[] = [];
   readonly claimLinks: Array<{ id: string; evidenceId: string; claimId: string; stance: StanceLabelRecord['stance'] }> =
     [];
@@ -213,6 +235,36 @@ class StanceSpine implements EvidenceSpinePort {
       return null;
     }
     return claim;
+  }
+  async createClaim(): Promise<never> {
+    throw new Error('unused');
+  }
+  async createArgument(): Promise<never> {
+    throw new Error('unused');
+  }
+  async findArgument() {
+    return null;
+  }
+  async countArgumentLinksForClaim() {
+    return 0;
+  }
+  async countEvidenceLinksForClaim() {
+    return 0;
+  }
+  async softDeleteClaim() {
+    return false;
+  }
+  async linkArgumentClaim(): Promise<never> {
+    throw new Error('unused');
+  }
+  async linkEvidenceClaim(): Promise<never> {
+    throw new Error('unused');
+  }
+  async listArgumentClaims() {
+    return [];
+  }
+  async listArgumentsForClaim() {
+    return [];
   }
   async findEvidence(evidenceId: string, projectId: string) {
     const row = this.evidence.get(evidenceId);

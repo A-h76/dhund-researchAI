@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { EvidenceStance, EvidenceType, ExtractionMethod, Prisma } from '@prisma/client';
 import { L0OperationError } from '../../ports/errors';
 import type {
+  ArgumentClaimLinkRecord,
+  ArgumentRecord,
   ChunkRecord,
   ClaimRecord,
   EvidenceClaimLinkRecord,
@@ -81,9 +83,197 @@ export class PrismaEvidenceSpineAdapter implements EvidenceSpinePort {
       if (row === null) {
         return null;
       }
-      return { id: row.id, projectId: row.projectId, text: row.text };
+      return toClaim(row);
     } catch (error) {
       throw new L0OperationError('Claim lookup failed', error);
+    }
+  }
+
+  async createClaim(input: {
+    id: string;
+    projectId: string;
+    text: string;
+    coverageAnnotation: Readonly<Record<string, unknown>>;
+  }): Promise<ClaimRecord> {
+    await this.ensureConnected();
+    try {
+      const row = await this.client().claim.create({
+        data: {
+          id: input.id,
+          projectId: input.projectId,
+          text: input.text,
+          coverageAnnotation: input.coverageAnnotation as Prisma.InputJsonValue,
+        },
+      });
+      return toClaim(row);
+    } catch (error) {
+      throw new L0OperationError('Claim create failed', error);
+    }
+  }
+
+  async createArgument(input: {
+    id: string;
+    projectId: string;
+    title: string;
+    structure: unknown;
+  }): Promise<ArgumentRecord> {
+    await this.ensureConnected();
+    try {
+      const row = await this.client().argument.create({
+        data: {
+          id: input.id,
+          projectId: input.projectId,
+          title: input.title,
+          structure: input.structure as Prisma.InputJsonValue,
+        },
+      });
+      return toArgument(row);
+    } catch (error) {
+      throw new L0OperationError('Argument create failed', error);
+    }
+  }
+
+  async findArgument(argumentId: string, projectId: string): Promise<ArgumentRecord | null> {
+    await this.ensureConnected();
+    try {
+      const row = await this.client().argument.findFirst({
+        where: { id: argumentId, projectId },
+      });
+      return row === null ? null : toArgument(row);
+    } catch (error) {
+      throw new L0OperationError('Argument lookup failed', error);
+    }
+  }
+
+  async countArgumentLinksForClaim(claimId: string): Promise<number> {
+    await this.ensureConnected();
+    try {
+      return this.client().argumentClaimLink.count({ where: { claimId } });
+    } catch (error) {
+      throw new L0OperationError('Argument-link count failed', error);
+    }
+  }
+
+  async countEvidenceLinksForClaim(claimId: string): Promise<number> {
+    await this.ensureConnected();
+    try {
+      return this.client().evidenceClaimLink.count({ where: { claimId } });
+    } catch (error) {
+      throw new L0OperationError('Evidence-link count failed', error);
+    }
+  }
+
+  async softDeleteClaim(claimId: string, projectId: string): Promise<boolean> {
+    await this.ensureConnected();
+    try {
+      const result = await this.client().claim.updateMany({
+        where: { id: claimId, projectId, deletedAt: null },
+        data: { deletedAt: new Date() },
+      });
+      return result.count > 0;
+    } catch (error) {
+      throw new L0OperationError('Claim delete failed', error);
+    }
+  }
+
+  async linkArgumentClaim(input: {
+    id: string;
+    argumentId: string;
+    claimId: string;
+    projectId: string;
+    role: string | null;
+    ordinal: number | null;
+  }): Promise<ArgumentClaimLinkRecord> {
+    await this.ensureConnected();
+    try {
+      const row = await this.client().argumentClaimLink.create({
+        data: {
+          id: input.id,
+          argumentId: input.argumentId,
+          claimId: input.claimId,
+          projectId: input.projectId,
+          role: input.role,
+          ordinal: input.ordinal,
+        },
+      });
+      return {
+        id: row.id,
+        argumentId: row.argumentId,
+        claimId: row.claimId,
+        projectId: row.projectId,
+        role: row.role,
+        ordinal: row.ordinal,
+      };
+    } catch (error) {
+      throw new L0OperationError('Argument-claim link create failed', error);
+    }
+  }
+
+  async linkEvidenceClaim(input: {
+    id: string;
+    evidenceId: string;
+    claimId: string;
+    stance: StoredEvidenceStance;
+    weight: string;
+  }): Promise<EvidenceClaimLinkRecord> {
+    await this.ensureConnected();
+    try {
+      const row = await this.client().evidenceClaimLink.create({
+        data: {
+          id: input.id,
+          evidenceId: input.evidenceId,
+          claimId: input.claimId,
+          weight: new Prisma.Decimal(input.weight),
+          stance: toPrismaStance(input.stance),
+        },
+      });
+      return {
+        id: row.id,
+        evidenceId: row.evidenceId,
+        claimId: row.claimId,
+        stance: fromPrismaStance(row.stance),
+      };
+    } catch (error) {
+      throw new L0OperationError('Evidence-claim link create failed', error);
+    }
+  }
+
+  async listArgumentClaims(argumentId: string): Promise<readonly ArgumentClaimLinkRecord[]> {
+    await this.ensureConnected();
+    try {
+      const rows = await this.client().argumentClaimLink.findMany({
+        where: { argumentId },
+        orderBy: [{ ordinal: 'asc' }, { createdAt: 'asc' }],
+      });
+      return rows.map((row) => ({
+        id: row.id,
+        argumentId: row.argumentId,
+        claimId: row.claimId,
+        projectId: row.projectId,
+        role: row.role,
+        ordinal: row.ordinal,
+      }));
+    } catch (error) {
+      throw new L0OperationError('Argument-claim list failed', error);
+    }
+  }
+
+  async listArgumentsForClaim(claimId: string): Promise<readonly ArgumentClaimLinkRecord[]> {
+    await this.ensureConnected();
+    try {
+      const rows = await this.client().argumentClaimLink.findMany({
+        where: { claimId },
+      });
+      return rows.map((row) => ({
+        id: row.id,
+        argumentId: row.argumentId,
+        claimId: row.claimId,
+        projectId: row.projectId,
+        role: row.role,
+        ordinal: row.ordinal,
+      }));
+    } catch (error) {
+      throw new L0OperationError('Claim-argument list failed', error);
     }
   }
 
@@ -340,6 +530,84 @@ export class PrismaEvidenceSpineAdapter implements EvidenceSpinePort {
   private async ensureConnected(): Promise<void> {
     await this.database.connect();
   }
+}
+
+function toClaim(row: {
+  id: string;
+  projectId: string;
+  text: string;
+  coverageAnnotation: Prisma.JsonValue;
+}): ClaimRecord {
+  const coverage = asRecord(row.coverageAnnotation);
+  const provenance = parseProvenance(coverage);
+  return {
+    id: row.id,
+    projectId: row.projectId,
+    text: row.text,
+    method: provenance.method,
+    aiExecutionId: provenance.aiExecutionId,
+    coverageAnnotation: coverage,
+  };
+}
+
+function toArgument(row: {
+  id: string;
+  projectId: string;
+  title: string;
+  structure: Prisma.JsonValue;
+}): ArgumentRecord {
+  const structure = row.structure;
+  const provenance = parseProvenance(
+    typeof structure === 'object' && structure !== null && !Array.isArray(structure)
+      ? (structure as Record<string, unknown>)
+      : {},
+  );
+  const nested =
+    typeof structure === 'object' &&
+    structure !== null &&
+    !Array.isArray(structure) &&
+    typeof (structure as Record<string, unknown>).provenance === 'object'
+      ? parseProvenance(
+          ((structure as Record<string, unknown>).provenance ?? {}) as Record<string, unknown>,
+        )
+      : provenance;
+  return {
+    id: row.id,
+    projectId: row.projectId,
+    title: row.title,
+    structure,
+    method: nested.method,
+    aiExecutionId: nested.aiExecutionId,
+  };
+}
+
+function asRecord(value: Prisma.JsonValue): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return {};
+  }
+  return value as Record<string, unknown>;
+}
+
+function parseProvenance(record: Record<string, unknown>): {
+  method: ClaimRecord['method'];
+  aiExecutionId: string | null;
+} {
+  const nested =
+    typeof record.provenance === 'object' &&
+    record.provenance !== null &&
+    !Array.isArray(record.provenance)
+      ? (record.provenance as Record<string, unknown>)
+      : record;
+  const methodRaw = nested.method;
+  const method =
+    methodRaw === 'llm' || methodRaw === 'deterministic' || methodRaw === 'human'
+      ? methodRaw
+      : 'deterministic';
+  const aiExecutionId =
+    typeof nested.aiExecutionId === 'string' && nested.aiExecutionId.length > 0
+      ? nested.aiExecutionId
+      : null;
+  return { method, aiExecutionId };
 }
 
 function toChunk(row: {

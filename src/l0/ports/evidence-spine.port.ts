@@ -38,10 +38,35 @@ export interface ChunkRecord {
   readonly blockIds: readonly string[];
 }
 
+export type GenerationMethod = 'llm' | 'deterministic' | 'human';
+
+export type ClaimSupportStatus = 'unsupported' | 'supported' | 'conflicting';
+
 export interface ClaimRecord {
   readonly id: string;
   readonly projectId: string;
   readonly text: string;
+  readonly method: GenerationMethod;
+  readonly aiExecutionId: string | null;
+  readonly coverageAnnotation: Readonly<Record<string, unknown>>;
+}
+
+export interface ArgumentRecord {
+  readonly id: string;
+  readonly projectId: string;
+  readonly title: string;
+  readonly structure: unknown;
+  readonly method: GenerationMethod;
+  readonly aiExecutionId: string | null;
+}
+
+export interface ArgumentClaimLinkRecord {
+  readonly id: string;
+  readonly argumentId: string;
+  readonly claimId: string;
+  readonly projectId: string;
+  readonly role: string | null;
+  readonly ordinal: number | null;
 }
 
 export interface EvidenceClaimLinkRecord {
@@ -88,6 +113,39 @@ export interface EvidenceSpinePort {
     blockId: string;
   }): Promise<ChunkRecord | null>;
   findClaim(claimId: string, projectId: string): Promise<ClaimRecord | null>;
+  createClaim(input: {
+    id: string;
+    projectId: string;
+    text: string;
+    coverageAnnotation: Readonly<Record<string, unknown>>;
+  }): Promise<ClaimRecord>;
+  createArgument(input: {
+    id: string;
+    projectId: string;
+    title: string;
+    structure: unknown;
+  }): Promise<ArgumentRecord>;
+  findArgument(argumentId: string, projectId: string): Promise<ArgumentRecord | null>;
+  countArgumentLinksForClaim(claimId: string): Promise<number>;
+  countEvidenceLinksForClaim(claimId: string): Promise<number>;
+  softDeleteClaim(claimId: string, projectId: string): Promise<boolean>;
+  linkArgumentClaim(input: {
+    id: string;
+    argumentId: string;
+    claimId: string;
+    projectId: string;
+    role: string | null;
+    ordinal: number | null;
+  }): Promise<ArgumentClaimLinkRecord>;
+  linkEvidenceClaim(input: {
+    id: string;
+    evidenceId: string;
+    claimId: string;
+    stance: StoredEvidenceStance;
+    weight: string;
+  }): Promise<EvidenceClaimLinkRecord>;
+  listArgumentClaims(argumentId: string): Promise<readonly ArgumentClaimLinkRecord[]>;
+  listArgumentsForClaim(claimId: string): Promise<readonly ArgumentClaimLinkRecord[]>;
   findEvidence(evidenceId: string, projectId: string): Promise<EvidenceRecord | null>;
   listEvidenceForExecution(aiExecutionId: string): Promise<readonly EvidenceRecord[]>;
   findExtractionSet(stepId: string): Promise<ExtractionSetRecord | null>;

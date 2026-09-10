@@ -333,6 +333,36 @@ class InMemorySpine implements EvidenceSpinePort {
   async findClaim() {
     return null;
   }
+  async createClaim(): Promise<never> {
+    throw new Error('unused');
+  }
+  async createArgument(): Promise<never> {
+    throw new Error('unused');
+  }
+  async findArgument() {
+    return null;
+  }
+  async countArgumentLinksForClaim() {
+    return 0;
+  }
+  async countEvidenceLinksForClaim() {
+    return 0;
+  }
+  async softDeleteClaim() {
+    return false;
+  }
+  async linkArgumentClaim(): Promise<never> {
+    throw new Error('unused');
+  }
+  async linkEvidenceClaim(): Promise<never> {
+    throw new Error('unused');
+  }
+  async listArgumentClaims() {
+    return [];
+  }
+  async listArgumentsForClaim() {
+    return [];
+  }
   async findEvidence(evidenceId: string, projectId: string) {
     const row = this.evidence.get(evidenceId);
     if (row === undefined || row.projectId !== projectId) {
