@@ -13,6 +13,7 @@ export function buildTestAppConfig(
     logLevel: 'silent',
     databaseUrl: 'postgres://dhund:dhund@localhost:5432/dhund',
     databasePoolSize: 10,
+    hnswEfSearch: 80,
     redisUrl: 'redis://localhost:6379',
     featureFlags: Object.freeze({ research_runs: false }),
     argon2: Object.freeze({

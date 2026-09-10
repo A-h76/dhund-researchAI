@@ -19,6 +19,7 @@ export interface AppConfig {
   readonly logLevel: string;
   readonly databaseUrl: string;
   readonly databasePoolSize: number;
+  readonly hnswEfSearch: number;
   readonly redisUrl: string;
   readonly argon2: Argon2Config;
   readonly jwt?: JwtConfig;

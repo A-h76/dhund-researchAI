@@ -104,12 +104,17 @@ export class MemoryScopedStore implements ScopedStore {
     return Promise.resolve(live.slice(0, query.limit));
   }
 
+  lastEfSearch: number | undefined;
+  annHits: AnnHit[] = [];
+
   annNearest(
     _scope: ProjectScope,
     _vector: string,
     _limit: number,
+    options?: { readonly efSearch?: number },
   ): Promise<readonly AnnHit[]> {
-    return Promise.resolve([]);
+    this.lastEfSearch = options?.efSearch;
+    return Promise.resolve(this.annHits);
   }
 
   private bucket(entity: TenantEntity): ScopedRow[] {

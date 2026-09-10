@@ -1,3 +1,12 @@
+import {
+  HNSW_EF_SEARCH_DEFAULT,
+  HNSW_EF_SEARCH_MAX,
+  HNSW_EF_SEARCH_MIN,
+} from '../../l0/ports/hnsw.constants';
+import {
+  InvalidHnswEfSearchError,
+  resolveHnswEfSearch,
+} from '../../l0/ports/hnsw-ef-search';
 import type { SecretsService } from '../../l0/ports/secrets.port';
 import { RuntimeRole } from '../runtime/role';
 import type { JwtConfig } from './app-config.types';
@@ -132,6 +141,24 @@ export function parseDatabasePoolSize(value: string | undefined): number {
   }
 
   return parsed;
+}
+
+/** Runtime HNSW search-list size. Not an index rebuild. */
+export function parseHnswEfSearch(value: string | undefined): number {
+  if (value === undefined) {
+    return HNSW_EF_SEARCH_DEFAULT;
+  }
+  const parsed = Number(value);
+  try {
+    return resolveHnswEfSearch(parsed);
+  } catch (error) {
+    if (error instanceof InvalidHnswEfSearchError) {
+      throw new ConfigValidationError(
+        `HNSW_EF_SEARCH must be an integer between ${HNSW_EF_SEARCH_MIN} and ${HNSW_EF_SEARCH_MAX}`,
+      );
+    }
+    throw error;
+  }
 }
 
 export function parseFeatureFlags(
