@@ -229,6 +229,77 @@ export const INGESTION_EVENTS: readonly CatalogEventDefinition[] = [
       },
     ],
   },
+  {
+    eventType: 'ingestion.document.chunked',
+    aggregateType: 'document',
+    domain: 'ingestion',
+    currentVersion: 1,
+    versions: [
+      {
+        schemaVersion: 1,
+        fields: [
+          orgId,
+          projectId,
+          field('documentId', 'string'),
+          field('documentVersionId', 'string'),
+          field('chunkCount', 'number'),
+          field('chunkerVersion', 'string'),
+        ],
+      },
+    ],
+  },
+  {
+    eventType: 'ingestion.document.completed',
+    aggregateType: 'document',
+    domain: 'ingestion',
+    currentVersion: 1,
+    versions: [
+      {
+        schemaVersion: 1,
+        fields: [
+          orgId,
+          projectId,
+          field('documentId', 'string'),
+          field('documentVersionId', 'string'),
+        ],
+      },
+    ],
+  },
+  {
+    eventType: 'ingestion.document.partial',
+    aggregateType: 'document',
+    domain: 'ingestion',
+    currentVersion: 1,
+    versions: [
+      {
+        schemaVersion: 1,
+        fields: [
+          orgId,
+          projectId,
+          field('documentId', 'string'),
+          field('documentVersionId', 'string'),
+        ],
+      },
+    ],
+  },
+  {
+    eventType: 'ingestion.document.failed',
+    aggregateType: 'document',
+    domain: 'ingestion',
+    currentVersion: 1,
+    versions: [
+      {
+        schemaVersion: 1,
+        fields: [
+          orgId,
+          projectId,
+          field('documentId', 'string'),
+          field('documentVersionId', 'string'),
+          field('stage', 'string'),
+        ],
+      },
+    ],
+  },
 ];
 
 export const ORCHESTRATION_EVENTS: readonly CatalogEventDefinition[] = [

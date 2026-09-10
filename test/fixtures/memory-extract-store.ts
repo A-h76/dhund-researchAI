@@ -6,6 +6,10 @@ import type {
   ExtractionRecord,
   StoredBlock,
 } from '../../src/l0/ports/extract-store.port';
+import {
+  canTransitionDocument,
+  DocumentTransitionError,
+} from '../../src/l0/ports/document-state';
 
 export class MemoryExtractStore implements ExtractStore {
   readonly versions = new Map<string, ExtractVersionRecord>();
@@ -72,6 +76,10 @@ export class MemoryExtractStore implements ExtractStore {
   }
 
   async markDocumentStatus(documentId: string, status: DocumentLifecycleStatus): Promise<void> {
+    const current = this.documentStatus.get(documentId);
+    if (current !== undefined && !canTransitionDocument(current, status)) {
+      throw new DocumentTransitionError(current, status);
+    }
     this.documentStatus.set(documentId, status);
     for (const [id, version] of this.versions) {
       if (version.documentId === documentId) {

@@ -35,8 +35,9 @@ export class UploadsController {
   @RequireAuth()
   complete(
     @Param('sessionId') sessionId: string,
+    @Body() body: unknown,
     @Headers('authorization') authorization: string | undefined,
   ): Promise<UploadCompleteResponse> {
-    return this.uploads.complete(authorization, sessionId);
+    return this.uploads.complete(authorization, sessionId, body);
   }
 }

@@ -28,7 +28,11 @@ import {
   PRESIGN_TTL_SECONDS,
   UPLOAD_OBJECT_CATEGORY,
 } from './upload.constants';
-import { parseIdempotencyKey, parseUploadCreateRequest } from './parse-upload-request';
+import {
+  parseIdempotencyKey,
+  parseUploadCompleteRequest,
+  parseUploadCreateRequest,
+} from './parse-upload-request';
 import { assertPdfMagicBytes, storedFilenameFromKey } from './upload-validation';
 import { UploadsMetrics, type UploadRejectionClass } from './uploads.metrics';
 
@@ -141,11 +145,13 @@ export class UploadsService {
   async complete(
     authorization: string | undefined,
     sessionId: string,
+    body?: unknown,
   ): Promise<UploadCompleteResponse> {
     try {
       if (!isUuid(sessionId)) {
         throw notFound({ module: MODULE });
       }
+      const { doi } = parseUploadCompleteRequest(body);
       const user = await this.accessTokens.verify(readBearerToken(authorization));
       const context = await this.accessContext.resolve(user.sub);
       const session = await this.sessions.getById(sessionId);
@@ -203,6 +209,7 @@ export class UploadsService {
         documentId: generateId(),
         documentVersionId: generateId(),
         title: session.filename,
+        doi,
       });
       if (consumed === null) {
         throw new DomainError(ErrorCode.InvalidStateTransition, { module: MODULE });

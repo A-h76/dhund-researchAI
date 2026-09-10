@@ -35,6 +35,7 @@ import {
   UPLOAD_SESSION_STORE,
   ORPHAN_SWEEP_STORE,
   EXTRACT_STORE,
+  CHUNK_STORE,
   PDF_PARSE_SERVICE,
 } from './ports/tokens';
 import { PrismaAiExecutionLedgerAdapter } from './adapters/prisma/prisma-ai-execution-ledger.adapter';
@@ -50,6 +51,7 @@ import { PrismaSessionAdapter } from './adapters/prisma/prisma-session.adapter';
 import { PrismaUploadSessionAdapter } from './adapters/prisma/prisma-upload-session.adapter';
 import { PrismaOrphanSweepAdapter } from './adapters/prisma/prisma-orphan-sweep.adapter';
 import { PrismaExtractStoreAdapter } from './adapters/prisma/prisma-extract-store.adapter';
+import { PrismaChunkStoreAdapter } from './adapters/prisma/prisma-chunk-store.adapter';
 import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
 
 @Module({
@@ -69,6 +71,7 @@ import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
     PrismaUploadSessionAdapter,
     PrismaOrphanSweepAdapter,
     PrismaExtractStoreAdapter,
+    PrismaChunkStoreAdapter,
     PdfjsParseAdapter,
     RedisAccessContextInvalidator,
     HibpBreachListAdapter,
@@ -94,6 +97,7 @@ import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
     { provide: UPLOAD_SESSION_STORE, useExisting: PrismaUploadSessionAdapter },
     { provide: ORPHAN_SWEEP_STORE, useExisting: PrismaOrphanSweepAdapter },
     { provide: EXTRACT_STORE, useExisting: PrismaExtractStoreAdapter },
+    { provide: CHUNK_STORE, useExisting: PrismaChunkStoreAdapter },
     { provide: PDF_PARSE_SERVICE, useExisting: PdfjsParseAdapter },
     {
       provide: ACCESS_CONTEXT_INVALIDATOR,
@@ -124,6 +128,7 @@ import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
     UPLOAD_SESSION_STORE,
     ORPHAN_SWEEP_STORE,
     EXTRACT_STORE,
+    CHUNK_STORE,
     PDF_PARSE_SERVICE,
     ACCESS_CONTEXT_INVALIDATOR,
     BREACH_LIST,

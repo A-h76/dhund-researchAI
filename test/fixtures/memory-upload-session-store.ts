@@ -11,11 +11,19 @@ import {
   type UploadSessionStore,
 } from '../../src/l0/ports/upload-session-store.port';
 
+interface StoredDocumentVersion {
+  readonly documentVersionId: string;
+  readonly versionNo: number;
+  readonly storageKey: string;
+}
+
 interface StoredDocument {
   readonly documentId: string;
-  readonly documentVersionId: string;
   readonly projectId: string;
   readonly storageKey: string;
+  readonly doi: string | null;
+  status: string;
+  readonly versions: StoredDocumentVersion[];
 }
 
 export class MemoryUploadSessionStore implements UploadSessionStore {
@@ -109,36 +117,81 @@ export class MemoryUploadSessionStore implements UploadSessionStore {
     if (session === undefined) {
       return null;
     }
-    this.documents.push({
-      documentId: input.documentId,
-      documentVersionId: input.documentVersionId,
-      projectId: session.projectId,
-      storageKey: session.storageKey,
-    });
+
+    // GAP-DOI-OVERWRITE-01: same DOI + same project versions the existing
+    // document; a different project gets its own document.
+    const doi = input.doi ?? null;
+    let result: ConsumedUploadResult;
+    const existing =
+      doi === null
+        ? undefined
+        : this.documents.find(
+            (entry) => entry.projectId === session.projectId && entry.doi === doi,
+          );
+    if (existing !== undefined) {
+      const nextVersionNo =
+        Math.max(...existing.versions.map((version) => version.versionNo)) + 1;
+      existing.versions.push({
+        documentVersionId: input.documentVersionId,
+        versionNo: nextVersionNo,
+        storageKey: session.storageKey,
+      });
+      existing.status = 'stale';
+      result = {
+        documentId: existing.documentId,
+        documentVersionId: input.documentVersionId,
+      };
+    } else {
+      this.documents.push({
+        documentId: input.documentId,
+        projectId: session.projectId,
+        storageKey: session.storageKey,
+        doi,
+        status: 'queued',
+        versions: [
+          {
+            documentVersionId: input.documentVersionId,
+            versionNo: 1,
+            storageKey: session.storageKey,
+          },
+        ],
+      });
+      result = {
+        documentId: input.documentId,
+        documentVersionId: input.documentVersionId,
+      };
+    }
+
     const consumed = await this.transition(input.sessionId, 'uploaded', 'consumed');
     if (!consumed) {
       return null;
     }
-    return {
-      documentId: input.documentId,
-      documentVersionId: input.documentVersionId,
-    };
+    return result;
   }
 
   async findDocumentByStorageKey(
     projectId: string,
     storageKey: string,
   ): Promise<ConsumedUploadResult | null> {
-    const row = this.documents.find(
-      (entry) => entry.projectId === projectId && entry.storageKey === storageKey,
-    );
-    if (row === undefined) {
-      return null;
+    for (const entry of this.documents) {
+      if (entry.projectId !== projectId) {
+        continue;
+      }
+      const version = [...entry.versions]
+        .sort((a, b) => b.versionNo - a.versionNo)
+        .find((row) => row.storageKey === storageKey);
+      if (version !== undefined) {
+        return {
+          documentId: entry.documentId,
+          documentVersionId: version.documentVersionId,
+        };
+      }
     }
-    return {
-      documentId: row.documentId,
-      documentVersionId: row.documentVersionId,
-    };
+    return null;
+  }
+
+  documentsInProject(projectId: string): readonly StoredDocument[] {
+    return this.documents.filter((entry) => entry.projectId === projectId);
   }
 
   expire(id: string, at: Date): void {

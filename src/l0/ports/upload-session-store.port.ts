@@ -62,6 +62,14 @@ export interface ConsumeUploadInput {
   readonly documentId: string;
   readonly documentVersionId: string;
   readonly title: string;
+  /**
+   * Normalized DOI (GAP-DOI-OVERWRITE-01). When a live document with the same
+   * DOI already exists in the same project, consume creates a new
+   * DocumentVersion on that document instead of a second document, and the
+   * document becomes stale for the old version. A different project always
+   * gets its own document.
+   */
+  readonly doi?: string | null;
 }
 
 export class UploadConcurrencyError extends Error {
