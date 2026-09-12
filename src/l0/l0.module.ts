@@ -42,6 +42,7 @@ import {
   RETRIEVAL_TRACE,
   IDENTITY_LOOKUP,
   PDF_PARSE_SERVICE,
+  MESSAGE_EVIDENCE_BINDING,
 } from './ports/tokens';
 import { PrismaAiExecutionLedgerAdapter } from './adapters/prisma/prisma-ai-execution-ledger.adapter';
 import { PrismaAuditEventAdapter } from './adapters/prisma/prisma-audit-event.adapter';
@@ -62,6 +63,7 @@ import { PrismaRetrievalIndexAdapter } from './adapters/prisma/prisma-retrieval-
 import { PrismaIdentityLookupAdapter } from './adapters/prisma/prisma-identity-lookup.adapter';
 import { PrismaEvidenceLookupAdapter } from './adapters/prisma/prisma-evidence-lookup.adapter';
 import { PrismaRetrievalTraceAdapter } from './adapters/prisma/prisma-retrieval-trace.adapter';
+import { PrismaMessageEvidenceBindingAdapter } from './adapters/prisma/prisma-message-evidence-binding.adapter';
 import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
 
 @Module({
@@ -86,6 +88,7 @@ import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
     PrismaRetrievalIndexAdapter,
     PrismaEvidenceLookupAdapter,
     PrismaRetrievalTraceAdapter,
+    PrismaMessageEvidenceBindingAdapter,
     PrismaIdentityLookupAdapter,
     PdfjsParseAdapter,
     RedisAccessContextInvalidator,
@@ -117,6 +120,7 @@ import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
     { provide: RETRIEVAL_INDEX, useExisting: PrismaRetrievalIndexAdapter },
     { provide: EVIDENCE_LOOKUP, useExisting: PrismaEvidenceLookupAdapter },
     { provide: RETRIEVAL_TRACE, useExisting: PrismaRetrievalTraceAdapter },
+    { provide: MESSAGE_EVIDENCE_BINDING, useExisting: PrismaMessageEvidenceBindingAdapter },
     { provide: IDENTITY_LOOKUP, useExisting: PrismaIdentityLookupAdapter },
     { provide: PDF_PARSE_SERVICE, useExisting: PdfjsParseAdapter },
     {
@@ -153,6 +157,7 @@ import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
     RETRIEVAL_INDEX,
     EVIDENCE_LOOKUP,
     RETRIEVAL_TRACE,
+    MESSAGE_EVIDENCE_BINDING,
     IDENTITY_LOOKUP,
     PDF_PARSE_SERVICE,
     ACCESS_CONTEXT_INVALIDATOR,

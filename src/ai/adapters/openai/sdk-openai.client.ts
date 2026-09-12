@@ -37,7 +37,13 @@ export class SdkOpenAiClient implements OpenAiClient {
 
     return invokeOpenAiWith429Backoff(async () => {
       if (request.stream) {
-        return this.completeStreaming(client, request.model, messages, started);
+        return this.completeStreaming(
+          client,
+          request.model,
+          messages,
+          started,
+          request.onToken,
+        );
       }
 
       const response = await client.chat.completions.create({
@@ -59,6 +65,7 @@ export class SdkOpenAiClient implements OpenAiClient {
     model: string,
     messages: Array<{ role: 'system' | 'user'; content: string }>,
     started: number,
+    onToken: ((token: string) => void) | undefined,
   ): Promise<OpenAiCompletionResponse> {
     const stream = await client.chat.completions.create({
       model,
@@ -73,8 +80,15 @@ export class SdkOpenAiClient implements OpenAiClient {
 
     for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta?.content;
-      if (typeof delta === 'string') {
+      if (typeof delta === 'string' && delta.length > 0) {
         text += delta;
+        if (onToken !== undefined) {
+          try {
+            onToken(delta);
+          } catch {
+            // Disconnect or sink failure must not cancel generation (DHB-62).
+          }
+        }
       }
       if (chunk.usage) {
         tokensIn = chunk.usage.prompt_tokens ?? tokensIn;

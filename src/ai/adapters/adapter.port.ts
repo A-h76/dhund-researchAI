@@ -8,6 +8,7 @@ export interface AdapterInvokeInput {
   readonly policy: PolicyDecision;
   readonly payload: AssembledProviderPayload;
   readonly request: GatewayRequest;
+  readonly onToken?: (token: string) => void;
 }
 
 export interface CapabilityAdapter {

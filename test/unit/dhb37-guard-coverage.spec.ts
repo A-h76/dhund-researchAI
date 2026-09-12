@@ -18,6 +18,7 @@ import { OrgsController } from '../../src/projects/orgs.controller';
 import { ProjectsController } from '../../src/projects/projects.controller';
 import { UploadsController } from '../../src/ingestion/uploads.controller';
 import { RetrievalSearchController } from '../../src/retrieval/retrieval-search.controller';
+import { ConversationsController } from '../../src/orchestration/conversations.controller';
 
 const ROOT = join(__dirname, '..', '..');
 const SRC = join(ROOT, 'src');
@@ -34,6 +35,7 @@ const HTTP_CONTROLLERS = [
   ProjectsController,
   MembershipsController,
   RetrievalSearchController,
+  ConversationsController,
 ] as const;
 
 const EXPECTED_CONTROLLER_FILES = [
@@ -44,6 +46,7 @@ const EXPECTED_CONTROLLER_FILES = [
   'src/ingestion/document-access.controller.ts',
   'src/ingestion/documents.controller.ts',
   'src/ingestion/uploads.controller.ts',
+  'src/orchestration/conversations.controller.ts',
   'src/projects/memberships.controller.ts',
   'src/projects/orgs.controller.ts',
   'src/projects/projects.controller.ts',

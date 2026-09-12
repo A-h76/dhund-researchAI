@@ -23,17 +23,27 @@ import { IngestionModule } from '../../ingestion/ingestion.module';
 import { ProjectsModule } from '../../projects/projects.module';
 import { RetrievalModule } from '../../retrieval/retrieval.module';
 import { RetrievalApiModule } from '../../retrieval/retrieval-api.module';
-import { ApiEventsGateway } from './api-events.gateway';
+import { OrchestrationApiModule } from '../../orchestration/orchestration-api.module';
+import { ApiRealtimeModule } from './api-realtime.module';
 import { ApiRootController } from './api-root.controller';
 import { CapabilityProbeController } from './capability-probe.controller';
 import { HealthController } from './health.controller';
 import { NoopProcessorReadiness } from './noop-processor-readiness';
 
 @Module({
-  imports: [PlatformModule, AiModule, IamModule, ProjectsModule, IngestionModule, RetrievalModule, RetrievalApiModule],
+  imports: [
+    PlatformModule,
+    AiModule,
+    IamModule,
+    ProjectsModule,
+    IngestionModule,
+    RetrievalModule,
+    RetrievalApiModule,
+    ApiRealtimeModule,
+    OrchestrationApiModule,
+  ],
   controllers: [ApiRootController, HealthController, CapabilityProbeController],
   providers: [
-    ApiEventsGateway,
     provideRuntimeRole(RuntimeRole.Api),
     { provide: PROCESSOR_READINESS, useClass: NoopProcessorReadiness },
     BootstrapValidationService,
