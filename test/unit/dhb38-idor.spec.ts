@@ -1,5 +1,8 @@
 import { TENANT_ENTITIES, type TenantEntity } from '../../src/l0/ports/scoped-store.port';
-import { ClaimsRepository, EvidenceRepository } from '../../src/evidence/scoped-repos';
+import { ClaimsRepository } from '../../src/evidence/scoped-repos';
+import { EvidenceMetrics } from '../../src/evidence/evidence.metrics';
+import { EvidenceRepository } from '../../src/evidence/evidence.repository';
+import { SourcesRepository } from '../../src/evidence/sources.repository';
 import { DocumentsRepository } from '../../src/ingestion/documents.repository';
 import { ExternalRecordsRepository } from '../../src/ingestion/external-records.repository';
 import {
@@ -16,6 +19,8 @@ import type { PlatformLogger } from '../../src/platform/logging';
 import { encodeCursor } from '../../src/platform/persistence/cursor';
 import { ScopedMetrics } from '../../src/platform/persistence/scoped.metrics';
 import { ScopedReader } from '../../src/platform/persistence/scoped-reader';
+import { MemoryChunkStore } from '../fixtures/memory-chunk-store';
+import { MemoryExtractStore } from '../fixtures/memory-extract-store';
 import { MemoryScopedStore } from '../fixtures/memory-scoped-store';
 
 function stubLogger(logs: unknown[]): PlatformLogger {
@@ -45,10 +50,16 @@ interface EntityRepo {
   ): Promise<readonly unknown[]>;
 }
 
-function repos(reader: ScopedReader): Record<TenantEntity, EntityRepo> {
+function repos(
+  reader: ScopedReader,
+  store: MemoryScopedStore,
+): Record<TenantEntity, EntityRepo> {
+  const extract = new MemoryExtractStore();
+  const chunks = new MemoryChunkStore(extract);
+  const evidenceMetrics = new EvidenceMetrics(stubLogger([]));
   return {
     document: new DocumentsRepository(reader),
-    evidence: new EvidenceRepository(reader),
+    evidence: new EvidenceRepository(reader, store, chunks, extract, evidenceMetrics),
     claim: new ClaimsRepository(reader),
     research_run: new ResearchRunsRepository(reader),
     extraction_cell: new ExtractionCellsRepository(reader),
@@ -57,6 +68,7 @@ function repos(reader: ScopedReader): Record<TenantEntity, EntityRepo> {
     research_artifact: new ResearchArtifactsRepository(reader),
     screening_decision: new ScreeningDecisionsRepository(reader),
     external_record: new ExternalRecordsRepository(reader),
+    source: new SourcesRepository(reader, store),
   };
 }
 
@@ -77,7 +89,7 @@ describe('DHB-38 IDOR-404 scoped repositories', () => {
     logs = [];
     metrics = new ScopedMetrics(stubLogger(logs));
     reader = new ScopedReader(store, metrics);
-    accessors = repos(reader);
+    accessors = repos(reader, store);
   });
 
   it.each([...TENANT_ENTITIES])(

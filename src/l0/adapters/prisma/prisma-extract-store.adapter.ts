@@ -6,6 +6,7 @@ import type {
   ExtractStore,
   ExtractVersionRecord,
   ExtractionRecord,
+  DocumentBodyCapability,
   DocumentLifecycleStatus,
   StoredBlock,
 } from '../../ports/extract-store.port';
@@ -197,9 +198,39 @@ export class PrismaExtractStoreAdapter implements ExtractStore {
     }
   }
 
+  async bodyCapability(documentId: string): Promise<DocumentBodyCapability | null> {
+    await this.database.connect();
+    try {
+      const row = await this.client().document.findFirst({
+        where: { id: documentId, deletedAt: null },
+        select: {
+          rightsSnapshotId: true,
+          rightsSnapshot: { select: { capabilities: true } },
+        },
+      });
+      if (row === null) {
+        return null;
+      }
+      if (row.rightsSnapshotId === null || row.rightsSnapshot === null) {
+        return 'unrestricted';
+      }
+      return bodyGranted(row.rightsSnapshot.capabilities) ? 'allowed' : 'forbidden';
+    } catch (error) {
+      throw new L0OperationError('Document body-capability lookup failed', error);
+    }
+  }
+
   private client() {
     return this.database.getPrismaClient();
   }
+}
+
+function bodyGranted(capabilities: unknown): boolean {
+  if (typeof capabilities !== 'object' || capabilities === null || Array.isArray(capabilities)) {
+    return false;
+  }
+  const body = (capabilities as { body?: unknown }).body;
+  return body === true || body === 'true';
 }
 
 function isUniqueConstraintViolation(error: unknown): boolean {

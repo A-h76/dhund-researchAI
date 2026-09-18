@@ -5,27 +5,6 @@ import { ScopedReader } from '../platform/persistence/scoped-reader';
 const MODULE = 'evidence';
 
 @Injectable()
-export class EvidenceRepository {
-  constructor(private readonly reader: ScopedReader) {}
-
-  get(scope: ProjectScope, id: string) {
-    return this.reader.require('evidence', scope, id, MODULE);
-  }
-
-  update(scope: ProjectScope, id: string, patch: Record<string, unknown>) {
-    return this.reader.update('evidence', scope, id, patch, MODULE);
-  }
-
-  remove(scope: ProjectScope, id: string) {
-    return this.reader.remove('evidence', scope, id, MODULE);
-  }
-
-  list(scope: ProjectScope, query: ScopedListQuery) {
-    return this.reader.list('evidence', scope, query);
-  }
-}
-
-@Injectable()
 export class ClaimsRepository {
   constructor(private readonly reader: ScopedReader) {}
 
@@ -45,3 +24,5 @@ export class ClaimsRepository {
     return this.reader.list('claim', scope, query);
   }
 }
+
+export { EvidenceRepository } from './evidence.repository';

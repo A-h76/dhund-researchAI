@@ -55,6 +55,12 @@ export type DocumentLifecycleStatus =
   | 'cancelled'
   | 'stale';
 
+/**
+ * Body-storage rights for a document (DHB-58 PX-b).
+ * User-uploaded docs with no rights snapshot are unrestricted.
+ */
+export type DocumentBodyCapability = 'unrestricted' | 'allowed' | 'forbidden';
+
 export interface ExtractStore {
   findVersion(documentVersionId: string): Promise<ExtractVersionRecord | null>;
   findExtraction(
@@ -72,4 +78,9 @@ export interface ExtractStore {
   markDocumentStatus(documentId: string, status: DocumentLifecycleStatus): Promise<void>;
   listBlocks(documentVersionId: string): Promise<readonly StoredBlock[]>;
   findBlock(blockId: string): Promise<StoredBlock | null>;
+  /**
+   * Rights for body storage. Does not load block or chunk text.
+   * Returns null when the document is missing or soft-deleted.
+   */
+  bodyCapability(documentId: string): Promise<DocumentBodyCapability | null>;
 }

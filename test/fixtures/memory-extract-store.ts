@@ -1,4 +1,5 @@
 import type {
+  DocumentBodyCapability,
   DocumentLifecycleStatus,
   ExtractBlockInput,
   ExtractStore,
@@ -16,6 +17,8 @@ export class MemoryExtractStore implements ExtractStore {
   readonly extractions: ExtractionRecord[] = [];
   readonly blocks: StoredBlock[] = [];
   readonly documentStatus = new Map<string, DocumentLifecycleStatus>();
+  readonly documentBodyRights = new Map<string, DocumentBodyCapability>();
+  blockLookups = 0;
 
   seedVersion(record: ExtractVersionRecord): void {
     this.versions.set(record.id, record);
@@ -95,6 +98,15 @@ export class MemoryExtractStore implements ExtractStore {
   }
 
   async findBlock(blockId: string): Promise<StoredBlock | null> {
+    this.blockLookups += 1;
     return this.blocks.find((row) => row.id === blockId) ?? null;
+  }
+
+  seedBodyCapability(documentId: string, capability: DocumentBodyCapability): void {
+    this.documentBodyRights.set(documentId, capability);
+  }
+
+  async bodyCapability(documentId: string): Promise<DocumentBodyCapability | null> {
+    return this.documentBodyRights.get(documentId) ?? 'unrestricted';
   }
 }

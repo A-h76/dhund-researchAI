@@ -1,5 +1,6 @@
 import type { DocumentLifecycleStatus } from './extract-store.port';
 import type { OutboxInsertInput } from './outbox.port';
+import type { ProjectScope } from './scoped-store.port';
 
 export interface ChunkCharSpan {
   readonly start: number;
@@ -38,6 +39,17 @@ export interface StoredChunk {
   readonly text: string;
 }
 
+/** Project-scoped chunk lookup for evidence writes (DHB-58). */
+export interface ProjectChunk {
+  readonly id: string;
+  readonly projectId: string;
+  readonly documentId: string;
+  readonly documentVersionId: string;
+  readonly text: string;
+  readonly blockIds: readonly string[];
+  readonly page: number | null;
+}
+
 export interface ChunkCommitInput {
   readonly documentId: string;
   /** Only chunks that do not already exist for this version (content-addressed). */
@@ -68,4 +80,12 @@ export interface ChunkStore {
    * when the requested transition is forbidden by the state machine.
    */
   commitChunks(input: ChunkCommitInput): Promise<void>;
+  /**
+   * Returns the chunk only when it belongs to `scope`. Cross-project ids
+   * are indistinguishable from missing (no existence leak).
+   */
+  findInProject(
+    scope: ProjectScope,
+    chunkId: string,
+  ): Promise<ProjectChunk | null>;
 }
