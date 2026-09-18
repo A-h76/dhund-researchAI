@@ -16,6 +16,7 @@ import {
   parseDatabasePoolSize,
   parseJwtConfig,
   parseTotpWrapKey,
+  parseHnswEfSearch,
 } from './config.schema';
 
 export function loadAndValidateConfig(
@@ -50,9 +51,25 @@ export function loadAndValidateConfig(
     );
   }
 
+  if (secrets.getSecret('HNSW_M') !== undefined) {
+    throw new ConfigValidationError(
+      'HNSW_M is not supported; m is bound to idx_chunk_embeddings_hnsw_embedding_v1 and changes only by rebuild',
+    );
+  }
+
+  if (secrets.getSecret('HNSW_EF_CONSTRUCTION') !== undefined) {
+    throw new ConfigValidationError(
+      'HNSW_EF_CONSTRUCTION is not supported; ef_construction is bound to idx_chunk_embeddings_hnsw_embedding_v1 and changes only by rebuild',
+    );
+  }
+
   const poolValue = secrets.getSecret('DATABASE_POOL_SIZE');
   track('DATABASE_POOL_SIZE', poolValue);
   const databasePoolSize = parseDatabasePoolSize(poolValue);
+
+  const hnswEfSearchValue = secrets.getSecret('HNSW_EF_SEARCH');
+  track('HNSW_EF_SEARCH', hnswEfSearchValue);
+  const hnswEfSearch = parseHnswEfSearch(hnswEfSearchValue);
 
   const s3Endpoint = secrets.getSecret('S3_ENDPOINT');
   const s3Region = secrets.getSecret('S3_REGION');
@@ -103,6 +120,7 @@ export function loadAndValidateConfig(
     logLevel,
     databaseUrl,
     databasePoolSize,
+    hnswEfSearch,
     redisUrl,
     argon2: {
       memoryCost: ARGON2_MEMORY_COST,

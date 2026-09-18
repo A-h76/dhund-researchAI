@@ -24,4 +24,6 @@ export const ORPHAN_SWEEP_STORE = Symbol('ORPHAN_SWEEP_STORE');
 export const EXTRACT_STORE = Symbol('EXTRACT_STORE');
 export const CHUNK_STORE = Symbol('CHUNK_STORE');
 export const EMBEDDING_STORE = Symbol('EMBEDDING_STORE');
+export const RETRIEVAL_INDEX = Symbol('RETRIEVAL_INDEX');
+export const IDENTITY_LOOKUP = Symbol('IDENTITY_LOOKUP');
 export const PDF_PARSE_SERVICE = Symbol('PDF_PARSE_SERVICE');

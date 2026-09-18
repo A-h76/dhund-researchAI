@@ -1,5 +1,14 @@
 import { Injectable } from '@nestjs/common';
+import { EmbeddingDimensionMismatchError } from '../../ports/embedding-store.port';
 import { L0OperationError } from '../../ports/errors';
+import {
+  HNSW_EF_SEARCH_DEFAULT,
+  HNSW_WRITE_ACTIVE_MODEL_VERSION,
+} from '../../ports/hnsw.constants';
+import {
+  assertQueryVectorDimension,
+  resolveHnswEfSearch,
+} from '../../ports/hnsw-ef-search';
 import type {
   AnnHit,
   ProjectScope,
@@ -10,10 +19,17 @@ import type {
 } from '../../ports/scoped-store.port';
 import { PrismaDatabaseAdapter } from './prisma-database.adapter';
 
+/**
+ * GAP-HNSW-01: project_id is in WHERE before <=> so the planner can apply the
+ * partial HNSW index (`idx_chunk_embeddings_hnsw_embedding_v1`) rather than
+ * scanning another project's vectors. model_version + status match the
+ * index predicate; they are not a second filter authority.
+ */
 export const ANN_NEAREST_SQL = `
 SELECT ce.chunk_id AS "chunkId", ce.project_id AS "projectId"
 FROM chunk_embeddings ce
 WHERE ce.project_id = $1::uuid
+  AND ce.model_version = '${HNSW_WRITE_ACTIVE_MODEL_VERSION}'
   AND ce.status = 'ok'
 ORDER BY ce.vector <=> $2::vector(1024)
 LIMIT $3
@@ -164,16 +180,25 @@ export class PrismaScopedStoreAdapter implements ScopedStore {
     scope: ProjectScope,
     vector: string,
     limit: number,
+    options?: { readonly efSearch?: number },
   ): Promise<readonly AnnHit[]> {
+    assertQueryVectorDimension(vector);
+    const efSearch = resolveHnswEfSearch(options?.efSearch ?? HNSW_EF_SEARCH_DEFAULT);
     await this.database.connect();
     try {
-      return await this.client().$queryRawUnsafe<AnnHit[]>(
-        ANN_NEAREST_SQL,
-        scope.projectId,
-        vector,
-        limit,
-      );
+      return await this.client().$transaction(async (tx) => {
+        await tx.$executeRawUnsafe(`SET LOCAL hnsw.ef_search = ${String(efSearch)}`);
+        return tx.$queryRawUnsafe<AnnHit[]>(
+          ANN_NEAREST_SQL,
+          scope.projectId,
+          vector,
+          limit,
+        );
+      });
     } catch (error) {
+      if (error instanceof EmbeddingDimensionMismatchError) {
+        throw error;
+      }
       throw new L0OperationError('Scoped ANN failed', error);
     }
   }

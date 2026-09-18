@@ -56,6 +56,9 @@ describe('app config schema', () => {
       parallelism: 4,
     });
     expect(config.loadedKeyNames).not.toContain('EMBEDDING_DIMENSION');
+    expect(config.hnswEfSearch).toBe(80);
+    expect(config.loadedKeyNames).not.toContain('HNSW_EF_SEARCH');
+    expect(config.loadedKeyNames).not.toContain('HNSW_M');
   });
 
   it('rejects a missing DATABASE_URL', () => {
@@ -73,6 +76,42 @@ describe('app config schema', () => {
 
   it('rejects an invalid LOG_LEVEL', () => {
     expect(() => parseLogLevel('verbose')).toThrow(ConfigValidationError);
+  });
+
+  it('rejects HNSW_M and HNSW_EF_CONSTRUCTION because those require an index rebuild', () => {
+    expect(() =>
+      loadAndValidateConfig(createSecrets(apiSecrets({ HNSW_M: '32' })), RuntimeRole.Api),
+    ).toThrow(
+      new ConfigValidationError(
+        'HNSW_M is not supported; m is bound to idx_chunk_embeddings_hnsw_embedding_v1 and changes only by rebuild',
+      ),
+    );
+    expect(() =>
+      loadAndValidateConfig(
+        createSecrets(apiSecrets({ HNSW_EF_CONSTRUCTION: '256' })),
+        RuntimeRole.Api,
+      ),
+    ).toThrow(
+      new ConfigValidationError(
+        'HNSW_EF_CONSTRUCTION is not supported; ef_construction is bound to idx_chunk_embeddings_hnsw_embedding_v1 and changes only by rebuild',
+      ),
+    );
+  });
+
+  it('parses HNSW_EF_SEARCH from secrets with default 80 when unset', () => {
+    const tuned = loadAndValidateConfig(
+      createSecrets(apiSecrets({ HNSW_EF_SEARCH: '40' })),
+      RuntimeRole.Api,
+    );
+    expect(tuned.hnswEfSearch).toBe(40);
+    expect(tuned.loadedKeyNames).toContain('HNSW_EF_SEARCH');
+
+    expect(() =>
+      loadAndValidateConfig(
+        createSecrets(apiSecrets({ HNSW_EF_SEARCH: '0' })),
+        RuntimeRole.Api,
+      ),
+    ).toThrow(ConfigValidationError);
   });
 
   it('rejects EMBEDDING_DIMENSION because dimension is schema-bound', () => {

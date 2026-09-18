@@ -20,6 +20,7 @@ export {
   parsePort,
   parseJwtConfig,
   parseTotpWrapKey,
+  parseHnswEfSearch,
   parseRequiredSecret,
   DEFAULT_DATABASE_POOL_SIZE,
   MAX_DATABASE_POOL_SIZE,

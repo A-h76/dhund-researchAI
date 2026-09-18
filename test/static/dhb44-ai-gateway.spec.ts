@@ -47,6 +47,9 @@ describe('DHB-44 AI gateway static checks', () => {
     const allowedPattern = /\/ai\/(policy|adapters)\//;
     const excludedFiles = new Set([
       'src/platform/errors/leakage-guard.ts',
+      // Layer-local copies asserted equal to AI policy; those layers cannot import ai/.
+      'src/ingestion/chunk.constants.ts',
+      'src/l0/ports/hnsw.constants.ts',
     ]);
     const forbiddenPatterns = [
       /\bvoyage-4\b/,

@@ -64,5 +64,6 @@ export interface ScopedStore {
     scope: ProjectScope,
     vector: string,
     limit: number,
+    options?: { readonly efSearch?: number },
   ): Promise<readonly AnnHit[]>;
 }
