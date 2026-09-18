@@ -12,6 +12,8 @@ import {
   type UploadSessionStatus,
   type UploadSessionStore,
 } from '../../ports/upload-session-store.port';
+import { canTransitionDocument } from '../../ports/document-state';
+import type { DocumentLifecycleStatus } from '../../ports/extract-store.port';
 import { PrismaDatabaseAdapter } from './prisma-database.adapter';
 
 @Injectable()
@@ -158,6 +160,56 @@ export class PrismaUploadSessionAdapter implements UploadSessionStore {
           return null;
         }
 
+        // GAP-DOI-OVERWRITE-01: same DOI in the same project versions the
+        // existing document instead of forking a second one. The old version
+        // and its chunks/embeddings remain; the document goes stale for the
+        // old version. A different project always gets a separate document.
+        const doi = input.doi ?? null;
+        if (doi !== null) {
+          const existingDocument = await tx.document.findFirst({
+            where: { projectId: session.projectId, doi, deletedAt: null },
+            select: {
+              id: true,
+              status: true,
+              versions: {
+                orderBy: { versionNo: 'desc' },
+                take: 1,
+                select: { versionNo: true },
+              },
+            },
+          });
+          if (existingDocument !== null) {
+            const nextVersionNo = (existingDocument.versions[0]?.versionNo ?? 0) + 1;
+            await tx.documentVersion.create({
+              data: {
+                id: input.documentVersionId,
+                documentId: existingDocument.id,
+                versionNo: nextVersionNo,
+                storageKey: session.storageKey,
+              },
+            });
+            if (
+              canTransitionDocument(
+                existingDocument.status as DocumentLifecycleStatus,
+                'stale',
+              )
+            ) {
+              await tx.document.updateMany({
+                where: { id: existingDocument.id, deletedAt: null },
+                data: { status: 'stale' },
+              });
+            }
+            await tx.uploadSession.update({
+              where: { id: input.sessionId },
+              data: { status: 'consumed' },
+            });
+            return {
+              documentId: existingDocument.id,
+              documentVersionId: input.documentVersionId,
+            };
+          }
+        }
+
         await tx.document.create({
           data: {
             id: input.documentId,
@@ -167,6 +219,7 @@ export class PrismaUploadSessionAdapter implements UploadSessionStore {
             authors: [],
             storageKey: session.storageKey,
             status: 'queued',
+            doi,
           },
         });
         await tx.documentVersion.create({
@@ -197,23 +250,21 @@ export class PrismaUploadSessionAdapter implements UploadSessionStore {
   ): Promise<ConsumedUploadResult | null> {
     await this.database.connect();
     try {
-      const document = await this.client().document.findFirst({
-        where: { projectId, storageKey, deletedAt: null },
-        select: {
-          id: true,
-          versions: {
-            where: { retiredAt: null },
-            orderBy: { versionNo: 'asc' },
-            take: 1,
-            select: { id: true },
-          },
+      // Look up by the VERSION's storage key: on DOI re-ingest, later
+      // versions carry their own storage keys distinct from the document's.
+      const version = await this.client().documentVersion.findFirst({
+        where: {
+          storageKey,
+          retiredAt: null,
+          document: { projectId, deletedAt: null },
         },
+        orderBy: { versionNo: 'desc' },
+        select: { id: true, documentId: true },
       });
-      const versionId = document?.versions[0]?.id;
-      if (document === null || versionId === undefined) {
+      if (version === null) {
         return null;
       }
-      return { documentId: document.id, documentVersionId: versionId };
+      return { documentId: version.documentId, documentVersionId: version.id };
     } catch (error) {
       throw new L0OperationError('Upload document lookup failed', error);
     }

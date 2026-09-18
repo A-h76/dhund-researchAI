@@ -47,6 +47,31 @@ export class OutboxWriterService {
     return envelope;
   }
 
+  /**
+   * Build a validated outbox row for insertion by an L0 store inside its own
+   * transaction (same TX as domain state changes, e.g. chunk commit).
+   */
+  buildInsert(input: WriteOutboxEventInput): {
+    readonly id: string;
+    readonly aggregateType: string;
+    readonly aggregateId: string;
+    readonly eventType: string;
+    readonly schemaVersion: number;
+    readonly payload: Record<string, unknown>;
+    readonly correlationId: string;
+  } {
+    const envelope = this.buildEnvelope(input);
+    return {
+      id: envelope.eventId,
+      aggregateType: envelope.aggregateType,
+      aggregateId: envelope.aggregateId,
+      eventType: envelope.eventType,
+      schemaVersion: envelope.schemaVersion,
+      payload: this.toStoredPayload(envelope),
+      correlationId: envelope.correlationId,
+    };
+  }
+
   /** Own short transaction — prefer appendInTransaction when co-committing state. */
   async write(input: WriteOutboxEventInput): Promise<EventEnvelope> {
     let envelope!: EventEnvelope;

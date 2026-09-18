@@ -47,6 +47,46 @@ export function parseUploadCreateRequest(body: unknown): ParsedUploadCreateReque
   };
 }
 
+const DOI_PATTERN = /^10\.\d{4,9}\/\S+$/;
+
+export interface ParsedUploadCompleteRequest {
+  readonly doi: string | null;
+}
+
+/** Optional body: `{ doi?: string }`. DOI is normalized (URL prefix stripped, lowercased). */
+export function parseUploadCompleteRequest(body: unknown): ParsedUploadCompleteRequest {
+  if (body === undefined || body === null) {
+    return { doi: null };
+  }
+  if (typeof body !== 'object' || Array.isArray(body)) {
+    throw malformed();
+  }
+  const record = body as Record<string, unknown>;
+  if (record.doi === undefined || record.doi === null) {
+    return { doi: null };
+  }
+  if (typeof record.doi !== 'string') {
+    throw malformed();
+  }
+  const doi = normalizeDoi(record.doi);
+  if (doi === null) {
+    throw invalid();
+  }
+  return { doi };
+}
+
+export function normalizeDoi(raw: string): string | null {
+  const stripped = raw
+    .trim()
+    .replace(/^https?:\/\/(dx\.)?doi\.org\//i, '')
+    .replace(/^doi:/i, '')
+    .toLowerCase();
+  if (!DOI_PATTERN.test(stripped)) {
+    return null;
+  }
+  return stripped;
+}
+
 export function parseIdempotencyKey(header: string | undefined): string {
   if (header === undefined || header.trim().length === 0) {
     throw new DomainError(ErrorCode.IdempotencyKeyRequired, { module: MODULE });

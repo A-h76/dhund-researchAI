@@ -9,6 +9,10 @@ import type {
   DocumentLifecycleStatus,
   StoredBlock,
 } from '../../ports/extract-store.port';
+import {
+  allowedDocumentSources,
+  DocumentTransitionError,
+} from '../../ports/document-state';
 import { PrismaDatabaseAdapter } from './prisma-database.adapter';
 
 @Injectable()
@@ -132,11 +136,24 @@ export class PrismaExtractStoreAdapter implements ExtractStore {
   async markDocumentStatus(documentId: string, status: DocumentLifecycleStatus): Promise<void> {
     await this.database.connect();
     try {
-      await this.client().document.updateMany({
-        where: { id: documentId, deletedAt: null },
+      const sources = allowedDocumentSources(status);
+      const updated = await this.client().document.updateMany({
+        where: { id: documentId, deletedAt: null, status: { in: [...sources] } },
         data: { status },
       });
+      if (updated.count === 0) {
+        const current = await this.client().document.findFirst({
+          where: { id: documentId, deletedAt: null },
+          select: { status: true },
+        });
+        if (current !== null) {
+          throw new DocumentTransitionError(current.status, status);
+        }
+      }
     } catch (error) {
+      if (error instanceof DocumentTransitionError) {
+        throw error;
+      }
       throw new L0OperationError('Document status update failed', error);
     }
   }

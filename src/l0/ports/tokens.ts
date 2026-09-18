@@ -22,4 +22,5 @@ export const PROJECT_ERASURE_STORE = Symbol('PROJECT_ERASURE_STORE');
 export const UPLOAD_SESSION_STORE = Symbol('UPLOAD_SESSION_STORE');
 export const ORPHAN_SWEEP_STORE = Symbol('ORPHAN_SWEEP_STORE');
 export const EXTRACT_STORE = Symbol('EXTRACT_STORE');
+export const CHUNK_STORE = Symbol('CHUNK_STORE');
 export const PDF_PARSE_SERVICE = Symbol('PDF_PARSE_SERVICE');
