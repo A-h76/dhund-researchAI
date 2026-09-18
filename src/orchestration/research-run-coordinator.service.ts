@@ -6,20 +6,24 @@ import {
   type ResearchRunFailedReason,
   type ResearchRunRecord,
   type ResearchRunStateName,
+  type ResearchRunStepRecord,
   type ResearchRunStore,
   type ResearchRunTransitionResult,
 } from '../l0/ports';
 import { DomainError, ErrorCode } from '../platform/errors';
 import { JobEnqueueService } from '../platform/logging';
+import { findDagNode, resolveResearchRunPreset } from './presets/resolve-preset';
 import { ResearchRunCoordinationService } from './research-run-coordination.service';
 import { ResearchRunMetrics } from './research-run.metrics';
+import {
+  ResearchRunPlannerService,
+  type PlanningDecision,
+} from './research-run-planner.service';
 import { ResearchRunTransitionService } from './research-run-transition.service';
 
 const MODULE = 'orchestration';
 
-export type PlanningDecision =
-  | { readonly kind: 'ready' }
-  | { readonly kind: 'failed'; readonly reason: ResearchRunFailedReason };
+export type { PlanningDecision };
 
 export type ResearchRunTickOutcome =
   | {
@@ -31,17 +35,13 @@ export type ResearchRunTickOutcome =
   | { readonly kind: 'noop'; readonly reason: string; readonly state: ResearchRunStateName }
   | { readonly kind: 'version_conflict'; readonly state: ResearchRunStateName };
 
-/**
- * Optional planning hook — DHB-65 owns full DAG/presets.
- * Default: succeed planning (zero-source / failure injected by tests or callers).
- */
 export type ResearchRunPlanningHook = (
   run: ResearchRunRecord,
 ) => Promise<PlanningDecision> | PlanningDecision;
 
 @Injectable()
 export class ResearchRunCoordinatorService {
-  private planningHook: ResearchRunPlanningHook = () => ({ kind: 'ready' });
+  private planningHook: ResearchRunPlanningHook;
   /** Side-effect counter for crash/recovery proofs — increments only on applied transitions. */
   private appliedChargeCount = 0;
 
@@ -51,7 +51,10 @@ export class ResearchRunCoordinatorService {
     private readonly coordination: ResearchRunCoordinationService,
     private readonly metrics: ResearchRunMetrics,
     private readonly enqueue: JobEnqueueService,
-  ) {}
+    private readonly planner: ResearchRunPlannerService,
+  ) {
+    this.planningHook = (run) => this.planner.plan(run);
+  }
 
   /** Test hook — swap planning outcome without Temporal/Airflow. */
   setPlanningHook(hook: ResearchRunPlanningHook): void {
@@ -171,6 +174,11 @@ export class ResearchRunCoordinatorService {
   }
 
   private async advanceRunning(run: ResearchRunRecord): Promise<ResearchRunTickOutcome> {
+    const listed = await this.store.listSteps(run.id);
+    if (listed.length > 0) {
+      return this.advanceRunningSteps(run, listed);
+    }
+
     const steps = await this.store.countSteps(run.id);
 
     if (run.consumedMicros >= run.reservedMicros && steps.ready > 0) {
@@ -187,10 +195,127 @@ export class ResearchRunCoordinatorService {
     return { kind: 'noop', reason: 'awaiting_steps', state: run.state };
   }
 
+  private async advanceRunningSteps(
+    run: ResearchRunRecord,
+    listed: readonly ResearchRunStepRecord[],
+  ): Promise<ResearchRunTickOutcome> {
+    const byId = new Map(listed.map((step) => [step.id, step]));
+    await this.promoteSteps(listed, byId);
+
+    const current = await this.store.listSteps(run.id);
+    const ready = current.filter((step) => step.state === 'READY');
+
+    if (run.consumedMicros >= run.reservedMicros && ready.length > 0) {
+      return this.transitionOutcome(run, await this.applyTransition(run, 'PAUSED_BUDGET'));
+    }
+
+    for (const step of ready) {
+      await this.dispatchStep(run, step);
+    }
+
+    const afterDispatch = await this.store.listSteps(run.id);
+    const stillReady = afterDispatch.some((step) => step.state === 'READY');
+    const stillInFlight = afterDispatch.some(
+      (step) => step.state === 'DISPATCHED' || step.state === 'RUNNING',
+    );
+    const stillPending = afterDispatch.some((step) => step.state === 'PENDING');
+
+    if (!stillReady && !stillInFlight && !stillPending) {
+      return this.transitionOutcome(run, await this.applyTransition(run, 'COMPLETING'));
+    }
+
+    return { kind: 'noop', reason: 'awaiting_steps', state: run.state };
+  }
+
+  private async promoteSteps(
+    listed: readonly ResearchRunStepRecord[],
+    byId: Map<string, ResearchRunStepRecord>,
+  ): Promise<void> {
+    for (const step of listed) {
+      if (step.state !== 'PENDING') {
+        continue;
+      }
+      const deps = step.dependsOnStepIds.map((id) => byId.get(id));
+      if (deps.some((dep) => dep === undefined)) {
+        continue;
+      }
+      const blocked = deps.some(
+        (dep) =>
+          dep !== undefined &&
+          (dep.state === 'FAILED' || dep.state === 'CANCELLED' || dep.state === 'DEFERRED'),
+      );
+      if (blocked) {
+        await this.store.transitionStep({
+          stepId: step.id,
+          fromState: 'PENDING',
+          toState: 'DEFERRED',
+          expectedVersion: step.version,
+        });
+        this.metrics.recordDeferred(1);
+        continue;
+      }
+      const ready = deps.every((dep) => dep !== undefined && dep.state === 'SUCCEEDED');
+      if (ready) {
+        await this.store.transitionStep({
+          stepId: step.id,
+          fromState: 'PENDING',
+          toState: 'READY',
+          expectedVersion: step.version,
+        });
+      }
+    }
+  }
+
+  private async dispatchStep(run: ResearchRunRecord, step: ResearchRunStepRecord): Promise<void> {
+    const claimed = await this.store.transitionStep({
+      stepId: step.id,
+      fromState: 'READY',
+      toState: 'DISPATCHED',
+      expectedVersion: step.version,
+    });
+    if (claimed.kind !== 'applied') {
+      return;
+    }
+
+    const resolved = resolveResearchRunPreset({
+      preset: run.preset,
+      customDag: run.customDag,
+    });
+    const node =
+      resolved.kind === 'ok'
+        ? findDagNode(resolved.dag, {
+            runId: run.id,
+            stepType: step.stepType,
+            inputFingerprint: step.inputFingerprint,
+          })
+        : null;
+
+    await this.enqueue.enqueue(
+      'research-run-step',
+      {
+        orgId: run.orgId,
+        projectId: run.projectId,
+        runId: run.id,
+        stepId: step.id,
+        stepType: step.stepType,
+        inputFingerprint: step.inputFingerprint,
+        stepVersion: step.stepVersion,
+        ...(node?.query !== undefined ? { query: node.query } : {}),
+        ...(node?.documentVersionId !== undefined
+          ? { documentVersionId: node.documentVersionId }
+          : {}),
+        ...(node?.contentHash !== undefined ? { contentHash: node.contentHash } : {}),
+      },
+      { stepType: step.stepType },
+    );
+  }
+
   private async advanceCompleting(run: ResearchRunRecord): Promise<ResearchRunTickOutcome> {
-    const toState: ResearchRunStateName = isFullResearchRunCoverage(run.coverage)
-      ? 'COMPLETED'
-      : 'COMPLETED_PARTIAL';
+    const counts = await this.store.countSteps(run.id);
+    const toState: ResearchRunStateName =
+      isFullResearchRunCoverage(run.coverage) && counts.failed === 0
+        ? 'COMPLETED'
+        : 'COMPLETED_PARTIAL';
     return this.transitionOutcome(run, await this.applyTransition(run, toState));
   }
 

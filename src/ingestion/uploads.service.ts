@@ -23,11 +23,11 @@ import { generateId, isUuid } from '../platform/ids/uuid-v7';
 import { JobEnqueueService } from '../platform/logging';
 import { projectScopeFrom } from '../platform/persistence/project-scope';
 import {
-  EXTRACTOR_VERSION,
   MAX_UPLOAD_BYTES,
   PRESIGN_TTL_SECONDS,
   UPLOAD_OBJECT_CATEGORY,
 } from './upload.constants';
+import { requestExtractJob } from './request-extract';
 import {
   parseIdempotencyKey,
   parseUploadCompleteRequest,
@@ -300,12 +300,11 @@ export class UploadsService {
     documentVersionId: string,
     contentHash: string,
   ): Promise<void> {
-    await this.enqueue.enqueue('extract', {
+    await requestExtractJob(this.enqueue, {
       orgId: session.orgId,
       projectId: session.projectId,
       documentVersionId,
       contentHash,
-      extractorVersion: EXTRACTOR_VERSION,
     });
   }
 
