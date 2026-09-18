@@ -19,6 +19,7 @@ export interface ExtractVersionRecord {
   readonly storageKey: string;
   readonly documentStatus: string;
   readonly deletedAt: Date | null;
+  readonly versionNo?: number;
 }
 
 export interface ExtractBlockInput {

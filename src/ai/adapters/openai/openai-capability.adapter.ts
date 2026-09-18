@@ -1,6 +1,11 @@
 import { isInteractiveCapability } from '../../policy/capability-routing';
 import { computeInputFingerprint } from '../../gateway/input-fingerprint';
-import type { CapabilityInvokeResult, OcrPage } from '../../gateway/gateway.types';
+import type {
+  CapabilityInvokeResult,
+  EvidenceExtractCandidate,
+  GatewayStanceLabel,
+  OcrPage,
+} from '../../gateway/gateway.types';
 import type { AdapterInvokeInput, CapabilityAdapter } from '../adapter.port';
 import type { AdapterInvokeOutcome } from '../adapter-outcome';
 import { AdapterError } from '../adapter.errors';
@@ -120,6 +125,8 @@ function parseCapabilityResult(
       return { capability: 'SYNTHESIS', text, ...base };
     case 'OCR':
       return { capability: 'OCR', ...parseOcrPayload(text), ...base };
+    case 'EVIDENCE_EXTRACT':
+      return { capability: 'EVIDENCE_EXTRACT', candidates: parseEvidenceExtract(text), ...base };
     case 'EMBED':
       throw new AdapterError('terminal', 'OpenAI adapter does not handle EMBED');
     default: {
@@ -248,8 +255,11 @@ function parseScreening(text: string): 'include' | 'exclude' | 'uncertain' {
   return 'uncertain';
 }
 
-function parseStance(text: string): 'support' | 'oppose' | 'neutral' {
+function parseStance(text: string): GatewayStanceLabel {
   const normalized = text.trim().toLowerCase();
+  if (normalized.includes('unresolved')) {
+    return 'unresolved';
+  }
   if (normalized.includes('support')) {
     return 'support';
   }
@@ -257,4 +267,61 @@ function parseStance(text: string): 'support' | 'oppose' | 'neutral' {
     return 'oppose';
   }
   return 'neutral';
+}
+
+function parseEvidenceExtract(text: string): EvidenceExtractCandidate[] {
+  const match = text.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
+  if (match === null) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(match[0]) as unknown;
+    const list = Array.isArray(parsed)
+      ? parsed
+      : typeof parsed === 'object' &&
+          parsed !== null &&
+          Array.isArray((parsed as { candidates?: unknown }).candidates)
+        ? (parsed as { candidates: unknown[] }).candidates
+        : null;
+    if (list === null) {
+      return [];
+    }
+    const candidates: EvidenceExtractCandidate[] = [];
+    for (const entry of list) {
+      if (typeof entry !== 'object' || entry === null) {
+        continue;
+      }
+      const record = entry as Record<string, unknown>;
+      if (typeof record.text !== 'string' || record.text.trim().length === 0) {
+        continue;
+      }
+      const locatorRaw = record.locator;
+      let locator: EvidenceExtractCandidate['locator'];
+      if (typeof locatorRaw === 'object' && locatorRaw !== null && !Array.isArray(locatorRaw)) {
+        const loc = locatorRaw as Record<string, unknown>;
+        if (
+          typeof loc.documentVersionId === 'string' &&
+          typeof loc.blockId === 'string' &&
+          typeof loc.page === 'number'
+        ) {
+          locator = {
+            documentVersionId: loc.documentVersionId,
+            blockId: loc.blockId,
+            page: loc.page,
+          };
+        }
+      }
+      candidates.push({
+        text: record.text,
+        ...(locator !== undefined ? { locator } : {}),
+        ...(record.type === 'metadata_only' || record.type === 'body_grounded'
+          ? { type: record.type }
+          : {}),
+        ...(typeof record.chunkId === 'string' ? { chunkId: record.chunkId } : {}),
+      });
+    }
+    return candidates;
+  } catch {
+    return [];
+  }
 }

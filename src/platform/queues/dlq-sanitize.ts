@@ -10,6 +10,7 @@ const SENSITIVE_FIELD_NAMES = new Set([
   'promptText',
   'documentText',
   'documentContent',
+  'claim',
   'evidenceText',
   'evidenceSummaries',
   'userPayload',

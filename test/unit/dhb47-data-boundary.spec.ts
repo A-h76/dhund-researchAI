@@ -85,6 +85,12 @@ function requestForCapability(capability: GatewayRequest['capability']): Gateway
       return { capability, evidenceSummaries: [EVIDENCE_BODY], documentContent: DOCUMENT_BODY };
     case 'OCR':
       return { capability, objectKey: 'uploads/doc.pdf' };
+    case 'EVIDENCE_EXTRACT':
+      return {
+        capability,
+        documentContent: DOCUMENT_BODY,
+        locatorCatalog: [],
+      };
     default: {
       const _exhaustive: never = capability;
       throw new Error(String(_exhaustive));
@@ -99,7 +105,8 @@ function contextFor(capability: GatewayRequest['capability'], overrides: Partial
     capability === 'SCREENING' ||
     capability === 'STANCE' ||
     capability === 'SYNTHESIS' ||
-    capability === 'OCR';
+    capability === 'OCR' ||
+    capability === 'EVIDENCE_EXTRACT';
   return isBatch ? workerContext(overrides) : apiContext(overrides);
 }
 

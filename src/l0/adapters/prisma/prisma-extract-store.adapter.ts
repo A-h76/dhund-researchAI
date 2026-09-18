@@ -28,6 +28,7 @@ export class PrismaExtractStoreAdapter implements ExtractStore {
         select: {
           id: true,
           storageKey: true,
+          versionNo: true,
           document: {
             select: {
               id: true,
@@ -50,6 +51,7 @@ export class PrismaExtractStoreAdapter implements ExtractStore {
         storageKey: row.storageKey,
         documentStatus: row.document.status,
         deletedAt: row.document.deletedAt,
+        versionNo: row.versionNo,
       };
     } catch (error) {
       throw new L0OperationError('Document version lookup failed', error);

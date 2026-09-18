@@ -28,6 +28,7 @@ const KNOWN_TEXT_KEYS = new Set([
   'claim',
   'evidenceSummaries',
   'objectKey',
+  'locatorCatalog',
 ]);
 
 export function findBoundaryRefusal(
