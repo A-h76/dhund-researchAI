@@ -53,6 +53,13 @@ describe('queue registry (DHB-40)', () => {
     fixed('billing-reconcile', 1);
 
     expect(QUEUE_REGISTRY['research-run-tick'].attempts).toEqual({ kind: 'infinite' });
+    expect(QUEUE_REGISTRY['research-run-tick'].naturalKeyFields).toEqual(['runId']);
+    expect(QUEUE_REGISTRY['research-run-tick'].requiredPayloadFields).toEqual([
+      'orgId',
+      'correlationId',
+      'projectId',
+      'runId',
+    ]);
     expect(QUEUE_REGISTRY['outbox-relay'].attempts).toEqual({ kind: 'infinite' });
     expect(QUEUE_REGISTRY['research-run-step'].attempts).toEqual({
       kind: 'per-step-type',
