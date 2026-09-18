@@ -5,6 +5,7 @@ import {
   RetrievalArmUnavailableError,
   SCOPED_STORE,
   resolveHnswEfSearch,
+  type AnnHit,
   type ProjectScope,
   type ScopedStore,
 } from '../l0/ports';
@@ -12,7 +13,7 @@ import { APP_CONFIG, type FrozenAppConfig } from '../platform/config';
 import { RetrievalMetrics } from './retrieval.metrics';
 
 export interface AnnSearchResult {
-  readonly hits: readonly { readonly chunkId: string; readonly projectId: string }[];
+  readonly hits: readonly AnnHit[];
   readonly efSearch: number;
 }
 

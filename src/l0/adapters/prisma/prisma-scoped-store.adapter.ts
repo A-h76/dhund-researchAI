@@ -1,14 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { EmbeddingDimensionMismatchError } from '../../ports/embedding-store.port';
 import { L0OperationError } from '../../ports/errors';
-import {
-  HNSW_EF_SEARCH_DEFAULT,
-  HNSW_WRITE_ACTIVE_MODEL_VERSION,
-} from '../../ports/hnsw.constants';
+import { HNSW_EF_SEARCH_DEFAULT } from '../../ports/hnsw.constants';
 import {
   assertQueryVectorDimension,
   resolveHnswEfSearch,
 } from '../../ports/hnsw-ef-search';
+import { RETRIEVAL_ELIGIBILITY_SQL } from '../../ports/retrieval-eligibility';
 import type {
   AnnHit,
   ProjectScope,
@@ -26,11 +24,14 @@ import { PrismaDatabaseAdapter } from './prisma-database.adapter';
  * index predicate; they are not a second filter authority.
  */
 export const ANN_NEAREST_SQL = `
-SELECT ce.chunk_id AS "chunkId", ce.project_id AS "projectId"
+SELECT ce.chunk_id AS "chunkId", ce.project_id AS "projectId", d.id AS "documentId"
 FROM chunk_embeddings ce
+JOIN chunks c ON c.id = ce.chunk_id
+JOIN document_versions dv ON dv.id = c.document_version_id
+JOIN documents d ON d.id = dv.document_id
+LEFT JOIN rights_snapshots rs ON rs.id = d.rights_snapshot_id
 WHERE ce.project_id = $1::uuid
-  AND ce.model_version = '${HNSW_WRITE_ACTIVE_MODEL_VERSION}'
-  AND ce.status = 'ok'
+  AND ${RETRIEVAL_ELIGIBILITY_SQL}
 ORDER BY ce.vector <=> $2::vector(1024)
 LIMIT $3
 `.trim();

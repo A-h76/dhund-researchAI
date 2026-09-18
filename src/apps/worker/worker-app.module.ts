@@ -10,6 +10,7 @@ import { EmbedModule } from '../../ai/embed/embed.module';
 import { ExtractModule } from '../../ingestion/extract.module';
 import { OcrModule } from '../../ai/ocr/ocr.module';
 import { PlatformModule } from '../../platform/platform.module';
+import { RetrievalModule } from '../../retrieval/retrieval.module';
 import { RuntimeRole } from '../../platform/runtime/role';
 import { ChunkProcessor } from './chunk.processor';
 import { EmbedBackfillProcessor } from './embed-backfill.processor';
@@ -25,7 +26,7 @@ import { ReaperProcessor } from './reaper.processor';
 import { WorkerBootstrapService } from './worker-bootstrap.service';
 
 @Module({
-  imports: [PlatformModule, AiModule, ExtractModule, OcrModule, ChunkModule, EmbedModule],
+  imports: [PlatformModule, AiModule, ExtractModule, OcrModule, ChunkModule, EmbedModule, RetrievalModule],
   providers: [
     provideRuntimeRole(RuntimeRole.Worker),
     ProcessorRegistry,

@@ -62,7 +62,7 @@ describe('DHB-54 GAP-HNSW-01 runtime', () => {
 
   it('passes runtime ef_search through AnnSearch without a migration', async () => {
     const store = new MemoryScopedStore();
-    store.annHits = [{ chunkId: 'c1', projectId: 'p1' }];
+    store.annHits = [{ chunkId: 'c1', projectId: 'p1', documentId: 'd1' }];
     const metrics = new RetrievalMetrics(stubLogger());
     const search = new AnnSearch(store, buildTestAppConfig({ hnswEfSearch: 80 }), metrics);
 

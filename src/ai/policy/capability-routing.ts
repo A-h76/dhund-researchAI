@@ -1,5 +1,6 @@
 import type { AiCapability } from '../capability';
 import { GatewayError } from '../gateway/gateway.errors';
+import type { GatewayRequest } from '../gateway/gateway.types';
 import { RuntimeRole } from '../../platform/runtime/role';
 
 const INTERACTIVE_CAPABILITIES = new Set<AiCapability>([
@@ -25,10 +26,23 @@ export function isBatchCapability(capability: AiCapability): boolean {
   return BATCH_CAPABILITIES.has(capability);
 }
 
+function isQueryEmbed(request: GatewayRequest): boolean {
+  return request.capability === 'EMBED' && request.inputType === 'query';
+}
+
 export function assertRoleAllowed(
   runtimeRole: RuntimeRole,
   capability: AiCapability,
+  request?: GatewayRequest,
 ): void {
+  if (
+    runtimeRole === RuntimeRole.Api &&
+    request !== undefined &&
+    isQueryEmbed(request)
+  ) {
+    return;
+  }
+
   if (runtimeRole === RuntimeRole.Api && !isInteractiveCapability(capability)) {
     throw new GatewayError(
       'capability_role_mismatch',

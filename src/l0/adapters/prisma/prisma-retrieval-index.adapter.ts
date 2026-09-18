@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { L0OperationError } from '../../ports/errors';
 import { resolveHnswEfSearch } from '../../ports/hnsw-ef-search';
+import { RETRIEVAL_ELIGIBILITY_SQL } from '../../ports/retrieval-eligibility';
 import {
   RetrievalArmUnavailableError,
   type FtsHit,
@@ -17,8 +18,11 @@ export const FTS_SEARCH_SQL = `
 SELECT c.id AS "chunkId", c.project_id AS "projectId", dv.document_id AS "documentId"
 FROM chunks c
 JOIN document_versions dv ON dv.id = c.document_version_id
-JOIN documents d ON d.id = dv.document_id AND d.deleted_at IS NULL
+JOIN documents d ON d.id = dv.document_id
+JOIN chunk_embeddings ce ON ce.chunk_id = c.id
+LEFT JOIN rights_snapshots rs ON rs.id = d.rights_snapshot_id
 WHERE c.project_id = $1::uuid
+  AND ${RETRIEVAL_ELIGIBILITY_SQL}
   AND c.search_vector @@ plainto_tsquery('english', $2)
 ORDER BY ts_rank(c.search_vector, plainto_tsquery('english', $2)) DESC
 LIMIT $3

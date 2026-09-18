@@ -109,6 +109,7 @@ function vector(dimensions: number = EMBED_DIMENSION, value = 0.0125): number[] 
         title: input.title,
         authors: [...(input.authors ?? [])],
         storageKey: `doc/${documentId}`,
+        status: 'completed',
       },
     });
     await prisma.documentVersion.create({
@@ -296,6 +297,12 @@ function vector(dimensions: number = EMBED_DIMENSION, value = 0.0125): number[] 
       projectId: b.projectId,
       title: 'Other RCT',
       text: 'randomized controlled trial outcomes in adults',
+    });
+    await insertEmbedding({
+      chunkId: inScope.chunkId,
+      projectId: a.projectId,
+      vector: vectorLiteral(1024, 0.2),
+      status: 'ok',
     });
 
     const hits = await retrieval.ftsSearch({
