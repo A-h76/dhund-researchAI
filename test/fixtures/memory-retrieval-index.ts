@@ -35,6 +35,7 @@ export class MemoryRetrievalIndexStore implements RetrievalIndexStore {
         chunkId: chunk.chunkId,
         projectId: chunk.projectId,
         documentId: chunk.documentId,
+        text: chunk.text,
       }));
     return Promise.resolve(hits);
   }

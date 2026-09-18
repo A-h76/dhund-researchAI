@@ -14,6 +14,7 @@ import { RetrievalMetrics } from '../../src/retrieval/retrieval.metrics';
 import { RetrievalService } from '../../src/retrieval/retrieval.service';
 import { buildTestAppConfig } from '../fixtures/app-config.fixture';
 import { MemoryQueryEmbed } from '../fixtures/memory-query-embed';
+import { MemoryRerank } from '../fixtures/memory-rerank';
 import { MemoryRetrievalIndexStore } from '../fixtures/memory-retrieval-index';
 import { MemoryScopedStore } from '../fixtures/memory-scoped-store';
 
@@ -55,6 +56,7 @@ describe('DHB-55 RetrievalService arms', () => {
       embed,
       new AnnSearch(store, buildTestAppConfig(), metrics),
       new LexicalSearch(fts, metrics),
+      new MemoryRerank(),
       metrics,
     );
 
@@ -72,9 +74,11 @@ describe('DHB-55 RetrievalService arms', () => {
     expect(store.lastLimit).toBe(15);
     expect(fts.lastLimit).toBe(15);
     expect(result.vectorHits).toEqual([
-      { chunkId, projectId, documentId, arm: 'vector' },
+      { chunkId, projectId, documentId, text: '', arm: 'vector' },
     ]);
-    expect(result.ftsHits).toEqual([{ chunkId, projectId, documentId, arm: 'fts' }]);
+    expect(result.ftsHits).toEqual([
+      { chunkId, projectId, documentId, text: 'randomized trial', arm: 'fts' },
+    ]);
     expect(result.timings.vectorMs).toBeGreaterThanOrEqual(0);
     expect(result.timings.ftsMs).toBeGreaterThanOrEqual(0);
     expect(embed.lastInput?.text).toBe('randomized trial');
@@ -96,6 +100,7 @@ describe('DHB-55 RetrievalService arms', () => {
       new MemoryQueryEmbed(),
       new AnnSearch(store, buildTestAppConfig(), metrics),
       new LexicalSearch(fts, metrics),
+      new MemoryRerank(),
       metrics,
     );
 

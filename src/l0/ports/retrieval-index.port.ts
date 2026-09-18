@@ -6,6 +6,7 @@ export interface FtsHit {
   readonly chunkId: string;
   readonly projectId: string;
   readonly documentId: string;
+  readonly text?: string;
 }
 
 export interface FtsSearchInput {

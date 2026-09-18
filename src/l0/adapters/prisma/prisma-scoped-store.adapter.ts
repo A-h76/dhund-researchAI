@@ -24,7 +24,7 @@ import { PrismaDatabaseAdapter } from './prisma-database.adapter';
  * index predicate; they are not a second filter authority.
  */
 export const ANN_NEAREST_SQL = `
-SELECT ce.chunk_id AS "chunkId", ce.project_id AS "projectId", d.id AS "documentId"
+SELECT ce.chunk_id AS "chunkId", ce.project_id AS "projectId", d.id AS "documentId", c.text AS "text"
 FROM chunk_embeddings ce
 JOIN chunks c ON c.id = ce.chunk_id
 JOIN document_versions dv ON dv.id = c.document_version_id

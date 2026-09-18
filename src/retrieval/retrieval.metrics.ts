@@ -7,6 +7,8 @@ import {
   filteredRecallShortfall,
 } from './filtered-recall';
 
+export type RetrievalLatencyStage = 'vector' | 'fts' | 'rrf' | 'rerank';
+
 export interface RetrievalMetricsSnapshot {
   readonly vectorQueries: number;
   readonly ftsQueries: number;
@@ -15,6 +17,10 @@ export interface RetrievalMetricsSnapshot {
   readonly lastEfSearch: number | null;
   readonly lastVectorMs: number | null;
   readonly lastFtsMs: number | null;
+  readonly lastRrfMs: number | null;
+  readonly lastRerankMs: number | null;
+  readonly rerankLlm: number;
+  readonly rerankFallbacks: number;
   readonly filteredRecallShortfall: number;
   readonly filteredRecallDropRate: number;
 }
@@ -28,6 +34,10 @@ export class RetrievalMetrics {
   private lastEfSearch: number | null = null;
   private lastVectorMs: number | null = null;
   private lastFtsMs: number | null = null;
+  private lastRrfMs: number | null = null;
+  private lastRerankMs: number | null = null;
+  private rerankLlm = 0;
+  private rerankFallbacks = 0;
   private shortfall = 0;
   private retrieved = 0;
   private surviving = 0;
@@ -74,13 +84,19 @@ export class RetrievalMetrics {
     });
   }
 
-  recordStageLatency(stage: 'vector' | 'fts', latencyMs: number): void {
+  recordStageLatency(stage: RetrievalLatencyStage, latencyMs: number): void {
     switch (stage) {
       case 'vector':
         this.lastVectorMs = latencyMs;
         break;
       case 'fts':
         this.lastFtsMs = latencyMs;
+        break;
+      case 'rrf':
+        this.lastRrfMs = latencyMs;
+        break;
+      case 'rerank':
+        this.lastRerankMs = latencyMs;
         break;
       default: {
         const exhaustive: never = stage;
@@ -92,6 +108,19 @@ export class RetrievalMetrics {
       message: 'retrieval.stage.latency',
       stage,
       latencyMs,
+    });
+  }
+
+  recordRerankLlm(): void {
+    this.rerankLlm += 1;
+  }
+
+  recordRerankFallback(): void {
+    this.rerankFallbacks += 1;
+    this.logger.info({
+      module: 'retrieval',
+      message: 'retrieval.rerank.fallback',
+      method: 'deterministic',
     });
   }
 
@@ -120,6 +149,10 @@ export class RetrievalMetrics {
       lastEfSearch: this.lastEfSearch,
       lastVectorMs: this.lastVectorMs,
       lastFtsMs: this.lastFtsMs,
+      lastRrfMs: this.lastRrfMs,
+      lastRerankMs: this.lastRerankMs,
+      rerankLlm: this.rerankLlm,
+      rerankFallbacks: this.rerankFallbacks,
       filteredRecallShortfall: this.shortfall,
       filteredRecallDropRate: filteredRecallDropRate(this.retrieved, this.surviving),
     };
