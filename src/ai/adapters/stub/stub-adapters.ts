@@ -1,4 +1,5 @@
 import { EMBED_DIMENSION } from '../../policy/embed-policy.constants';
+import type { ObjectStorageService } from '../../../l0/ports/object-storage.port';
 import type {
   AdapterDispatchRecord,
   AdapterInvokeInput,
@@ -7,6 +8,7 @@ import type {
 import type { AdapterInvokeOutcome } from '../adapter-outcome';
 import type { CapabilityInvokeResult, GatewayExecutionMetrics } from '../../gateway/gateway.types';
 import { computeInputFingerprint } from '../../gateway/input-fingerprint';
+import { loadOcrObject } from '../ocr/ocr-storage';
 
 const STUB_METRICS: GatewayExecutionMetrics = Object.freeze({
   latencyMs: 1,
@@ -187,26 +189,47 @@ export class StubSynthesisAdapter extends StubCapabilityAdapter {
 export class StubOcrAdapter extends StubCapabilityAdapter {
   readonly capability = 'OCR' as const;
 
+  constructor(private readonly storage: ObjectStorageService) {
+    super();
+  }
+
   protected async buildResult(input: AdapterInvokeInput): Promise<CapabilityInvokeResult> {
+    if (input.request.capability !== 'OCR') {
+      throw new Error('StubOcrAdapter received non-OCR request');
+    }
+
+    const bytes = await loadOcrObject(this.storage, input.request.objectKey);
+    const text = bytes.byteLength > 0 ? 'stub-ocr-text' : '';
+
     return {
       capability: 'OCR',
-      text: 'stub-ocr-text',
+      text,
+      meanConfidence: 0.95,
+      pages: [
+        {
+          page: 1,
+          confidence: 0.95,
+          blocks: [{ text, confidence: 0.95 }],
+        },
+      ],
       ...this.baseFields(input),
     };
   }
 }
 
-export const STUB_ADAPTERS: readonly CapabilityAdapter[] = [
-  new StubChatAdapter(),
-  new StubEmbedAdapter(),
-  new StubRerankAdapter(),
-  new StubAutocompleteAdapter(),
-  new StubExtractCellAdapter(),
-  new StubScreeningAdapter(),
-  new StubStanceAdapter(),
-  new StubSynthesisAdapter(),
-  new StubOcrAdapter(),
-];
+export function createStubAdapters(storage: ObjectStorageService): readonly CapabilityAdapter[] {
+  return [
+    new StubChatAdapter(),
+    new StubEmbedAdapter(),
+    new StubRerankAdapter(),
+    new StubAutocompleteAdapter(),
+    new StubExtractCellAdapter(),
+    new StubScreeningAdapter(),
+    new StubStanceAdapter(),
+    new StubSynthesisAdapter(),
+    new StubOcrAdapter(storage),
+  ];
+}
 
 export type StubAdapterInstance = InstanceType<
   | typeof StubChatAdapter

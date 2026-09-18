@@ -47,7 +47,7 @@ export class MemoryObjectStorage implements ObjectStorageService {
     return `memory://put/${key}`;
   }
 
-  async getPresignedGetUrl(key: string): Promise<string> {
+  async getPresignedGetUrl(key: string, _expiresInSeconds?: number): Promise<string> {
     return `memory://get/${key}`;
   }
 

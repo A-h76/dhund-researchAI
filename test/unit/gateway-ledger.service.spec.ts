@@ -20,6 +20,7 @@ import { PromptAssembler } from '../../src/ai/policy/prompt-assembler';
 import { MoneyMicrosError } from '../../src/platform/money/micros';
 import { RuntimeRole } from '../../src/platform/runtime/role';
 import { PlatformLogger } from '../../src/platform/logging/platform-logger.service';
+import { stubAdaptersWithOcrObject } from '../fixtures/stub-ai-adapters';
 
 class TrackingLedger implements AiExecutionLedgerPort {
   readonly records: AiExecutionLedgerRecord[] = [];
@@ -255,7 +256,7 @@ function createGateway(
     new PromptAssembler(),
     options.adapters !== undefined
       ? AdapterRegistry.forAdapters(options.adapters)
-      : new AdapterRegistry(),
+      : AdapterRegistry.forAdapters(stubAdaptersWithOcrObject().adapters),
     logger,
   );
 

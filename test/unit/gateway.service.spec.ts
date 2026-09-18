@@ -21,6 +21,7 @@ import {
 } from '../../src/ai/policy/embed-policy.constants';
 import { RuntimeRole } from '../../src/platform/runtime/role';
 import { PlatformLogger } from '../../src/platform/logging/platform-logger.service';
+import { stubAdaptersWithOcrObject } from '../fixtures/stub-ai-adapters';
 
 class InMemoryAiExecutionLedger implements AiExecutionLedgerPort {
   readonly records: AiExecutionLedgerRecord[] = [];
@@ -65,7 +66,7 @@ function createGateway(
     new PromptAssembler(),
     options.adapters !== undefined
       ? AdapterRegistry.forAdapters(options.adapters)
-      : new AdapterRegistry(),
+      : AdapterRegistry.forAdapters(stubAdaptersWithOcrObject().adapters),
     logger,
   );
 

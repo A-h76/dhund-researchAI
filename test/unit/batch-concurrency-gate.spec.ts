@@ -2,6 +2,7 @@ import { BatchConcurrencyGateService } from '../../src/platform/concurrency/batc
 import { ConcurrencyMetrics } from '../../src/platform/concurrency/concurrency-metrics';
 import {
   effectiveGlobalBatchLimit,
+  OCR_POOL_CEILING,
   PER_ORG_BATCH_CONCURRENCY_DEFAULT,
 } from '../../src/platform/concurrency/concurrency-gate.config';
 import type { CounterService } from '../../src/l0/ports';
@@ -77,5 +78,17 @@ describe('batch concurrency gate (DHB-42)', () => {
     }
 
     expect(await gate.tryAcquireImmediate('org-overflow', 'stance')).toBeNull();
+  });
+
+  it('enforces a global OCR pool ceiling on top of per-org gates', async () => {
+    const gate = new BatchConcurrencyGateService(counter, new ConcurrencyMetrics());
+    const slots = [];
+    for (let index = 0; index < OCR_POOL_CEILING; index += 1) {
+      const slot = await gate.tryAcquireImmediate(`org-ocr-${index}`, 'ocr');
+      expect(slot).not.toBeNull();
+      slots.push(slot!);
+    }
+    expect(await gate.tryAcquireImmediate('org-ocr-overflow', 'ocr')).toBeNull();
+    expect(await gate.tryAcquireImmediate('org-other', 'extract')).not.toBeNull();
   });
 });

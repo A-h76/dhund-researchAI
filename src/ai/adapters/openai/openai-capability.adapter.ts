@@ -1,6 +1,6 @@
 import { isInteractiveCapability } from '../../policy/capability-routing';
 import { computeInputFingerprint } from '../../gateway/input-fingerprint';
-import type { CapabilityInvokeResult } from '../../gateway/gateway.types';
+import type { CapabilityInvokeResult, OcrPage } from '../../gateway/gateway.types';
 import type { AdapterInvokeInput, CapabilityAdapter } from '../adapter.port';
 import type { AdapterInvokeOutcome } from '../adapter-outcome';
 import { AdapterError } from '../adapter.errors';
@@ -118,7 +118,7 @@ function parseCapabilityResult(
     case 'SYNTHESIS':
       return { capability: 'SYNTHESIS', text, ...base };
     case 'OCR':
-      return { capability: 'OCR', text, ...base };
+      return { capability: 'OCR', ...parseOcrPayload(text), ...base };
     case 'EMBED':
       throw new AdapterError('terminal', 'OpenAI adapter does not handle EMBED');
     default: {
@@ -126,6 +126,94 @@ function parseCapabilityResult(
       throw new Error(`Unhandled capability: ${String(_exhaustive)}`);
     }
   }
+}
+
+function parseOcrPayload(text: string): {
+  text: string;
+  pages: readonly OcrPage[];
+  meanConfidence: number;
+} {
+  const structured = parseStructuredOcr(text);
+  if (structured !== null) {
+    return structured;
+  }
+  const trimmed = text.trim();
+  if (trimmed.length === 0) {
+    return { text: '', pages: [], meanConfidence: 0 };
+  }
+  return {
+    text: trimmed,
+    meanConfidence: 0.5,
+    pages: [
+      {
+        page: 1,
+        confidence: 0.5,
+        blocks: [{ text: trimmed, confidence: 0.5 }],
+      },
+    ],
+  };
+}
+
+function parseStructuredOcr(text: string): {
+  text: string;
+  pages: readonly OcrPage[];
+  meanConfidence: number;
+} | null {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (match === null) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(match[0]) as unknown;
+    if (typeof parsed !== 'object' || parsed === null || !('pages' in parsed)) {
+      return null;
+    }
+    const pagesValue = (parsed as { pages: unknown }).pages;
+    if (!Array.isArray(pagesValue)) {
+      return null;
+    }
+    const pages: OcrPage[] = [];
+    for (const entry of pagesValue) {
+      const page = asOcrPage(entry);
+      if (page === null) {
+        return null;
+      }
+      pages.push(page);
+    }
+    const texts = pages.flatMap((page) => page.blocks.map((block) => block.text));
+    const meanConfidence =
+      pages.length === 0
+        ? 0
+        : pages.reduce((sum, page) => sum + page.confidence, 0) / pages.length;
+    return { text: texts.join('\n'), pages, meanConfidence };
+  } catch {
+    return null;
+  }
+}
+
+function asOcrPage(value: unknown): OcrPage | null {
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  if (typeof record.page !== 'number' || typeof record.confidence !== 'number') {
+    return null;
+  }
+  if (!Array.isArray(record.blocks)) {
+    return null;
+  }
+  const blocks: Array<{ text: string; confidence: number }> = [];
+  for (const block of record.blocks) {
+    if (typeof block !== 'object' || block === null) {
+      return null;
+    }
+    const blockRecord = block as Record<string, unknown>;
+    if (typeof blockRecord.text !== 'string' || typeof blockRecord.confidence !== 'number') {
+      return null;
+    }
+    blocks.push({ text: blockRecord.text, confidence: blockRecord.confidence });
+  }
+  return { page: record.page, confidence: record.confidence, blocks };
 }
 
 function parseRerankScores(text: string, expected: number): number[] {

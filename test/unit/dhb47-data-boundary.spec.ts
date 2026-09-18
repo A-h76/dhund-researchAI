@@ -1,6 +1,6 @@
 import { AI_CAPABILITIES } from '../../src/ai/capability';
 import { AdapterRegistry } from '../../src/ai/adapters/adapter-registry';
-import { StubChatAdapter, STUB_ADAPTERS } from '../../src/ai/adapters/stub/stub-adapters';
+import { StubChatAdapter } from '../../src/ai/adapters/stub/stub-adapters';
 import { BoundaryMetrics } from '../../src/ai/boundary/boundary-metrics';
 import { findBoundaryRefusal } from '../../src/ai/boundary/find-boundary-refusal';
 import {
@@ -20,6 +20,7 @@ import { DomainError } from '../../src/platform/errors/domain-error';
 import { ErrorCode } from '../../src/platform/errors/error-codes';
 import { RuntimeRole } from '../../src/platform/runtime/role';
 import { PlatformLogger } from '../../src/platform/logging/platform-logger.service';
+import { stubAdaptersWithOcrObject } from '../fixtures/stub-ai-adapters';
 
 const DOCUMENT_BODY = 'UNIQUE_DOCUMENT_BODY_MUST_NOT_LEAK';
 const PROMPT_BODY = 'UNIQUE_PROMPT_TEXT_MUST_NOT_LEAK';
@@ -116,7 +117,7 @@ function createGateway(options: { audit?: TrackingAudit; metrics?: BoundaryMetri
   const metrics = options.metrics ?? new BoundaryMetrics();
   const logger = createLogger();
   const ledger = new TrackingLedger();
-  const adapters = STUB_ADAPTERS.map((adapter) => {
+  const adapters = stubAdaptersWithOcrObject().adapters.map((adapter) => {
     const invoke = jest.spyOn(adapter, 'invoke');
     return { adapter, invoke };
   });

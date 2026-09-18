@@ -87,6 +87,23 @@ export interface GatewayResultProvenance {
   readonly method: 'llm' | 'deterministic';
 }
 
+export interface OcrBlock {
+  readonly text: string;
+  readonly confidence: number;
+  readonly bbox?: {
+    readonly x0: number;
+    readonly y0: number;
+    readonly x1: number;
+    readonly y1: number;
+  } | null;
+}
+
+export interface OcrPage {
+  readonly page: number;
+  readonly confidence: number;
+  readonly blocks: readonly OcrBlock[];
+}
+
 export type CapabilityInvokeResult =
   | {
       readonly capability: 'CHAT';
@@ -164,6 +181,8 @@ export type CapabilityInvokeResult =
   | {
       readonly capability: 'OCR';
       readonly text: string;
+      readonly pages: readonly OcrPage[];
+      readonly meanConfidence: number;
       readonly metrics: GatewayExecutionMetrics;
       readonly inputFingerprint: string;
       readonly promptVersion: string;

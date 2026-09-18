@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { OBJECT_STORAGE_SERVICE, type ObjectStorageService } from '../l0/ports';
 import { PlatformModule } from '../platform/platform.module';
 import { PlatformLogger } from '../platform/logging/platform-logger.service';
 import { AdapterRegistry } from './adapters/adapter-registry';
@@ -28,6 +29,7 @@ import { DATA_BOUNDARY_CHECK, GATEWAY_SERVICE } from './tokens';
         openAiClient: SdkOpenAiClient,
         breakers: ProviderCircuitBreakerRegistry,
         logger: PlatformLogger,
+        storage: ObjectStorageService,
       ) =>
         AdapterRegistry.forAdapters(
           createLiveAdapters({
@@ -35,6 +37,7 @@ import { DATA_BOUNDARY_CHECK, GATEWAY_SERVICE } from './tokens';
             openAiClient,
             breakers,
             logger,
+            storage,
           }),
         ),
       inject: [
@@ -42,6 +45,7 @@ import { DATA_BOUNDARY_CHECK, GATEWAY_SERVICE } from './tokens';
         SdkOpenAiClient,
         ProviderCircuitBreakerRegistry,
         PlatformLogger,
+        OBJECT_STORAGE_SERVICE,
       ],
     },
     GatewayService,
