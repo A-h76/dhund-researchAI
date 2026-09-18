@@ -304,6 +304,25 @@ export const INGESTION_EVENTS: readonly CatalogEventDefinition[] = [
 
 export const ORCHESTRATION_EVENTS: readonly CatalogEventDefinition[] = [
   {
+    eventType: 'orchestration.research_run.state_changed',
+    aggregateType: 'research_run',
+    domain: 'orchestration',
+    currentVersion: 1,
+    versions: [
+      {
+        schemaVersion: 1,
+        fields: [
+          orgId,
+          projectId,
+          field('runId', 'string'),
+          field('fromState', 'string'),
+          field('toState', 'string'),
+          field('version', 'number'),
+        ],
+      },
+    ],
+  },
+  {
     eventType: 'orchestration.research_run.started',
     aggregateType: 'research_run',
     domain: 'orchestration',

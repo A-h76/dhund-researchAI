@@ -74,8 +74,9 @@ export const QUEUE_REGISTRY: Readonly<Record<QueueName, QueuePolicy>> = {
     'research-run-tick',
     { kind: 'infinite' },
     EXPONENTIAL_BACKOFF,
-    ['runId', 'tickInstant'],
-    ['projectId', 'runId', 'tickInstant'],
+    // jobId = run:{runId} logically; BullMQ forbids ':' so natural key is runId only (DHB-64).
+    ['runId'],
+    ['projectId', 'runId'],
   ),
   'research-run-step': policy(
     'research-run-step',

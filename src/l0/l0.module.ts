@@ -43,6 +43,7 @@ import {
   IDENTITY_LOOKUP,
   PDF_PARSE_SERVICE,
   MESSAGE_EVIDENCE_BINDING,
+  RESEARCH_RUN_STORE,
 } from './ports/tokens';
 import { PrismaAiExecutionLedgerAdapter } from './adapters/prisma/prisma-ai-execution-ledger.adapter';
 import { PrismaAuditEventAdapter } from './adapters/prisma/prisma-audit-event.adapter';
@@ -64,6 +65,7 @@ import { PrismaIdentityLookupAdapter } from './adapters/prisma/prisma-identity-l
 import { PrismaEvidenceLookupAdapter } from './adapters/prisma/prisma-evidence-lookup.adapter';
 import { PrismaRetrievalTraceAdapter } from './adapters/prisma/prisma-retrieval-trace.adapter';
 import { PrismaMessageEvidenceBindingAdapter } from './adapters/prisma/prisma-message-evidence-binding.adapter';
+import { PrismaResearchRunStoreAdapter } from './adapters/prisma/prisma-research-run-store.adapter';
 import { PrismaEvidenceSpineAdapter } from './adapters/prisma/prisma-evidence-spine.adapter';
 import { PrismaCitationProjectionAdapter } from './adapters/prisma/prisma-citation-projection.adapter';
 import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
@@ -93,6 +95,7 @@ import { EVIDENCE_SPINE } from './ports/evidence-spine.port';
     PrismaEvidenceLookupAdapter,
     PrismaRetrievalTraceAdapter,
     PrismaMessageEvidenceBindingAdapter,
+    PrismaResearchRunStoreAdapter,
     PrismaEvidenceSpineAdapter,
     PrismaCitationProjectionAdapter,
     PrismaIdentityLookupAdapter,
@@ -127,6 +130,7 @@ import { EVIDENCE_SPINE } from './ports/evidence-spine.port';
     { provide: EVIDENCE_LOOKUP, useExisting: PrismaEvidenceLookupAdapter },
     { provide: RETRIEVAL_TRACE, useExisting: PrismaRetrievalTraceAdapter },
     { provide: MESSAGE_EVIDENCE_BINDING, useExisting: PrismaMessageEvidenceBindingAdapter },
+    { provide: RESEARCH_RUN_STORE, useExisting: PrismaResearchRunStoreAdapter },
     { provide: EVIDENCE_SPINE, useExisting: PrismaEvidenceSpineAdapter },
     { provide: CITATION_PROJECTION, useExisting: PrismaCitationProjectionAdapter },
     { provide: IDENTITY_LOOKUP, useExisting: PrismaIdentityLookupAdapter },
@@ -166,6 +170,7 @@ import { EVIDENCE_SPINE } from './ports/evidence-spine.port';
     EVIDENCE_LOOKUP,
     RETRIEVAL_TRACE,
     MESSAGE_EVIDENCE_BINDING,
+    RESEARCH_RUN_STORE,
     EVIDENCE_SPINE,
     CITATION_PROJECTION,
     IDENTITY_LOOKUP,

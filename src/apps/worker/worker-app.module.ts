@@ -10,6 +10,7 @@ import { EmbedModule } from '../../ai/embed/embed.module';
 import { ExtractModule } from '../../ingestion/extract.module';
 import { EvidenceModule } from '../../evidence/evidence.module';
 import { OcrModule } from '../../ai/ocr/ocr.module';
+import { OrchestrationModule } from '../../orchestration/orchestration.module';
 import { PlatformModule } from '../../platform/platform.module';
 import { RetrievalModule } from '../../retrieval/retrieval.module';
 import { RuntimeRole } from '../../platform/runtime/role';
@@ -27,6 +28,7 @@ import { PlaceholderProcessor } from './placeholder.processor';
 import { ProcessorRegistry } from './processor-registry';
 import { ProjectDeletionProcessor } from './project-deletion.processor';
 import { ReaperProcessor } from './reaper.processor';
+import { ResearchRunTickProcessor } from './research-run-tick.processor';
 import { StanceJobConsumer } from './stance-job.consumer';
 import { StanceProcessor } from './stance.processor';
 import { StanceService } from './stance.service';
@@ -42,6 +44,7 @@ import { WorkerBootstrapService } from './worker-bootstrap.service';
     EmbedModule,
     RetrievalModule,
     EvidenceModule,
+    OrchestrationModule,
   ],
   providers: [
     provideRuntimeRole(RuntimeRole.Worker),
@@ -58,6 +61,7 @@ import { WorkerBootstrapService } from './worker-bootstrap.service';
     StanceService,
     StanceJobConsumer,
     StanceProcessor,
+    ResearchRunTickProcessor,
     ReaperProcessor,
     OutboxRelayProcessor,
     OrphanSweepProcessor,
