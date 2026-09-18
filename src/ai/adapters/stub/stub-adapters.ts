@@ -79,9 +79,19 @@ export class StubChatAdapter extends StubCapabilityAdapter {
   readonly capability = 'CHAT' as const;
 
   protected async buildResult(input: AdapterInvokeInput): Promise<CapabilityInvokeResult> {
+    const text = 'stub-chat-response';
+    if (input.onToken !== undefined) {
+      for (const token of text.match(/\S+|\s+/g) ?? [text]) {
+        try {
+          input.onToken(token);
+        } catch {
+          // Sink failures must not cancel generation.
+        }
+      }
+    }
     return {
       capability: 'CHAT',
-      text: 'stub-chat-response',
+      text,
       ...this.baseFields(input),
     };
   }

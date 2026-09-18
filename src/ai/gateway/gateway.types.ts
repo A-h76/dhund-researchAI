@@ -24,6 +24,9 @@ export type GatewayRequest =
       readonly userMessage: string;
       readonly documentContent?: string;
       readonly systemInstructions?: string;
+      /** Folded into input_fingerprint so chat provenance includes retrieval (DHB-62). */
+      readonly retrievalFingerprint?: string;
+      readonly retrievalTraceId?: string;
     }
   | {
       readonly capability: 'EMBED';

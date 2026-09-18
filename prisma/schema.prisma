@@ -664,6 +664,7 @@ model AiExecution {
   orgId            String       @map("org_id") @db.Uuid
   projectId        String?      @map("project_id") @db.Uuid
   researchRunId    String?      @map("research_run_id") @db.Uuid
+  retrievalTraceId String?      @map("retrieval_trace_id") @db.Uuid
   capability       AiCapability
   provider         String
   model            String
@@ -681,12 +682,14 @@ model AiExecution {
   organization     Organization          @relation(fields: [orgId], references: [id], onDelete: Restrict)
   project          Project?              @relation(fields: [projectId], references: [id], onDelete: Restrict)
   researchRun      ResearchRun?          @relation(fields: [researchRunId], references: [id], onDelete: Restrict)
+  retrievalTrace   RetrievalTrace?       @relation(fields: [retrievalTraceId], references: [id], onDelete: Restrict)
   attempts         AiExecutionAttempt[]
   evidence         Evidence[]
   extractionCells  ExtractionCell[]
   screeningDecisions ScreeningDecision[]
   messages         Message[]
 
+  @@index([retrievalTraceId], map: "idx_ai_executions_retrieval_trace")
   @@map("ai_executions")
 }
 
@@ -1533,6 +1536,7 @@ model RetrievalTrace {
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  aiExecutions AiExecution[]
 
   @@index([projectId, queryFingerprint], map: "idx_retrieval_traces_project_fingerprint")
   @@map("retrieval_traces")

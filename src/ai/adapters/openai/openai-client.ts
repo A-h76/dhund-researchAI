@@ -6,6 +6,7 @@ export interface OpenAiCompletionRequest {
   readonly systemPrompt: string;
   readonly userPayload: string;
   readonly stream: boolean;
+  readonly onToken?: (token: string) => void;
 }
 
 export interface OpenAiCompletionResponse {

@@ -23,6 +23,20 @@ export class MemoryScopedStore implements ScopedStore {
     row: Record<string, unknown>,
   ): Promise<ScopedRow> {
     const id = String(row.id);
+    if (entity === 'message') {
+      const conversationId = String(row.conversationId);
+      const sequence = Number(row.sequence);
+      const conflict = this.bucket(entity).some(
+        (existing) =>
+          existing.conversationId === conversationId &&
+          Number(existing.sequence) === sequence,
+      );
+      if (conflict) {
+        const error = new Error('unique constraint failed') as Error & { code: string };
+        error.code = 'P2002';
+        return Promise.reject(error);
+      }
+    }
     const stored: ScopedRow = {
       ...row,
       id,

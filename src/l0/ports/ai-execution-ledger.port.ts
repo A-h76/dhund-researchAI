@@ -18,6 +18,8 @@ export interface AiExecutionLedgerRecord {
   readonly orgId: string;
   readonly projectId?: string;
   readonly researchRunId?: string;
+  /** RetrievalTrace that grounded this CHAT turn (DHB-62). */
+  readonly retrievalTraceId?: string;
   readonly capability: string;
   readonly provider: string;
   readonly model: string;

@@ -38,6 +38,9 @@ export function mapLedgerRecordToPrismaCreate(input: AiExecutionLedgerRecord): {
     ...(input.researchRunId !== undefined
       ? { researchRun: { connect: { id: input.researchRunId } } }
       : {}),
+    ...(input.retrievalTraceId !== undefined
+      ? { retrievalTrace: { connect: { id: input.retrievalTraceId } } }
+      : {}),
   };
 
   const attempts: Prisma.AiExecutionAttemptCreateManyInput[] = input.attempts.map(

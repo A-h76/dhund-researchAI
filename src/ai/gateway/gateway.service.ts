@@ -11,7 +11,7 @@ import { assertRoleAllowed } from '../policy/capability-routing';
 import { PolicyResolver } from '../policy/policy-resolver';
 import { PromptAssembler } from '../policy/prompt-assembler';
 import { validateGatewayRequest } from '../validation/request-validation';
-import type { IGatewayService } from './gateway.port';
+import type { GatewayExecuteOptions, IGatewayService } from './gateway.port';
 import type { GatewayContext, GatewayRequest, GatewayResult } from './gateway.types';
 import { GatewayExecutionFailedError } from './gateway-execution.errors';
 import { computeInputFingerprint } from './input-fingerprint';
@@ -29,7 +29,11 @@ export class GatewayService implements IGatewayService {
     private readonly logger: PlatformLogger,
   ) {}
 
-  async execute(ctx: GatewayContext, request: GatewayRequest): Promise<GatewayResult> {
+  async execute(
+    ctx: GatewayContext,
+    request: GatewayRequest,
+    options: GatewayExecuteOptions = {},
+  ): Promise<GatewayResult> {
     const started = Date.now();
 
     await this.boundary.assertAllowed(ctx, request);
@@ -48,6 +52,7 @@ export class GatewayService implements IGatewayService {
       policy,
       payload,
       request,
+      ...(options.onToken !== undefined ? { onToken: options.onToken } : {}),
     });
 
     assertIntegerMicros(outcome.costMicros);
@@ -68,12 +73,15 @@ export class GatewayService implements IGatewayService {
     }));
 
     const latencyMs = Date.now() - started;
+    const retrievalTraceId =
+      request.capability === 'CHAT' ? request.retrievalTraceId : undefined;
 
     await this.ledger.record({
       id: aiExecutionId,
       orgId: ctx.orgId,
       ...(ctx.projectId !== undefined ? { projectId: ctx.projectId } : {}),
       ...(ctx.researchRunId !== undefined ? { researchRunId: ctx.researchRunId } : {}),
+      ...(retrievalTraceId !== undefined ? { retrievalTraceId } : {}),
       capability: request.capability,
       provider: policy.provider,
       model: policy.modelId,
@@ -102,6 +110,7 @@ export class GatewayService implements IGatewayService {
       latencyMs,
       aiExecutionId,
       correlationId: ctx.correlationId,
+      ...(retrievalTraceId !== undefined ? { retrievalTraceId } : {}),
     };
 
     if (outcome.status === 'failed') {

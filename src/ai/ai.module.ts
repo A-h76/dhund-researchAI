@@ -16,6 +16,7 @@ import { GatewayService } from './gateway/gateway.service';
 import { PolicyResolver } from './policy/policy-resolver';
 import { PromptAssembler } from './policy/prompt-assembler';
 import { QueryRerankAdapter } from './rerank/rerank.adapter';
+import { ChatGatewayAdapter } from './chat/chat-gateway.adapter';
 import { DATA_BOUNDARY_CHECK, GATEWAY_SERVICE } from './tokens';
 
 @Global()
@@ -58,11 +59,19 @@ import { DATA_BOUNDARY_CHECK, GATEWAY_SERVICE } from './tokens';
     GatewayDataBoundary,
     QueryEmbedAdapter,
     QueryRerankAdapter,
+    ChatGatewayAdapter,
     { provide: DATA_BOUNDARY_CHECK, useExisting: GatewayDataBoundary },
     { provide: GATEWAY_SERVICE, useExisting: GatewayService },
     { provide: QUERY_EMBED, useExisting: QueryEmbedAdapter },
     { provide: QUERY_RERANK, useExisting: QueryRerankAdapter },
   ],
-  exports: [GATEWAY_SERVICE, DATA_BOUNDARY_CHECK, GatewayService, QUERY_EMBED, QUERY_RERANK],
+  exports: [
+    GATEWAY_SERVICE,
+    DATA_BOUNDARY_CHECK,
+    GatewayService,
+    QUERY_EMBED,
+    QUERY_RERANK,
+    ChatGatewayAdapter,
+  ],
 })
 export class AiModule {}

@@ -44,6 +44,7 @@ export class OpenAiCapabilityAdapter implements CapabilityAdapter {
               systemPrompt: input.payload.systemPrompt,
               userPayload: input.payload.userPayload,
               stream,
+              ...(input.onToken !== undefined ? { onToken: input.onToken } : {}),
             });
             const costMicros =
               (response.tokensIn + response.tokensOut) * OPENAI_MICROS_PER_TOKEN;
