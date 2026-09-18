@@ -11,6 +11,10 @@ export interface ResearchRunMetricsSnapshot {
   readonly recoveryCount: number;
   readonly versionConflictCount: number;
   readonly appliedTransitionCount: number;
+  readonly stepsByOutcome: Readonly<Record<string, number>>;
+  readonly stepLatencyMsByType: Readonly<Record<string, number>>;
+  readonly deferredCount: number;
+  readonly lastDagDepth: number | null;
 }
 
 @Injectable()
@@ -23,6 +27,10 @@ export class ResearchRunMetrics {
   private recoveryCount = 0;
   private versionConflictCount = 0;
   private appliedTransitionCount = 0;
+  private readonly stepsByOutcome = new Map<string, number>();
+  private readonly stepLatencyMsByType = new Map<string, number>();
+  private deferredCount = 0;
+  private lastDagDepth: number | null = null;
 
   constructor(private readonly logger: PlatformLogger) {}
 
@@ -65,6 +73,25 @@ export class ResearchRunMetrics {
     });
   }
 
+  recordStepOutcome(outcome: string): void {
+    this.stepsByOutcome.set(outcome, (this.stepsByOutcome.get(outcome) ?? 0) + 1);
+  }
+
+  recordStepLatency(stepType: string, latencyMs: number): void {
+    this.stepLatencyMsByType.set(
+      stepType,
+      (this.stepLatencyMsByType.get(stepType) ?? 0) + latencyMs,
+    );
+  }
+
+  recordDeferred(count: number): void {
+    this.deferredCount += count;
+  }
+
+  recordDagDepth(depth: number): void {
+    this.lastDagDepth = depth;
+  }
+
   snapshot(): ResearchRunMetricsSnapshot {
     return {
       runsByState: Object.fromEntries(this.runsByState),
@@ -75,6 +102,10 @@ export class ResearchRunMetrics {
       recoveryCount: this.recoveryCount,
       versionConflictCount: this.versionConflictCount,
       appliedTransitionCount: this.appliedTransitionCount,
+      stepsByOutcome: Object.fromEntries(this.stepsByOutcome),
+      stepLatencyMsByType: Object.fromEntries(this.stepLatencyMsByType),
+      deferredCount: this.deferredCount,
+      lastDagDepth: this.lastDagDepth,
     };
   }
 
@@ -87,5 +118,9 @@ export class ResearchRunMetrics {
     this.recoveryCount = 0;
     this.versionConflictCount = 0;
     this.appliedTransitionCount = 0;
+    this.stepsByOutcome.clear();
+    this.stepLatencyMsByType.clear();
+    this.deferredCount = 0;
+    this.lastDagDepth = null;
   }
 }

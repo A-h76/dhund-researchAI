@@ -29,6 +29,11 @@ describe('DHB-50 extract static checks', () => {
   const processor = readFileSync(join(ROOT, 'src/apps/worker/extract.processor.ts'), 'utf8');
   const uploads = readFileSync(join(ROOT, 'src/ingestion/uploads.service.ts'), 'utf8');
 
+  const requestExtract = readFileSync(
+    join(ROOT, 'src/ingestion/request-extract.ts'),
+    'utf8',
+  );
+
   it('keeps extract as the sole PDF ingestion entry point', () => {
     const parsers: string[] = [];
     const evalUses: string[] = [];
@@ -42,7 +47,11 @@ describe('DHB-50 extract static checks', () => {
       if (relative.includes('/ingestion/') && /eval\(|new Function|vm\.run/.test(content)) {
         evalUses.push(relative);
       }
-      if (content.includes("enqueue('extract'") && !relative.endsWith('/uploads.service.ts')) {
+      if (
+        content.includes("enqueue('extract'") &&
+        !relative.endsWith('/uploads.service.ts') &&
+        !relative.endsWith('/request-extract.ts')
+      ) {
         extractEnqueues.push(relative);
       }
     }
@@ -50,7 +59,8 @@ describe('DHB-50 extract static checks', () => {
     expect(evalUses).toEqual([]);
     expect(extractEnqueues).toEqual([]);
     expect(parser).toContain('isEvalSupported: false');
-    expect(uploads).toContain("enqueue('extract'");
+    expect(uploads).toContain('requestExtractJob');
+    expect(requestExtract).toContain("enqueue('extract'");
     expect(service).toContain("enqueue('chunk'");
     expect(service).toContain("enqueue('ocr'");
     expect(processor).toContain("register('extract')");

@@ -35,7 +35,7 @@ describe('DHB-48 upload session static checks', () => {
     expect(service).toContain('generateObjectKey');
     expect(service).toContain('UPLOAD_OBJECT_CATEGORY');
     expect(service).toContain('assertPdfMagicBytes');
-    expect(service).toContain("enqueue('extract'");
+    expect(service).toContain('requestExtractJob');
     expect(service).toContain('insertIssued');
     expect(service).not.toContain('body.projectId');
   });

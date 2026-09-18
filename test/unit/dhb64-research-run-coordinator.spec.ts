@@ -40,12 +40,16 @@ function createHarness(store = new MemoryResearchRunStore()) {
   const enqueue = {
     enqueue: jest.fn().mockResolvedValue('job-id'),
   };
+  const planner = {
+    plan: async () => ({ kind: 'ready' as const }),
+  };
   const coordinator = new ResearchRunCoordinatorService(
     store,
     transitions,
     coordination,
     metrics,
     enqueue as never,
+    planner as never,
   );
   return { store, writer, metrics, coordination, transitions, coordinator, enqueue };
 }

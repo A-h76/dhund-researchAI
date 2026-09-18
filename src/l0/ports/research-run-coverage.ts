@@ -69,6 +69,9 @@ export function parseResearchRunCoverage(value: unknown): ResearchRunCoverage {
   if ('corpus' in record) {
     throw new Error('Retired coverage vocabulary "corpus" is forbidden (GAP-COVERAGE-01)');
   }
+  if ('stepOutcomes' in record) {
+    throw new Error('stepOutcomes must not appear inside coverage (GAP-COVERAGE-01)');
+  }
   const discovery = asFunnel(record.discovery, [
     'requested',
     'discovered',
@@ -84,6 +87,16 @@ export function parseResearchRunCoverage(value: unknown): ResearchRunCoverage {
     'failed',
     'unresolved',
   ]);
+  if (typeof record.processing === 'object' && record.processing !== null) {
+    const processingRecord = record.processing as Record<string, unknown>;
+    for (const forbidden of ['succeeded', 'skipped', 'cancelled'] as const) {
+      if (forbidden in processingRecord) {
+        throw new Error(
+          `Retired Funnel-B counter "${forbidden}" must not appear inside coverage.processing (GAP-COVERAGE-01)`,
+        );
+      }
+    }
+  }
   return {
     schemaVersion: 1,
     discovery: {
