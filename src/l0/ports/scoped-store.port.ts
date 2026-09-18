@@ -33,6 +33,7 @@ export interface AnnHit {
   readonly projectId: string;
   readonly documentId: string;
   readonly text?: string;
+  readonly vectorScore?: number | null;
 }
 
 export interface ScopedStore {

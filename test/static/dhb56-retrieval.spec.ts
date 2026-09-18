@@ -35,13 +35,15 @@ describe('DHB-56 fusion order and GAP-INTERACTIVE-STREAM-01', () => {
     const rerank = retrieveBody.indexOf('rerankFused');
     const authz = retrieveBody.indexOf('authzRecheck');
     const shortfall = retrieveBody.indexOf('recordFilteredRecall');
-    const topK = retrieveBody.indexOf('surviving.slice(0, input.k)');
+    const quality = retrieveBody.indexOf('applyQualityFilter');
+    const topK = retrieveBody.indexOf('filtered.slice(0, input.k)');
     expect(fusion).toBeGreaterThanOrEqual(0);
     expect(rrf).toBeGreaterThan(fusion);
     expect(rerank).toBeGreaterThan(rrf);
     expect(authz).toBeGreaterThan(rerank);
     expect(shortfall).toBeGreaterThan(authz);
-    expect(topK).toBeGreaterThan(shortfall);
+    expect(quality).toBeGreaterThan(shortfall);
+    expect(topK).toBeGreaterThan(quality);
     expect(retrieveBody.slice(rrf)).not.toMatch(/armLimit/);
   });
 

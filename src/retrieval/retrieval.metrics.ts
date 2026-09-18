@@ -19,6 +19,8 @@ export interface RetrievalMetricsSnapshot {
   readonly lastFtsMs: number | null;
   readonly lastRrfMs: number | null;
   readonly lastRerankMs: number | null;
+  readonly lastLatencyMs: number | null;
+  readonly lastFallbacksUsed: readonly string[];
   readonly rerankLlm: number;
   readonly rerankFallbacks: number;
   readonly filteredRecallShortfall: number;
@@ -36,6 +38,8 @@ export class RetrievalMetrics {
   private lastFtsMs: number | null = null;
   private lastRrfMs: number | null = null;
   private lastRerankMs: number | null = null;
+  private lastLatencyMs: number | null = null;
+  private lastFallbacksUsed: readonly string[] = [];
   private rerankLlm = 0;
   private rerankFallbacks = 0;
   private shortfall = 0;
@@ -124,6 +128,20 @@ export class RetrievalMetrics {
     });
   }
 
+  recordCompleted(input: {
+    readonly latencyMs: number;
+    readonly fallbacksUsed: readonly string[];
+  }): void {
+    this.lastLatencyMs = input.latencyMs;
+    this.lastFallbacksUsed = input.fallbacksUsed;
+    this.logger.info({
+      module: 'retrieval',
+      message: 'retrieval.completed',
+      latencyMs: input.latencyMs,
+      fallbacksUsed: input.fallbacksUsed,
+    });
+  }
+
   recordFilteredRecall(retrievedCount: number, survivingCount: number): number {
     const shortfall = filteredRecallShortfall(retrievedCount, survivingCount);
     const dropRate = filteredRecallDropRate(retrievedCount, survivingCount);
@@ -151,6 +169,8 @@ export class RetrievalMetrics {
       lastFtsMs: this.lastFtsMs,
       lastRrfMs: this.lastRrfMs,
       lastRerankMs: this.lastRerankMs,
+      lastLatencyMs: this.lastLatencyMs,
+      lastFallbacksUsed: this.lastFallbacksUsed,
       rerankLlm: this.rerankLlm,
       rerankFallbacks: this.rerankFallbacks,
       filteredRecallShortfall: this.shortfall,

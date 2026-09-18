@@ -580,6 +580,7 @@ model Project {
   libraryFolders      LibraryFolder[]
   libraryItems        LibraryItem[]
   importSessions      ReferenceManagerImportSession[]
+  retrievalTraces     RetrievalTrace[]
 
   @@map("projects")
 }
@@ -1514,4 +1515,25 @@ model ReferenceManagerImportSession {
 
   @@unique([projectId, idempotencyKey], map: "refmgr_import_sessions_project_idempotency_key")
   @@map("reference_manager_import_sessions")
+}
+
+/// DHB-57 durable retrieval provenance. Postgres holds the fingerprint and
+/// the trace body (JSONB). No second database; object storage is not required.
+model RetrievalTrace {
+  id               String   @id @db.Uuid
+  projectId        String   @map("project_id") @db.Uuid
+  queryFingerprint String   @map("query_fingerprint")
+  embeddingModel   String   @map("embedding_model")
+  embeddingVersion String   @map("embedding_version")
+  k                Int
+  overFetchFactor  Int      @map("over_fetch_factor")
+  efSearch         Int      @map("ef_search")
+  fallbacksUsed    Json     @default("[]") @map("fallbacks_used") @db.JsonB
+  body             Json     @db.JsonB
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, queryFingerprint], map: "idx_retrieval_traces_project_fingerprint")
+  @@map("retrieval_traces")
 }

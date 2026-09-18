@@ -107,6 +107,7 @@ export class MemoryScopedStore implements ScopedStore {
   lastEfSearch: number | undefined;
   lastLimit: number | undefined;
   annHits: AnnHit[] = [];
+  annUnavailable = false;
 
   annNearest(
     _scope: ProjectScope,
@@ -116,6 +117,9 @@ export class MemoryScopedStore implements ScopedStore {
   ): Promise<readonly AnnHit[]> {
     this.lastEfSearch = options?.efSearch;
     this.lastLimit = limit;
+    if (this.annUnavailable) {
+      return Promise.reject(new Error('vector down'));
+    }
     return Promise.resolve(this.annHits);
   }
 

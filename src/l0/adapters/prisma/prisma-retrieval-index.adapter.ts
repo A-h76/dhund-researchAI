@@ -15,7 +15,8 @@ import { PrismaDatabaseAdapter } from './prisma-database.adapter';
  * `idx_chunks_fts` (DHB-31). project_id is in WHERE before @@.
  */
 export const FTS_SEARCH_SQL = `
-SELECT c.id AS "chunkId", c.project_id AS "projectId", dv.document_id AS "documentId", c.text AS "text"
+SELECT c.id AS "chunkId", c.project_id AS "projectId", dv.document_id AS "documentId", c.text AS "text",
+       ts_rank(c.search_vector, plainto_tsquery('english', $2)) AS "ftsScore"
 FROM chunks c
 JOIN document_versions dv ON dv.id = c.document_version_id
 JOIN documents d ON d.id = dv.document_id
