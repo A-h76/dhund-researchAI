@@ -16,6 +16,7 @@ const BATCH_CAPABILITIES = new Set<AiCapability>([
   'STANCE',
   'SYNTHESIS',
   'OCR',
+  'EVIDENCE_EXTRACT',
 ]);
 
 export function isInteractiveCapability(capability: AiCapability): boolean {

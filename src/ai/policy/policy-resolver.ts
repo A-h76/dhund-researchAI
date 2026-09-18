@@ -81,6 +81,13 @@ export class PolicyResolver {
           modelId: OPENAI_CHAT_MODEL,
           promptVersion: 'ocr_v1',
         };
+      case 'EVIDENCE_EXTRACT':
+        return {
+          capability: 'EVIDENCE_EXTRACT',
+          provider: 'openai',
+          modelId: OPENAI_CHAT_MODEL,
+          promptVersion: 'evidence_extract_v1',
+        };
       default: {
         const _exhaustive: never = request;
         throw new Error(`Unhandled capability: ${String(_exhaustive)}`);
@@ -132,6 +139,12 @@ function buildMinimalRequest(capability: AiCapability): GatewayRequest {
       };
     case 'OCR':
       return { capability: 'OCR', objectKey: 'probe-key' };
+    case 'EVIDENCE_EXTRACT':
+      return {
+        capability: 'EVIDENCE_EXTRACT',
+        documentContent: 'probe',
+        locatorCatalog: [],
+      };
     default: {
       const _exhaustive: never = capability;
       throw new Error(`Unhandled capability: ${String(_exhaustive)}`);

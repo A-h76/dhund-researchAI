@@ -8,6 +8,7 @@ import {
 import { ChunkModule } from '../../ingestion/chunk.module';
 import { EmbedModule } from '../../ai/embed/embed.module';
 import { ExtractModule } from '../../ingestion/extract.module';
+import { EvidenceModule } from '../../evidence/evidence.module';
 import { OcrModule } from '../../ai/ocr/ocr.module';
 import { PlatformModule } from '../../platform/platform.module';
 import { RetrievalModule } from '../../retrieval/retrieval.module';
@@ -16,6 +17,9 @@ import { ChunkProcessor } from './chunk.processor';
 import { EmbedBackfillProcessor } from './embed-backfill.processor';
 import { EmbedProcessor } from './embed.processor';
 import { ExtractProcessor } from './extract.processor';
+import { EvidenceExtractJobConsumer } from './evidence-extract-job.consumer';
+import { EvidenceExtractProcessor } from './evidence-extract.processor';
+import { EvidenceExtractService } from './evidence-extract.service';
 import { OcrProcessor } from './ocr.processor';
 import { OrphanSweepProcessor } from './orphan-sweep.processor';
 import { OutboxRelayProcessor } from './outbox-relay.processor';
@@ -23,10 +27,22 @@ import { PlaceholderProcessor } from './placeholder.processor';
 import { ProcessorRegistry } from './processor-registry';
 import { ProjectDeletionProcessor } from './project-deletion.processor';
 import { ReaperProcessor } from './reaper.processor';
+import { StanceJobConsumer } from './stance-job.consumer';
+import { StanceProcessor } from './stance.processor';
+import { StanceService } from './stance.service';
 import { WorkerBootstrapService } from './worker-bootstrap.service';
 
 @Module({
-  imports: [PlatformModule, AiModule, ExtractModule, OcrModule, ChunkModule, EmbedModule, RetrievalModule],
+  imports: [
+    PlatformModule,
+    AiModule,
+    ExtractModule,
+    OcrModule,
+    ChunkModule,
+    EmbedModule,
+    RetrievalModule,
+    EvidenceModule,
+  ],
   providers: [
     provideRuntimeRole(RuntimeRole.Worker),
     ProcessorRegistry,
@@ -36,6 +52,12 @@ import { WorkerBootstrapService } from './worker-bootstrap.service';
     ChunkProcessor,
     EmbedProcessor,
     EmbedBackfillProcessor,
+    EvidenceExtractService,
+    EvidenceExtractJobConsumer,
+    EvidenceExtractProcessor,
+    StanceService,
+    StanceJobConsumer,
+    StanceProcessor,
     ReaperProcessor,
     OutboxRelayProcessor,
     OrphanSweepProcessor,

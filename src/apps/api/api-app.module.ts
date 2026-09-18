@@ -24,11 +24,13 @@ import { ProjectsModule } from '../../projects/projects.module';
 import { RetrievalModule } from '../../retrieval/retrieval.module';
 import { RetrievalApiModule } from '../../retrieval/retrieval-api.module';
 import { OrchestrationApiModule } from '../../orchestration/orchestration-api.module';
+import { EvidenceModule } from '../../evidence/evidence.module';
 import { ApiRealtimeModule } from './api-realtime.module';
 import { ApiRootController } from './api-root.controller';
 import { CapabilityProbeController } from './capability-probe.controller';
 import { HealthController } from './health.controller';
 import { NoopProcessorReadiness } from './noop-processor-readiness';
+import { WritingSentenceBindingsController } from './writing-sentence-bindings.controller';
 
 @Module({
   imports: [
@@ -41,8 +43,14 @@ import { NoopProcessorReadiness } from './noop-processor-readiness';
     RetrievalApiModule,
     ApiRealtimeModule,
     OrchestrationApiModule,
+    EvidenceModule,
   ],
-  controllers: [ApiRootController, HealthController, CapabilityProbeController],
+  controllers: [
+    ApiRootController,
+    HealthController,
+    CapabilityProbeController,
+    WritingSentenceBindingsController,
+  ],
   providers: [
     provideRuntimeRole(RuntimeRole.Api),
     { provide: PROCESSOR_READINESS, useClass: NoopProcessorReadiness },

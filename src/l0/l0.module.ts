@@ -64,7 +64,11 @@ import { PrismaIdentityLookupAdapter } from './adapters/prisma/prisma-identity-l
 import { PrismaEvidenceLookupAdapter } from './adapters/prisma/prisma-evidence-lookup.adapter';
 import { PrismaRetrievalTraceAdapter } from './adapters/prisma/prisma-retrieval-trace.adapter';
 import { PrismaMessageEvidenceBindingAdapter } from './adapters/prisma/prisma-message-evidence-binding.adapter';
+import { PrismaEvidenceSpineAdapter } from './adapters/prisma/prisma-evidence-spine.adapter';
+import { PrismaCitationProjectionAdapter } from './adapters/prisma/prisma-citation-projection.adapter';
 import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
+import { CITATION_PROJECTION } from './ports/citation-projection.port';
+import { EVIDENCE_SPINE } from './ports/evidence-spine.port';
 
 @Module({
   providers: [
@@ -89,6 +93,8 @@ import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
     PrismaEvidenceLookupAdapter,
     PrismaRetrievalTraceAdapter,
     PrismaMessageEvidenceBindingAdapter,
+    PrismaEvidenceSpineAdapter,
+    PrismaCitationProjectionAdapter,
     PrismaIdentityLookupAdapter,
     PdfjsParseAdapter,
     RedisAccessContextInvalidator,
@@ -121,6 +127,8 @@ import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
     { provide: EVIDENCE_LOOKUP, useExisting: PrismaEvidenceLookupAdapter },
     { provide: RETRIEVAL_TRACE, useExisting: PrismaRetrievalTraceAdapter },
     { provide: MESSAGE_EVIDENCE_BINDING, useExisting: PrismaMessageEvidenceBindingAdapter },
+    { provide: EVIDENCE_SPINE, useExisting: PrismaEvidenceSpineAdapter },
+    { provide: CITATION_PROJECTION, useExisting: PrismaCitationProjectionAdapter },
     { provide: IDENTITY_LOOKUP, useExisting: PrismaIdentityLookupAdapter },
     { provide: PDF_PARSE_SERVICE, useExisting: PdfjsParseAdapter },
     {
@@ -158,6 +166,8 @@ import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
     EVIDENCE_LOOKUP,
     RETRIEVAL_TRACE,
     MESSAGE_EVIDENCE_BINDING,
+    EVIDENCE_SPINE,
+    CITATION_PROJECTION,
     IDENTITY_LOOKUP,
     PDF_PARSE_SERVICE,
     ACCESS_CONTEXT_INVALIDATOR,

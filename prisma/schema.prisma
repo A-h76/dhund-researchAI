@@ -138,6 +138,7 @@ enum AiCapability {
   STANCE
   SYNTHESIS
   OCR
+  EVIDENCE_EXTRACT
 
   @@map("ai_capability")
 }
