@@ -1,7 +1,13 @@
 import type { SearchCandidate } from '../retrieval/retrieval.port';
 
-export const CHAT_CONTEXT_MAX_CHUNKS = 8;
-export const CHAT_CONTEXT_TOKEN_BUDGET = 3_000;
+/** Shared context-assembly limits (DHB-62 interactive / DHB-68 batch). */
+export const CONTEXT_ASSEMBLY_MAX_CHUNKS = 8;
+export const CONTEXT_ASSEMBLY_TOKEN_BUDGET = 3_000;
+
+/** @deprecated Prefer CONTEXT_ASSEMBLY_MAX_CHUNKS — kept for DHB-62 call sites. */
+export const CHAT_CONTEXT_MAX_CHUNKS = CONTEXT_ASSEMBLY_MAX_CHUNKS;
+/** @deprecated Prefer CONTEXT_ASSEMBLY_TOKEN_BUDGET — kept for DHB-62 call sites. */
+export const CHAT_CONTEXT_TOKEN_BUDGET = CONTEXT_ASSEMBLY_TOKEN_BUDGET;
 
 export interface AssembledContextChunk {
   readonly chunkId: string;
@@ -20,6 +26,13 @@ export interface AssembledChatContext {
   readonly truncated: boolean;
 }
 
+export interface AssembleContextOptions {
+  readonly maxChunks?: number;
+  readonly tokenBudget?: number;
+  /** When set, only candidates for these document ids are considered. */
+  readonly documentIds?: readonly string[];
+}
+
 /**
  * Interactive context assembly (DHB-62). Shared rules with DHB-68:
  * token budget, max chunks, dedupe, deterministic order, document diversity,
@@ -29,15 +42,35 @@ export interface AssembledChatContext {
  */
 export function assembleChatContext(
   hits: readonly SearchCandidate[],
-  options: {
-    readonly maxChunks?: number;
-    readonly tokenBudget?: number;
-  } = {},
+  options: AssembleContextOptions = {},
 ): AssembledChatContext {
-  const maxChunks = options.maxChunks ?? CHAT_CONTEXT_MAX_CHUNKS;
-  const tokenBudget = options.tokenBudget ?? CHAT_CONTEXT_TOKEN_BUDGET;
+  return assembleGroundedContext(hits, options);
+}
 
-  const grounded = hits.filter((hit) => hit.evidenceRefs.length > 0);
+/**
+ * Shared grounded-context assembler used by chat (DHB-62) and extraction batch (DHB-68).
+ */
+export function assembleGroundedContext(
+  hits: readonly SearchCandidate[],
+  options: AssembleContextOptions = {},
+): AssembledChatContext {
+  const maxChunks = options.maxChunks ?? CONTEXT_ASSEMBLY_MAX_CHUNKS;
+  const tokenBudget = options.tokenBudget ?? CONTEXT_ASSEMBLY_TOKEN_BUDGET;
+  const documentFilter =
+    options.documentIds === undefined
+      ? null
+      : new Set(options.documentIds);
+
+  const grounded = hits.filter((hit) => {
+    if (hit.evidenceRefs.length === 0) {
+      return false;
+    }
+    if (documentFilter !== null && !documentFilter.has(hit.documentId)) {
+      return false;
+    }
+    return true;
+  });
+
   const ordered = [...grounded].sort((a, b) => {
     if (b.rerankScore !== a.rerankScore) {
       return b.rerankScore - a.rerankScore;
