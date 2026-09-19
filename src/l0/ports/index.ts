@@ -39,6 +39,8 @@ export * from './research-run-coverage';
 export * from './research-run-step-state';
 export * from './research-run-step-outcomes';
 export * from './research-run-store.port';
+export * from './extraction-matrix.port';
+export { EXTRACTION_MATRIX_STORE } from './tokens';
 export * from './pubsub.port';
 export * from './query-observer.port';
 export * from './counter.port';

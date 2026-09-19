@@ -9,6 +9,7 @@ import { ResearchRunPlannerService } from '../../src/orchestration/research-run-
 import { ResearchRunTransitionService } from '../../src/orchestration/research-run-transition.service';
 import { DEEP_RESEARCH_V1 } from '../../src/orchestration/presets/builtin-presets';
 import { MemoryResearchRunStore } from '../fixtures/memory-research-run-store';
+import { stubExtractionMatrix } from '../fixtures/stub-extraction-matrix';
 import type { PlatformLogger } from '../../src/platform/logging';
 
 function createHarness(store = new MemoryResearchRunStore()) {
@@ -49,6 +50,7 @@ function createHarness(store = new MemoryResearchRunStore()) {
     metrics,
     enqueue as never,
     planner,
+    stubExtractionMatrix() as never,
   );
   return { store, writer, metrics, coordination, transitions, coordinator, enqueue, planner };
 }

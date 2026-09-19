@@ -8,6 +8,7 @@ import { ResearchRunMetrics } from '../../src/orchestration/research-run.metrics
 import { ResearchRunPlannerService } from '../../src/orchestration/research-run-planner.service';
 import { ResearchRunTransitionService } from '../../src/orchestration/research-run-transition.service';
 import { MemoryResearchRunStore } from '../fixtures/memory-research-run-store';
+import { stubExtractionMatrix } from '../fixtures/stub-extraction-matrix';
 import type { PlatformLogger } from '../../src/platform/logging';
 import {
   isOverageWithinBound,
@@ -52,6 +53,7 @@ function createHarness(store = new MemoryResearchRunStore()) {
     metrics,
     enqueue as never,
     planner,
+    stubExtractionMatrix() as never,
   );
   return { store, writer, metrics, coordination, transitions, coordinator, enqueue };
 }

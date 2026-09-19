@@ -3,6 +3,9 @@ import { EvidenceModule } from '../evidence/evidence.module';
 import { IngestionModule } from '../ingestion/ingestion.module';
 import { PlatformModule } from '../platform/platform.module';
 import { RetrievalModule } from '../retrieval/retrieval.module';
+import { ExtractionCellService } from './extraction-cell.service';
+import { ExtractionMatrixMetrics } from './extraction-matrix.metrics';
+import { ExtractionMatrixService } from './extraction-matrix.service';
 import { ResearchRunCoordinationService } from './research-run-coordination.service';
 import { ResearchRunCoordinatorService } from './research-run-coordinator.service';
 import { ResearchArtifactGenerateService } from './research-artifact-generate.service';
@@ -18,6 +21,9 @@ const RESEARCH_RUN_PROVIDERS = [
   ResearchRunPlannerService,
   ResearchRunCoordinatorService,
   ResearchArtifactGenerateService,
+  ExtractionMatrixMetrics,
+  ExtractionMatrixService,
+  ExtractionCellService,
 ] as const;
 
 @Module({

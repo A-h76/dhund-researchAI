@@ -17,6 +17,7 @@ import { ResearchRunTransitionService } from '../../src/orchestration/research-r
 import { ResearchRunStepExecutor } from '../../src/apps/worker/research-run-step.executor';
 import { DEEP_RESEARCH_QUERY } from '../../src/orchestration/presets/builtin-presets';
 import type { PlatformLogger } from '../../src/platform/logging';
+import { stubExtractionMatrix } from '../fixtures/stub-extraction-matrix';
 
 const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
 const ROOT = join(__dirname, '..', '..');
@@ -79,6 +80,7 @@ const ROOT = join(__dirname, '..', '..');
         metrics,
         enqueue as never,
         planner,
+        stubExtractionMatrix() as never,
       );
 
       stop = async () => {

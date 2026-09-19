@@ -30,6 +30,7 @@ import { ResearchRunMetrics } from '../../src/orchestration/research-run.metrics
 import { ResearchRunPlannerService } from '../../src/orchestration/research-run-planner.service';
 import { ResearchRunTransitionService } from '../../src/orchestration/research-run-transition.service';
 import type { PlatformLogger } from '../../src/platform/logging';
+import { stubExtractionMatrix } from '../fixtures/stub-extraction-matrix';
 
 const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
 const ROOT = join(__dirname, '..', '..');
@@ -132,6 +133,7 @@ class CostedChatAdapter implements CapabilityAdapter {
         metrics,
         enqueue as never,
         planner,
+        stubExtractionMatrix() as never,
       );
 
       const registry = AdapterRegistry.forAdapters([new CostedChatAdapter(100)]);

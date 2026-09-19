@@ -25,6 +25,7 @@ import {
   isBudgetCapReached,
   measuredOverageMicros,
 } from './budget/research-run-budget';
+import { ExtractionMatrixService } from './extraction-matrix.service';
 import { findDagNode, resolveResearchRunPreset } from './presets/resolve-preset';
 import { artifactTypesForPreset } from './research-artifact-types';
 import { ResearchRunCoordinationService } from './research-run-coordination.service';
@@ -67,6 +68,7 @@ export class ResearchRunCoordinatorService {
     private readonly metrics: ResearchRunMetrics,
     private readonly enqueue: JobEnqueueService,
     private readonly planner: ResearchRunPlannerService,
+    private readonly extractionMatrix: ExtractionMatrixService,
   ) {
     this.planningHook = (run) => this.planner.plan(run);
   }
@@ -264,6 +266,10 @@ export class ResearchRunCoordinatorService {
   }
 
   private async advanceRunning(run: ResearchRunRecord): Promise<ResearchRunTickOutcome> {
+    if (run.preset === 'extraction_matrix') {
+      await this.extractionMatrix.dispatchCellsForRun(run);
+    }
+
     const listed = await this.store.listSteps(run.id);
     if (listed.length > 0) {
       return this.advanceRunningSteps(run, listed);
@@ -285,7 +291,7 @@ export class ResearchRunCoordinatorService {
     }
 
     if (steps.ready === 0 && steps.inFlight === 0 && steps.pending === 0) {
-      return this.transitionOutcome(run, await this.applyTransition(run, 'COMPLETING'));
+      return this.maybeCompleteRunning(run);
     }
 
     return { kind: 'noop', reason: 'awaiting_steps', state: run.state };
@@ -334,10 +340,24 @@ export class ResearchRunCoordinatorService {
     const stillPending = afterDispatch.some((step) => step.state === 'PENDING');
 
     if (!stillReady && !stillInFlight && !stillPending) {
-      return this.transitionOutcome(run, await this.applyTransition(run, 'COMPLETING'));
+      return this.maybeCompleteRunning(run);
     }
 
     return { kind: 'noop', reason: 'awaiting_steps', state: run.state };
+  }
+
+  /** Wait for extraction cells before COMPLETING extraction_matrix runs. */
+  private async maybeCompleteRunning(
+    run: ResearchRunRecord,
+  ): Promise<ResearchRunTickOutcome> {
+    if (run.preset === 'extraction_matrix') {
+      const cellsDone = await this.extractionMatrix.areCellsTerminal(run.id);
+      if (!cellsDone) {
+        return { kind: 'noop', reason: 'awaiting_extraction_cells', state: run.state };
+      }
+      await this.extractionMatrix.finalizeExtractionRunIfReady(run.id);
+    }
+    return this.transitionOutcome(run, await this.applyTransition(run, 'COMPLETING'));
   }
 
   private async pauseForBudget(
