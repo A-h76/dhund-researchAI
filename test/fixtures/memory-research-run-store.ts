@@ -13,6 +13,8 @@ import {
   canTransitionResearchStep,
 } from '../../src/l0/ports/research-run-step-state';
 import type {
+  ResearchRunIncreaseBudgetInput,
+  ResearchRunIncreaseBudgetResult,
   ResearchRunPresetName,
   ResearchRunRecord,
   ResearchRunStepCounts,
@@ -170,6 +172,43 @@ export class MemoryResearchRunStore implements ResearchRunStore {
       }
     }
     return { kind: 'applied', step: next };
+  }
+
+  /** Test helper — simulate synchronous ledger debit onto consumedMicros. */
+  debitConsumed(runId: string, costMicros: bigint): void {
+    if (costMicros < 0n) {
+      throw new Error('costMicros must be non-negative');
+    }
+    const current = this.runs.get(runId);
+    if (current === undefined) {
+      throw new Error(`ResearchRun ${runId} not found`);
+    }
+    this.runs.set(runId, {
+      ...current,
+      consumedMicros: current.consumedMicros + costMicros,
+    });
+  }
+
+  async increaseReservedMicros(
+    input: ResearchRunIncreaseBudgetInput,
+  ): Promise<ResearchRunIncreaseBudgetResult> {
+    if (input.additionalMicros <= 0n) {
+      throw new Error('additionalMicros must be positive');
+    }
+    const current = this.runs.get(input.runId);
+    if (current === undefined) {
+      return { kind: 'not_found' };
+    }
+    if (current.version !== input.expectedVersion) {
+      return { kind: 'version_conflict', run: current };
+    }
+    const next: ResearchRunRecord = {
+      ...current,
+      reservedMicros: current.reservedMicros + input.additionalMicros,
+      version: current.version + 1,
+    };
+    this.runs.set(input.runId, next);
+    return { kind: 'applied', run: next };
   }
 
   async transition(input: ResearchRunTransitionInput): Promise<ResearchRunTransitionResult> {

@@ -114,6 +114,18 @@ export type ResearchRunStepTransitionResult =
   | { readonly kind: 'version_conflict'; readonly step: ResearchRunStepRecord }
   | { readonly kind: 'not_found' };
 
+export interface ResearchRunIncreaseBudgetInput {
+  readonly runId: string;
+  /** Positive integer micros to add to reservedMicros (DHB-66). */
+  readonly additionalMicros: bigint;
+  readonly expectedVersion: number;
+}
+
+export type ResearchRunIncreaseBudgetResult =
+  | { readonly kind: 'applied'; readonly run: ResearchRunRecord }
+  | { readonly kind: 'version_conflict'; readonly run: ResearchRunRecord }
+  | { readonly kind: 'not_found' };
+
 export interface ResearchRunStore {
   getById(runId: string): Promise<ResearchRunRecord | null>;
   countSteps(runId: string): Promise<ResearchRunStepCounts>;
@@ -129,4 +141,11 @@ export interface ResearchRunStore {
    * guard misses — never double-applies.
    */
   transition(input: ResearchRunTransitionInput): Promise<ResearchRunTransitionResult>;
+  /**
+   * Atomically increase reservedMicros (budget top-up). Does not change state —
+   * resume is a separate transition (DHB-66).
+   */
+  increaseReservedMicros(
+    input: ResearchRunIncreaseBudgetInput,
+  ): Promise<ResearchRunIncreaseBudgetResult>;
 }

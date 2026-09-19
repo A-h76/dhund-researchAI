@@ -12,6 +12,13 @@ import {
 } from '../l0/ports';
 import { DomainError, ErrorCode } from '../platform/errors';
 import { JobEnqueueService } from '../platform/logging';
+import {
+  RESEARCH_RUN_PER_STEP_CEILING_MICROS,
+  assertIntegerMicrosBigInt,
+  canReserveDispatch,
+  isBudgetCapReached,
+  measuredOverageMicros,
+} from './budget/research-run-budget';
 import { findDagNode, resolveResearchRunPreset } from './presets/resolve-preset';
 import { ResearchRunCoordinationService } from './research-run-coordination.service';
 import { ResearchRunMetrics } from './research-run.metrics';
@@ -44,6 +51,7 @@ export class ResearchRunCoordinatorService {
   private planningHook: ResearchRunPlanningHook;
   /** Side-effect counter for crash/recovery proofs — increments only on applied transitions. */
   private appliedChargeCount = 0;
+  private perStepCeilingMicros = RESEARCH_RUN_PER_STEP_CEILING_MICROS;
 
   constructor(
     @Inject(RESEARCH_RUN_STORE) private readonly store: ResearchRunStore,
@@ -59,6 +67,18 @@ export class ResearchRunCoordinatorService {
   /** Test hook — swap planning outcome without Temporal/Airflow. */
   setPlanningHook(hook: ResearchRunPlanningHook): void {
     this.planningHook = hook;
+  }
+
+  /** Test hook — override per-step ceiling for overage-bound proofs. */
+  setPerStepCeilingMicros(ceiling: bigint): void {
+    assertIntegerMicrosBigInt(ceiling);
+    if (ceiling <= 0n) {
+      throw new DomainError(ErrorCode.ValidationError, {
+        module: MODULE,
+        userMessage: 'per-step ceiling must be a positive integer micros value',
+      });
+    }
+    this.perStepCeilingMicros = ceiling;
   }
 
   getAppliedChargeCount(): number {
@@ -115,6 +135,69 @@ export class ResearchRunCoordinatorService {
   async pauseManual(runId: string): Promise<ResearchRunTransitionResult> {
     const run = await this.transitions.get(runId);
     return this.applyTransition(run, 'PAUSED_MANUAL');
+  }
+
+  /**
+   * Increase reservedMicros (budget top-up). Does not resume — call resume()
+   * after a PAUSED_BUDGET top-up (DHB-66).
+   */
+  async increaseBudget(
+    runId: string,
+    additionalMicros: bigint,
+  ): Promise<ResearchRunRecord> {
+    assertIntegerMicrosBigInt(additionalMicros);
+    if (additionalMicros <= 0n) {
+      throw new DomainError(ErrorCode.ValidationError, {
+        module: MODULE,
+        userMessage: 'Budget increase must be a positive integer micros value.',
+      });
+    }
+
+    const run = await this.transitions.get(runId);
+    if (isResearchRunTerminal(run.state)) {
+      throw new DomainError(ErrorCode.InvalidStateTransition, {
+        module: MODULE,
+        userMessage: `Cannot increase budget for terminal research run in state ${run.state}`,
+      });
+    }
+
+    const result = await this.store.increaseReservedMicros({
+      runId,
+      additionalMicros,
+      expectedVersion: run.version,
+    });
+
+    if (result.kind === 'not_found') {
+      throw new DomainError(ErrorCode.NotFound, {
+        module: MODULE,
+        userMessage: 'Research run not found.',
+      });
+    }
+    if (result.kind === 'version_conflict') {
+      throw new DomainError(ErrorCode.InvalidStateTransition, {
+        module: MODULE,
+        userMessage: 'Research run version conflict while increasing budget.',
+      });
+    }
+
+    this.metrics.recordBudgetIncrease({
+      runId,
+      additionalMicros,
+      reservedMicros: result.run.reservedMicros,
+    });
+    return result.run;
+  }
+
+  /**
+   * Top up reservedMicros then resume from PAUSED_BUDGET. Continues from
+   * committed step state — no repeated work, no double charge (DHB-66).
+   */
+  async resumeAfterBudgetIncrease(
+    runId: string,
+    additionalMicros: bigint,
+  ): Promise<ResearchRunTransitionResult> {
+    await this.increaseBudget(runId, additionalMicros);
+    return this.resume(runId);
   }
 
   async resume(runId: string): Promise<ResearchRunTransitionResult> {
@@ -181,11 +264,17 @@ export class ResearchRunCoordinatorService {
 
     const steps = await this.store.countSteps(run.id);
 
-    if (run.consumedMicros >= run.reservedMicros && steps.ready > 0) {
-      return this.transitionOutcome(
-        run,
-        await this.applyTransition(run, 'PAUSED_BUDGET'),
-      );
+    if (
+      (isBudgetCapReached(run.reservedMicros, run.consumedMicros) ||
+        !canReserveDispatch({
+          reservedMicros: run.reservedMicros,
+          consumedMicros: run.consumedMicros,
+          inFlight: steps.inFlight,
+          perStepCeilingMicros: this.perStepCeilingMicros,
+        })) &&
+      steps.ready > 0
+    ) {
+      return this.pauseForBudget(run, steps.inFlight);
     }
 
     if (steps.ready === 0 && steps.inFlight === 0 && steps.pending === 0) {
@@ -204,13 +293,30 @@ export class ResearchRunCoordinatorService {
 
     const current = await this.store.listSteps(run.id);
     const ready = current.filter((step) => step.state === 'READY');
+    let inFlight = current.filter(
+      (step) => step.state === 'DISPATCHED' || step.state === 'RUNNING',
+    ).length;
 
-    if (run.consumedMicros >= run.reservedMicros && ready.length > 0) {
-      return this.transitionOutcome(run, await this.applyTransition(run, 'PAUSED_BUDGET'));
+    let blockedByBudget = false;
+    for (const step of ready) {
+      if (
+        isBudgetCapReached(run.reservedMicros, run.consumedMicros) ||
+        !canReserveDispatch({
+          reservedMicros: run.reservedMicros,
+          consumedMicros: run.consumedMicros,
+          inFlight,
+          perStepCeilingMicros: this.perStepCeilingMicros,
+        })
+      ) {
+        blockedByBudget = true;
+        break;
+      }
+      await this.dispatchStep(run, step);
+      inFlight += 1;
     }
 
-    for (const step of ready) {
-      await this.dispatchStep(run, step);
+    if (blockedByBudget) {
+      return this.pauseForBudget(run, inFlight);
     }
 
     const afterDispatch = await this.store.listSteps(run.id);
@@ -225,6 +331,21 @@ export class ResearchRunCoordinatorService {
     }
 
     return { kind: 'noop', reason: 'awaiting_steps', state: run.state };
+  }
+
+  private async pauseForBudget(
+    run: ResearchRunRecord,
+    inFlight: number,
+  ): Promise<ResearchRunTickOutcome> {
+    const overageMicros = measuredOverageMicros(run.reservedMicros, run.consumedMicros);
+    this.metrics.recordBudgetPause({
+      runId: run.id,
+      consumedMicros: run.consumedMicros,
+      reservedMicros: run.reservedMicros,
+      overageMicros,
+      inFlight,
+    });
+    return this.transitionOutcome(run, await this.applyTransition(run, 'PAUSED_BUDGET'));
   }
 
   private async promoteSteps(

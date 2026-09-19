@@ -15,6 +15,12 @@ export interface ResearchRunMetricsSnapshot {
   readonly stepLatencyMsByType: Readonly<Record<string, number>>;
   readonly deferredCount: number;
   readonly lastDagDepth: number | null;
+  readonly budgetPauseCount: number;
+  readonly budgetIncreaseCount: number;
+  readonly lastConsumedMicros: bigint | null;
+  readonly lastReservedMicros: bigint | null;
+  readonly lastOverageMicros: bigint | null;
+  readonly overageSamplesMicros: readonly bigint[];
 }
 
 @Injectable()
@@ -31,6 +37,12 @@ export class ResearchRunMetrics {
   private readonly stepLatencyMsByType = new Map<string, number>();
   private deferredCount = 0;
   private lastDagDepth: number | null = null;
+  private budgetPauseCount = 0;
+  private budgetIncreaseCount = 0;
+  private lastConsumedMicros: bigint | null = null;
+  private lastReservedMicros: bigint | null = null;
+  private lastOverageMicros: bigint | null = null;
+  private readonly overageSamplesMicros: bigint[] = [];
 
   constructor(private readonly logger: PlatformLogger) {}
 
@@ -92,6 +104,46 @@ export class ResearchRunMetrics {
     this.lastDagDepth = depth;
   }
 
+  /** DHB-66 / Experiment H — pause at dispatch with measured overage. */
+  recordBudgetPause(input: {
+    readonly runId: string;
+    readonly consumedMicros: bigint;
+    readonly reservedMicros: bigint;
+    readonly overageMicros: bigint;
+    readonly inFlight: number;
+  }): void {
+    this.budgetPauseCount += 1;
+    this.lastConsumedMicros = input.consumedMicros;
+    this.lastReservedMicros = input.reservedMicros;
+    this.lastOverageMicros = input.overageMicros;
+    this.overageSamplesMicros.push(input.overageMicros);
+    this.logger.info({
+      module: 'orchestration.research_run',
+      message: 'research_run.budget.paused',
+      runId: input.runId,
+      consumedMicros: input.consumedMicros.toString(),
+      reservedMicros: input.reservedMicros.toString(),
+      overageMicros: input.overageMicros.toString(),
+      inFlight: input.inFlight,
+    });
+  }
+
+  recordBudgetIncrease(input: {
+    readonly runId: string;
+    readonly additionalMicros: bigint;
+    readonly reservedMicros: bigint;
+  }): void {
+    this.budgetIncreaseCount += 1;
+    this.lastReservedMicros = input.reservedMicros;
+    this.logger.info({
+      module: 'orchestration.research_run',
+      message: 'research_run.budget.increased',
+      runId: input.runId,
+      additionalMicros: input.additionalMicros.toString(),
+      reservedMicros: input.reservedMicros.toString(),
+    });
+  }
+
   snapshot(): ResearchRunMetricsSnapshot {
     return {
       runsByState: Object.fromEntries(this.runsByState),
@@ -106,6 +158,12 @@ export class ResearchRunMetrics {
       stepLatencyMsByType: Object.fromEntries(this.stepLatencyMsByType),
       deferredCount: this.deferredCount,
       lastDagDepth: this.lastDagDepth,
+      budgetPauseCount: this.budgetPauseCount,
+      budgetIncreaseCount: this.budgetIncreaseCount,
+      lastConsumedMicros: this.lastConsumedMicros,
+      lastReservedMicros: this.lastReservedMicros,
+      lastOverageMicros: this.lastOverageMicros,
+      overageSamplesMicros: [...this.overageSamplesMicros],
     };
   }
 
@@ -122,5 +180,11 @@ export class ResearchRunMetrics {
     this.stepLatencyMsByType.clear();
     this.deferredCount = 0;
     this.lastDagDepth = null;
+    this.budgetPauseCount = 0;
+    this.budgetIncreaseCount = 0;
+    this.lastConsumedMicros = null;
+    this.lastReservedMicros = null;
+    this.lastOverageMicros = null;
+    this.overageSamplesMicros.length = 0;
   }
 }
