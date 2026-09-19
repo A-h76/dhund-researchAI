@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   RESEARCH_RUN_STORE,
+  assertResearchRunCoverageForFinalize,
   type ResearchRunCoverage,
   type ResearchRunFailedReason,
   type ResearchRunRecord,
@@ -59,6 +60,25 @@ export class ResearchRunTransitionService {
         userMessage: `Forbidden research-run transition ${fromState} -> ${toState}`,
         cause: new ResearchRunTransitionError(fromState, toState),
       });
+    }
+
+    if (input.toState === 'COMPLETED' || input.toState === 'COMPLETED_PARTIAL') {
+      if (input.coverage === undefined) {
+        throw new DomainError(ErrorCode.ValidationError, {
+          module: MODULE,
+          userMessage:
+            'Finalizing a research run requires a coverage object with funnel denominators.',
+        });
+      }
+      try {
+        assertResearchRunCoverageForFinalize(input.coverage);
+      } catch (error) {
+        throw new DomainError(ErrorCode.ValidationError, {
+          module: MODULE,
+          userMessage: error instanceof Error ? error.message : String(error),
+          cause: error instanceof Error ? error : undefined,
+        });
+      }
     }
 
     if (toState === 'FAILED') {

@@ -31,6 +31,7 @@ import { ReaperProcessor } from './reaper.processor';
 import { ResearchRunStepExecutor } from './research-run-step.executor';
 import { ResearchRunStepProcessor } from './research-run-step.processor';
 import { ResearchRunTickProcessor } from './research-run-tick.processor';
+import { ResearchArtifactGenerateProcessor } from './research-artifact-generate.processor';
 import { StanceJobConsumer } from './stance-job.consumer';
 import { StanceProcessor } from './stance.processor';
 import { StanceService } from './stance.service';
@@ -66,6 +67,7 @@ import { WorkerBootstrapService } from './worker-bootstrap.service';
     StanceJobConsumer,
     StanceProcessor,
     ResearchRunTickProcessor,
+    ResearchArtifactGenerateProcessor,
     ReaperProcessor,
     OutboxRelayProcessor,
     OrphanSweepProcessor,

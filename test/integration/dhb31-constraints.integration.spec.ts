@@ -301,6 +301,23 @@ async function expectRejectsAppendOnly(fn: () => Promise<unknown>): Promise<void
       it('rejects duplicate research_artifacts (run_id, type, coverage_snapshot_hash)', async () => {
         const { userId, orgId, projectId } = await createPersonalOrgProject();
         const runId = await createResearchRun(orgId, projectId, userId);
+        const aiExecutionId = generateId();
+        await prisma.aiExecution.create({
+          data: {
+            id: aiExecutionId,
+            orgId,
+            projectId,
+            researchRunId: runId,
+            capability: 'SYNTHESIS',
+            provider: 'openai',
+            model: 'gpt',
+            promptVersion: 'v1',
+            inputFingerprint: 'fp',
+            status: 'ok',
+            method: 'llm',
+            correlationId: generateId(),
+          },
+        });
         const hash = 'abc123';
         const base = {
           runId,
@@ -308,6 +325,7 @@ async function expectRejectsAppendOnly(fn: () => Promise<unknown>): Promise<void
           coverageSnapshot: { schemaVersion: 1 },
           coverageSnapshotHash: hash,
           generatedAt: new Date(),
+          aiExecutionId,
         };
         await prisma.researchArtifact.create({ data: { id: generateId(), ...base } });
         await expectRejectsUnique(() =>
