@@ -179,7 +179,10 @@ export class MessagesRepository {
 
 @Injectable()
 export class ResearchArtifactsRepository {
-  constructor(private readonly reader: ScopedReader) {}
+  constructor(
+    private readonly reader: ScopedReader,
+    @Inject(SCOPED_STORE) private readonly store: ScopedStore,
+  ) {}
 
   get(scope: ProjectScope, id: string) {
     return this.reader.require('research_artifact', scope, id, MODULE);
@@ -195,6 +198,52 @@ export class ResearchArtifactsRepository {
 
   list(scope: ProjectScope, query: ScopedListQuery) {
     return this.reader.list('research_artifact', scope, query);
+  }
+
+  async create(
+    scope: ProjectScope,
+    input: {
+      readonly id: string;
+      readonly runId: string;
+      readonly type: string;
+      readonly coverageSnapshot: unknown;
+      readonly coverageSnapshotHash: string;
+      readonly generatedAt: Date;
+      readonly aiExecutionId: string;
+      readonly stale?: boolean;
+      readonly storageKey?: string | null;
+    },
+  ): Promise<ScopedRow> {
+    return this.store.insert('research_artifact', scope, {
+      id: input.id,
+      runId: input.runId,
+      type: input.type,
+      coverageSnapshot: input.coverageSnapshot,
+      coverageSnapshotHash: input.coverageSnapshotHash,
+      generatedAt: input.generatedAt,
+      aiExecutionId: input.aiExecutionId,
+      stale: input.stale ?? false,
+      ...(input.storageKey !== undefined ? { storageKey: input.storageKey } : {}),
+    });
+  }
+
+  async findByCoverageHash(
+    scope: ProjectScope,
+    runId: string,
+    type: string,
+    coverageSnapshotHash: string,
+  ): Promise<ScopedRow | null> {
+    const rows = await this.store.list('research_artifact', scope, { limit: 200 });
+    for (const row of rows) {
+      if (
+        row.runId === runId &&
+        row.type === type &&
+        row.coverageSnapshotHash === coverageSnapshotHash
+      ) {
+        return row;
+      }
+    }
+    return null;
   }
 }
 

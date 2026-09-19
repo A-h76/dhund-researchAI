@@ -65,7 +65,7 @@ function repos(
     extraction_cell: new ExtractionCellsRepository(reader),
     conversation: new ConversationsRepository(reader, store),
     message: new MessagesRepository(reader, store),
-    research_artifact: new ResearchArtifactsRepository(reader),
+    research_artifact: new ResearchArtifactsRepository(reader, store),
     screening_decision: new ScreeningDecisionsRepository(reader),
     external_record: new ExternalRecordsRepository(reader),
     source: new SourcesRepository(reader, store),

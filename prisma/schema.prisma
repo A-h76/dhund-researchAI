@@ -689,6 +689,7 @@ model AiExecution {
   extractionCells  ExtractionCell[]
   screeningDecisions ScreeningDecision[]
   messages         Message[]
+  researchArtifacts ResearchArtifact[]
 
   @@index([retrievalTraceId], map: "idx_ai_executions_retrieval_trace")
   @@map("ai_executions")
@@ -1192,8 +1193,10 @@ model ResearchArtifact {
   generatedAt          DateTime             @map("generated_at") @db.Timestamptz(3)
   storageKey           String?              @map("storage_key")
   stale                Boolean              @default(false)
+  aiExecutionId        String               @map("ai_execution_id") @db.Uuid
 
-  run ResearchRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  run         ResearchRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  aiExecution AiExecution @relation(fields: [aiExecutionId], references: [id], onDelete: Restrict)
 
   @@unique([runId, type, coverageSnapshotHash], map: "research_artifacts_run_id_type_coverage_snapshot_hash_key")
   @@map("research_artifacts")

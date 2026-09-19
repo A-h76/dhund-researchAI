@@ -1,9 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
   RESEARCH_RUN_STORE,
+  aggregateResearchRunStepOutcomes,
+  computeFinalResearchRunCoverage,
+  hashResearchRunCoverage,
   isFullResearchRunCoverage,
   isResearchRunTerminal,
+  ResearchRunCoverageError,
+  type ResearchRunCoverage,
   type ResearchRunFailedReason,
+  type ResearchRunPresetName,
   type ResearchRunRecord,
   type ResearchRunStateName,
   type ResearchRunStepRecord,
@@ -20,6 +26,7 @@ import {
   measuredOverageMicros,
 } from './budget/research-run-budget';
 import { findDagNode, resolveResearchRunPreset } from './presets/resolve-preset';
+import { artifactTypesForPreset } from './research-artifact-types';
 import { ResearchRunCoordinationService } from './research-run-coordination.service';
 import { ResearchRunMetrics } from './research-run.metrics';
 import {
@@ -432,18 +439,64 @@ export class ResearchRunCoordinatorService {
   }
 
   private async advanceCompleting(run: ResearchRunRecord): Promise<ResearchRunTickOutcome> {
+    let coverage: ResearchRunCoverage;
+    try {
+      // COMPLETING computes final coverage, then chooses COMPLETED vs COMPLETED_PARTIAL.
+      coverage = computeFinalResearchRunCoverage(run.coverage);
+    } catch (error) {
+      if (error instanceof ResearchRunCoverageError) {
+        throw new DomainError(ErrorCode.ValidationError, {
+          module: MODULE,
+          userMessage: error.message,
+          cause: error,
+        });
+      }
+      throw error;
+    }
+
     const counts = await this.store.countSteps(run.id);
+    // stepOutcomes stay outside coverage (GAP-COVERAGE-01) — recorded for observability only.
+    const stepOutcomes = aggregateResearchRunStepOutcomes(counts);
+    this.metrics.recordStepOutcomesAggregate(stepOutcomes);
+
     const toState: ResearchRunStateName =
-      isFullResearchRunCoverage(run.coverage) && counts.failed === 0
+      isFullResearchRunCoverage(coverage) && counts.failed === 0
         ? 'COMPLETED'
         : 'COMPLETED_PARTIAL';
-    return this.transitionOutcome(run, await this.applyTransition(run, toState));
+
+    const result = await this.applyTransition(run, toState, { coverage });
+    if (result.kind === 'applied') {
+      this.metrics.recordCoverageFinalized(coverage, toState);
+      await this.enqueueArtifactGeneration(result.run, coverage);
+    }
+    return this.transitionOutcome(run, result);
+  }
+
+  private async enqueueArtifactGeneration(
+    run: ResearchRunRecord,
+    coverage: ResearchRunCoverage,
+  ): Promise<void> {
+    const coverageSnapshotHash = hashResearchRunCoverage(coverage);
+    const types = artifactTypesForPreset(run.preset as ResearchRunPresetName);
+    for (const artifactType of types) {
+      await this.enqueue.enqueue('research-artifact-generate', {
+        orgId: run.orgId,
+        projectId: run.projectId,
+        runId: run.id,
+        artifactType,
+        coverageSnapshotHash,
+        coverageSnapshot: coverage,
+      });
+    }
   }
 
   private async applyTransition(
     run: ResearchRunRecord,
     toState: ResearchRunStateName,
-    options?: { readonly failedReason?: ResearchRunFailedReason },
+    options?: {
+      readonly failedReason?: ResearchRunFailedReason;
+      readonly coverage?: ResearchRunCoverage;
+    },
   ): Promise<ResearchRunTransitionResult> {
     const result = await this.transitions.transition({
       runId: run.id,
@@ -452,6 +505,7 @@ export class ResearchRunCoordinatorService {
       ...(options?.failedReason !== undefined
         ? { failedReason: options.failedReason }
         : {}),
+      ...(options?.coverage !== undefined ? { coverage: options.coverage } : {}),
     });
     if (result.kind === 'applied') {
       // One charge unit per applied coordinator transition — crash before commit charges 0.

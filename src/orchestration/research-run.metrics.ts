@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PlatformLogger } from '../platform/logging';
-import type { ResearchRunStateName } from '../l0/ports';
+import type {
+  ResearchRunCoverage,
+  ResearchRunStateName,
+  ResearchRunStepOutcomes,
+} from '../l0/ports';
 
 export interface ResearchRunMetricsSnapshot {
   readonly runsByState: Readonly<Record<string, number>>;
@@ -21,6 +25,12 @@ export interface ResearchRunMetricsSnapshot {
   readonly lastReservedMicros: bigint | null;
   readonly lastOverageMicros: bigint | null;
   readonly overageSamplesMicros: readonly bigint[];
+  readonly completedCount: number;
+  readonly completedPartialCount: number;
+  readonly lastCoverage: ResearchRunCoverage | null;
+  readonly artifactsGeneratedCount: number;
+  readonly artifactsFailedCount: number;
+  readonly lastStepOutcomes: ResearchRunStepOutcomes | null;
 }
 
 @Injectable()
@@ -43,6 +53,12 @@ export class ResearchRunMetrics {
   private lastReservedMicros: bigint | null = null;
   private lastOverageMicros: bigint | null = null;
   private readonly overageSamplesMicros: bigint[] = [];
+  private completedCount = 0;
+  private completedPartialCount = 0;
+  private lastCoverage: ResearchRunCoverage | null = null;
+  private artifactsGeneratedCount = 0;
+  private artifactsFailedCount = 0;
+  private lastStepOutcomes: ResearchRunStepOutcomes | null = null;
 
   constructor(private readonly logger: PlatformLogger) {}
 
@@ -144,6 +160,46 @@ export class ResearchRunMetrics {
     });
   }
 
+  /** Experiment G — funnel distribution + partial-completion rate. */
+  recordCoverageFinalized(
+    coverage: ResearchRunCoverage,
+    terminal: 'COMPLETED' | 'COMPLETED_PARTIAL',
+  ): void {
+    this.lastCoverage = coverage;
+    if (terminal === 'COMPLETED') {
+      this.completedCount += 1;
+    } else {
+      this.completedPartialCount += 1;
+    }
+    this.logger.info({
+      module: 'orchestration.research_run',
+      message: 'research_run.coverage.finalized',
+      terminal,
+      discoveryRequested: coverage.discovery.requested,
+      discoveryIncluded: coverage.discovery.included,
+      processingRequested: coverage.processing.requested,
+      processingCompleted: coverage.processing.completed,
+      processingFailed: coverage.processing.failed,
+      partialRate:
+        this.completedCount + this.completedPartialCount === 0
+          ? 0
+          : this.completedPartialCount /
+            (this.completedCount + this.completedPartialCount),
+    });
+  }
+
+  recordStepOutcomesAggregate(outcomes: ResearchRunStepOutcomes): void {
+    this.lastStepOutcomes = outcomes;
+  }
+
+  recordArtifactGenerated(): void {
+    this.artifactsGeneratedCount += 1;
+  }
+
+  recordArtifactFailed(): void {
+    this.artifactsFailedCount += 1;
+  }
+
   snapshot(): ResearchRunMetricsSnapshot {
     return {
       runsByState: Object.fromEntries(this.runsByState),
@@ -164,6 +220,12 @@ export class ResearchRunMetrics {
       lastReservedMicros: this.lastReservedMicros,
       lastOverageMicros: this.lastOverageMicros,
       overageSamplesMicros: [...this.overageSamplesMicros],
+      completedCount: this.completedCount,
+      completedPartialCount: this.completedPartialCount,
+      lastCoverage: this.lastCoverage,
+      artifactsGeneratedCount: this.artifactsGeneratedCount,
+      artifactsFailedCount: this.artifactsFailedCount,
+      lastStepOutcomes: this.lastStepOutcomes,
     };
   }
 
@@ -186,5 +248,11 @@ export class ResearchRunMetrics {
     this.lastReservedMicros = null;
     this.lastOverageMicros = null;
     this.overageSamplesMicros.length = 0;
+    this.completedCount = 0;
+    this.completedPartialCount = 0;
+    this.lastCoverage = null;
+    this.artifactsGeneratedCount = 0;
+    this.artifactsFailedCount = 0;
+    this.lastStepOutcomes = null;
   }
 }

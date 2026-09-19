@@ -5,6 +5,7 @@ import { PlatformModule } from '../platform/platform.module';
 import { RetrievalModule } from '../retrieval/retrieval.module';
 import { ResearchRunCoordinationService } from './research-run-coordination.service';
 import { ResearchRunCoordinatorService } from './research-run-coordinator.service';
+import { ResearchArtifactGenerateService } from './research-artifact-generate.service';
 import { ResearchRunMetrics } from './research-run.metrics';
 import { ResearchRunPlannerService } from './research-run-planner.service';
 import { ResearchRunTransitionService } from './research-run-transition.service';
@@ -16,6 +17,7 @@ const RESEARCH_RUN_PROVIDERS = [
   ResearchRunTransitionService,
   ResearchRunPlannerService,
   ResearchRunCoordinatorService,
+  ResearchArtifactGenerateService,
 ] as const;
 
 @Module({
