@@ -19,6 +19,8 @@ import {
 } from '../../ports/research-run-step-state';
 import {
   isResearchRunPreset,
+  type ResearchRunIncreaseBudgetInput,
+  type ResearchRunIncreaseBudgetResult,
   type ResearchRunPresetName,
   type ResearchRunRecord,
   type ResearchRunStepCounts,
@@ -297,6 +299,49 @@ export class PrismaResearchRunStoreAdapter implements ResearchRunStore {
         throw error;
       }
       throw new L0OperationError('ResearchRun transition failed', error);
+    }
+  }
+
+  async increaseReservedMicros(
+    input: ResearchRunIncreaseBudgetInput,
+  ): Promise<ResearchRunIncreaseBudgetResult> {
+    if (typeof input.additionalMicros !== 'bigint' || input.additionalMicros <= 0n) {
+      throw new L0OperationError(
+        'additionalMicros must be a positive bigint',
+        undefined,
+      );
+    }
+
+    await this.database.connect();
+    try {
+      return await this.client().$transaction(async (tx) => {
+        const updated = await tx.researchRun.updateMany({
+          where: {
+            id: input.runId,
+            version: input.expectedVersion,
+          },
+          data: {
+            reservedMicros: { increment: input.additionalMicros },
+            version: { increment: 1 },
+          },
+        });
+
+        if (updated.count === 0) {
+          const current = await tx.researchRun.findUnique({ where: { id: input.runId } });
+          if (current === null) {
+            return { kind: 'not_found' as const };
+          }
+          return { kind: 'version_conflict' as const, run: this.toRecord(current) };
+        }
+
+        const run = await tx.researchRun.findUniqueOrThrow({ where: { id: input.runId } });
+        return { kind: 'applied' as const, run: this.toRecord(run) };
+      });
+    } catch (error) {
+      if (error instanceof L0OperationError) {
+        throw error;
+      }
+      throw new L0OperationError('ResearchRun budget increase failed', error);
     }
   }
 

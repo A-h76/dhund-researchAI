@@ -121,7 +121,7 @@ const ROOT = join(__dirname, '..', '..');
           initiatedBy: userId,
           preset: input?.preset ?? 'deep_research',
           customDag: input?.customDag === undefined ? undefined : (input.customDag as never),
-          reservedMicros: 1000n,
+          reservedMicros: 1_000_000n,
           idempotencyKey: `key-${runId}`,
         },
       });
