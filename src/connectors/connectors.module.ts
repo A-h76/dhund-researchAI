@@ -1,4 +1,5 @@
 import { Module, OnModuleInit } from '@nestjs/common';
+import { IdentityModule } from '../identity/identity.module';
 import { PlatformModule } from '../platform/platform.module';
 import { CONNECTOR_IDS } from './connector.ids';
 import { ConnectorCacheService } from './connector-cache.service';
@@ -11,7 +12,7 @@ import { DiscoveryAdmissionService } from './discovery-admission.service';
 import { DiscoverySearchService } from './discovery-search.service';
 
 @Module({
-  imports: [PlatformModule],
+  imports: [PlatformModule, IdentityModule],
   providers: [
     SourceConnectorRegistry,
     ConnectorCircuitBreakerRegistry,

@@ -145,8 +145,8 @@ export const QUEUE_REGISTRY: Readonly<Record<QueueName, QueuePolicy>> = {
     'identity-merge',
     fixed(3),
     EXPONENTIAL_BACKOFF,
-    ['mergeCandidateId'],
-    ['mergeCandidateId'],
+    ['mergeCandidateId', 'decision', 'reviewedBy'],
+    ['mergeCandidateId', 'decision'],
   ),
   'connector-fetch': policy(
     'connector-fetch',
