@@ -7,6 +7,8 @@ import {
 } from '../../platform/config';
 import { ChunkModule } from '../../ingestion/chunk.module';
 import { ConnectorsModule } from '../../connectors/connectors.module';
+import { ExternalRecordsModule } from '../../external-records/external-records.module';
+import { IdentityModule } from '../../identity/identity.module';
 import { EmbedModule } from '../../ai/embed/embed.module';
 import { ExtractModule } from '../../ingestion/extract.module';
 import { EvidenceModule } from '../../evidence/evidence.module';
@@ -17,6 +19,10 @@ import { RuntimeRole } from '../../platform/runtime/role';
 import { ChunkProcessor } from './chunk.processor';
 import { ConnectorFetchProcessor } from './connector-fetch.processor';
 import { DiscoverySearchProcessor } from './discovery-search.processor';
+import { ExternalRecordRefreshProcessor } from './external-record-refresh.processor';
+import { IdentityMergeProcessor } from './identity-merge.processor';
+import { IdentityResolveProcessor } from './identity-resolve.processor';
+import { RefmgrImportProcessor } from './refmgr-import.processor';
 import { EmbedBackfillProcessor } from './embed-backfill.processor';
 import { EmbedProcessor } from './embed.processor';
 import { ExtractProcessor } from './extract.processor';
@@ -46,6 +52,8 @@ import { WorkerBootstrapService } from './worker-bootstrap.service';
     RetrievalModule,
     EvidenceModule,
     ConnectorsModule,
+    IdentityModule,
+    ExternalRecordsModule,
   ],
   providers: [
     provideRuntimeRole(RuntimeRole.Worker),
@@ -64,6 +72,10 @@ import { WorkerBootstrapService } from './worker-bootstrap.service';
     StanceProcessor,
     ConnectorFetchProcessor,
     DiscoverySearchProcessor,
+    IdentityResolveProcessor,
+    IdentityMergeProcessor,
+    ExternalRecordRefreshProcessor,
+    RefmgrImportProcessor,
     ReaperProcessor,
     OutboxRelayProcessor,
     OrphanSweepProcessor,

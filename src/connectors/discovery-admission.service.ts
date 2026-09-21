@@ -6,10 +6,12 @@ import {
   type ObjectStorageService,
 } from '../l0/ports';
 import { requestExtractJob } from '../ingestion/request-extract';
-import { JobEnqueueService } from '../platform/logging';
 import { DomainError, ErrorCode } from '../platform/errors';
+import { JobEnqueueService } from '../platform/logging';
+import { IdentityResolveService } from '../identity/identity-resolve.service';
 import { ConnectorFetchService } from './connector-fetch.service';
 import { ConnectorMetrics } from './connector.metrics';
+import { RightsBodyForbiddenError } from './rights-body';
 import type { ConnectorSearchHit } from './source-connector';
 
 export interface DiscoveryAdmitInput {
@@ -26,6 +28,7 @@ export interface DiscoveryAdmitResult {
   readonly documentId?: string;
   readonly documentVersionId?: string;
   readonly extractJobId?: string;
+  readonly canonicalWorkId?: string;
 }
 
 /**
@@ -41,6 +44,7 @@ export class DiscoveryAdmissionService {
     @Inject(OBJECT_STORAGE_SERVICE) private readonly storage: ObjectStorageService,
     private readonly enqueue: JobEnqueueService,
     private readonly metrics: ConnectorMetrics,
+    private readonly identity: IdentityResolveService,
   ) {}
 
   async decide(input: DiscoveryAdmitInput): Promise<DiscoveryAdmitResult> {
@@ -55,15 +59,32 @@ export class DiscoveryAdmissionService {
       return { candidateId: rejected.id, status: rejected.status };
     }
 
-    const fetched = await this.fetch.execute({
-      orgId: input.orgId,
-      connectorId: candidate.connectorId,
-      externalId: candidate.externalId,
-      purpose: 'admit',
-      freshnessTtl: 86_400,
-      correlationId: input.correlationId,
-      includeBody: true,
-    });
+    let fetched;
+    try {
+      fetched = await this.fetch.execute({
+        orgId: input.orgId,
+        connectorId: candidate.connectorId,
+        externalId: candidate.externalId,
+        purpose: 'admit',
+        freshnessTtl: 86_400,
+        correlationId: input.correlationId,
+        includeBody: true,
+      });
+    } catch (error) {
+      // PX-b: rights-forbidden body fetch is rejected; admit metadata-only instead.
+      if (!(error instanceof RightsBodyForbiddenError)) {
+        throw error;
+      }
+      fetched = await this.fetch.execute({
+        orgId: input.orgId,
+        connectorId: candidate.connectorId,
+        externalId: candidate.externalId,
+        purpose: 'admit-metadata',
+        freshnessTtl: 86_400,
+        correlationId: input.correlationId,
+        includeBody: false,
+      });
+    }
 
     const hit = fetched.metadata;
     assertMetadataIsDataOnly(hit);
@@ -115,6 +136,21 @@ export class DiscoveryAdmissionService {
     const admitted = await this.spine.setCandidateStatus(candidate.id, 'admitted');
     this.metrics.recordCandidateState('admitted');
 
+    let canonicalWorkId: string | undefined;
+    const resolveIdentifier = resolveIdentifierFromHit(candidate.connectorId, hit);
+    if (resolveIdentifier !== null) {
+      const resolved = await this.identity.execute({
+        orgId: input.orgId,
+        correlationId: input.correlationId,
+        identifier: resolveIdentifier,
+        title: hit.title,
+        authors: hit.authors,
+        year: hit.year,
+        documentId: document.documentId,
+      });
+      canonicalWorkId = resolved.canonicalWorkId;
+    }
+
     let extractJobId: string | undefined;
     if (
       document.bodyAdmitted &&
@@ -137,8 +173,22 @@ export class DiscoveryAdmissionService {
         ? { documentVersionId: document.documentVersionId }
         : {}),
       ...(extractJobId !== undefined ? { extractJobId } : {}),
+      ...(canonicalWorkId !== undefined ? { canonicalWorkId } : {}),
     };
   }
+}
+
+function resolveIdentifierFromHit(
+  connectorId: string,
+  hit: ConnectorSearchHit,
+): { scheme: 'doi' | 'arxiv'; value: string } | null {
+  if (typeof hit.doi === 'string' && hit.doi.length > 0) {
+    return { scheme: 'doi', value: hit.doi };
+  }
+  if (connectorId === 'arxiv' && hit.externalId.length > 0) {
+    return { scheme: 'arxiv', value: hit.externalId };
+  }
+  return null;
 }
 
 /**

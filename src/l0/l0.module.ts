@@ -73,6 +73,10 @@ import { CITATION_PROJECTION } from './ports/citation-projection.port';
 import { EVIDENCE_SPINE } from './ports/evidence-spine.port';
 import { CONNECTOR_CACHE_STORE } from './ports/connector-cache.port';
 import { CONNECTOR_SPINE_STORE } from './ports/connector-spine.port';
+import { IDENTITY_SPINE_STORE } from './ports/identity-spine.port';
+import { EXTERNAL_RECORD_SPINE_STORE } from './ports/external-record-spine.port';
+import { PrismaIdentitySpineAdapter } from './adapters/prisma/prisma-identity-spine.adapter';
+import { PrismaExternalRecordSpineAdapter } from './adapters/prisma/prisma-external-record-spine.adapter';
 
 @Module({
   providers: [
@@ -102,6 +106,8 @@ import { CONNECTOR_SPINE_STORE } from './ports/connector-spine.port';
     PrismaConnectorCacheAdapter,
     PrismaConnectorSpineAdapter,
     PrismaIdentityLookupAdapter,
+    PrismaIdentitySpineAdapter,
+    PrismaExternalRecordSpineAdapter,
     PdfjsParseAdapter,
     RedisAccessContextInvalidator,
     HibpBreachListAdapter,
@@ -138,6 +144,11 @@ import { CONNECTOR_SPINE_STORE } from './ports/connector-spine.port';
     { provide: CONNECTOR_CACHE_STORE, useExisting: PrismaConnectorCacheAdapter },
     { provide: CONNECTOR_SPINE_STORE, useExisting: PrismaConnectorSpineAdapter },
     { provide: IDENTITY_LOOKUP, useExisting: PrismaIdentityLookupAdapter },
+    { provide: IDENTITY_SPINE_STORE, useExisting: PrismaIdentitySpineAdapter },
+    {
+      provide: EXTERNAL_RECORD_SPINE_STORE,
+      useExisting: PrismaExternalRecordSpineAdapter,
+    },
     { provide: PDF_PARSE_SERVICE, useExisting: PdfjsParseAdapter },
     {
       provide: ACCESS_CONTEXT_INVALIDATOR,
@@ -179,6 +190,8 @@ import { CONNECTOR_SPINE_STORE } from './ports/connector-spine.port';
     CONNECTOR_CACHE_STORE,
     CONNECTOR_SPINE_STORE,
     IDENTITY_LOOKUP,
+    IDENTITY_SPINE_STORE,
+    EXTERNAL_RECORD_SPINE_STORE,
     PDF_PARSE_SERVICE,
     ACCESS_CONTEXT_INVALIDATOR,
     BREACH_LIST,

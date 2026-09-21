@@ -1,12 +1,23 @@
 import { DiscoveryAdmissionService } from '../../src/connectors/discovery-admission.service';
 import type { ConnectorFetchService } from '../../src/connectors/connector-fetch.service';
 import type { ConnectorMetrics } from '../../src/connectors/connector.metrics';
+import type { IdentityResolveService } from '../../src/identity/identity-resolve.service';
 import type {
   ConnectorSpineStore,
   DiscoveryCandidateRecord,
 } from '../../src/l0/ports/connector-spine.port';
 import { MemoryObjectStorage } from '../fixtures/memory-object-storage';
 import type { JobEnqueueService } from '../../src/platform/logging';
+
+function stubIdentity(): IdentityResolveService {
+  return {
+    execute: async () => ({
+      outcome: 'created',
+      canonicalWorkId: 'work-1',
+      mergeCandidateIds: [],
+    }),
+  } as unknown as IdentityResolveService;
+}
 
 describe('DHB-70 discovery admission', () => {
   it('records rejected candidates instead of deleting them', async () => {
@@ -59,6 +70,7 @@ describe('DHB-70 discovery admission', () => {
         },
       } as unknown as JobEnqueueService,
       metrics,
+      stubIdentity(),
     );
 
     const result = await service.decide({
@@ -144,6 +156,7 @@ describe('DHB-70 discovery admission', () => {
         },
       } as unknown as JobEnqueueService,
       { recordCandidateState: jest.fn() } as unknown as ConnectorMetrics,
+      stubIdentity(),
     );
 
     const result = await service.decide({

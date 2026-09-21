@@ -12,6 +12,10 @@ import { ConnectorRateLimiter } from './connector-rate-limiter';
 import { SourceConnectorRegistry } from './connector.registry';
 import { ArxivRateLimitedError } from './adapters/arxiv.connector';
 import type { ConnectorFetchResult } from './source-connector';
+import {
+  assertBodyFetchPermitted,
+  RightsBodyForbiddenError,
+} from './rights-body';
 
 export interface ConnectorFetchJobPayload {
   readonly orgId: string;
@@ -56,6 +60,11 @@ export class ConnectorFetchService {
 
     if (cached !== null) {
       breaker.recordSuccess();
+      // PX-b: cached body request still rejects when rights forbid body.
+      assertBodyFetchPermitted({
+        includeBody,
+        rightsBody: cached.metadata.rights.body,
+      });
       return {
         externalId: cached.metadata.externalId,
         metadata: cached.metadata,
@@ -76,6 +85,12 @@ export class ConnectorFetchService {
       const result = await connector.fetch({
         externalId: payload.externalId,
         includeBody,
+      });
+
+      // PX-b: connector-fetch of a rights-forbidden body is rejected.
+      assertBodyFetchPermitted({
+        includeBody,
+        rightsBody: result.metadata.rights.body,
       });
 
       const ttlMs =
@@ -102,6 +117,9 @@ export class ConnectorFetchService {
       this.metrics.recordBreakerState(payload.connectorId, breaker.getState());
       return result;
     } catch (error) {
+      if (error instanceof RightsBodyForbiddenError) {
+        throw error;
+      }
       if (error instanceof DomainError) {
         if (
           error.code === ErrorCode.UrlTargetBlocked ||
