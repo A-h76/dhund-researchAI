@@ -289,6 +289,117 @@ export class PrismaEvidenceSpineAdapter implements EvidenceSpinePort {
     }
   }
 
+  async listEvidenceForProject(projectId: string): Promise<readonly EvidenceRecord[]> {
+    await this.ensureConnected();
+    try {
+      const rows = await this.client().evidence.findMany({
+        where: { projectId },
+        orderBy: { createdAt: 'asc' },
+      });
+      return rows.map(toEvidence);
+    } catch (error) {
+      throw new L0OperationError('Project evidence list failed', error);
+    }
+  }
+
+  async listClaimsForProject(projectId: string): Promise<readonly ClaimRecord[]> {
+    await this.ensureConnected();
+    try {
+      const rows = await this.client().claim.findMany({
+        where: { projectId, deletedAt: null },
+        orderBy: { createdAt: 'asc' },
+      });
+      return rows.map(toClaim);
+    } catch (error) {
+      throw new L0OperationError('Project claim list failed', error);
+    }
+  }
+
+  async persistSynthesizedClaim(input: {
+    id: string;
+    projectId: string;
+    text: string;
+    aiExecutionId: string;
+    evidenceLinks: readonly {
+      id: string;
+      evidenceId: string;
+      stance: StoredEvidenceStance;
+    }[];
+  }): Promise<{
+    readonly claim: ClaimRecord;
+    readonly evidenceLinks: readonly EvidenceClaimLinkRecord[];
+  }> {
+    await this.ensureConnected();
+    if (input.evidenceLinks.length === 0) {
+      throw new L0OperationError(
+        'Synthesized claim rejected: evidence lineage is required',
+        new Error('empty evidence lineage'),
+      );
+    }
+    try {
+      const existing = await this.findClaim(input.id, input.projectId);
+      if (existing !== null) {
+        const links = await this.listClaimLinks(input.id);
+        return { claim: existing, evidenceLinks: links };
+      }
+
+      const coverageAnnotation = {
+        method: 'llm',
+        aiExecutionId: input.aiExecutionId,
+        synthesized: true,
+      };
+
+      const links = await this.client().$transaction(async (tx) => {
+        await tx.claim.create({
+          data: {
+            id: input.id,
+            projectId: input.projectId,
+            text: input.text,
+            coverageAnnotation: coverageAnnotation as Prisma.InputJsonValue,
+          },
+        });
+        const createdLinks: EvidenceClaimLinkRecord[] = [];
+        for (const link of input.evidenceLinks) {
+          const row = await tx.evidenceClaimLink.create({
+            data: {
+              id: link.id,
+              evidenceId: link.evidenceId,
+              claimId: input.id,
+              stance: toPrismaStance(link.stance),
+              weight: new Prisma.Decimal('1'),
+            },
+          });
+          createdLinks.push({
+            id: row.id,
+            evidenceId: row.evidenceId,
+            claimId: row.claimId,
+            stance: fromPrismaStance(row.stance),
+          });
+        }
+        return createdLinks;
+      });
+
+      const claim = await this.findClaim(input.id, input.projectId);
+      if (claim === null) {
+        throw new L0OperationError(
+          'Synthesized claim persist failed',
+          new Error('claim missing after insert'),
+        );
+      }
+      return { claim, evidenceLinks: links };
+    } catch (error) {
+      if (error instanceof L0OperationError) {
+        throw error;
+      }
+      const raced = await this.findClaim(input.id, input.projectId).catch(() => null);
+      if (raced !== null) {
+        const links = await this.listClaimLinks(input.id);
+        return { claim: raced, evidenceLinks: links };
+      }
+      throw new L0OperationError('Synthesized claim persist failed', error);
+    }
+  }
+
   async listEvidenceForExecution(aiExecutionId: string): Promise<readonly EvidenceRecord[]> {
     await this.ensureConnected();
     try {

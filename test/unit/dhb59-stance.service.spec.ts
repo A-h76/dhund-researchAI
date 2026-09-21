@@ -246,6 +246,15 @@ class StanceSpine implements EvidenceSpinePort {
   async listEvidenceForExecution() {
     return [];
   }
+  async listEvidenceForProject(projectId: string) {
+    return [...this.evidence.values()].filter((row) => row.projectId === projectId);
+  }
+  async listClaimsForProject(projectId: string) {
+    return [...this.claims.values()].filter((row) => row.projectId === projectId);
+  }
+  async persistSynthesizedClaim(): Promise<never> {
+    throw new Error('unused');
+  }
   async findExtractionSet(): Promise<ExtractionSetRecord | null> {
     return null;
   }

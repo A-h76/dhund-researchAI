@@ -249,7 +249,10 @@ export class ResearchArtifactsRepository {
 
 @Injectable()
 export class ScreeningDecisionsRepository {
-  constructor(private readonly reader: ScopedReader) {}
+  constructor(
+    private readonly reader: ScopedReader,
+    @Inject(SCOPED_STORE) private readonly store: ScopedStore,
+  ) {}
 
   get(scope: ProjectScope, id: string) {
     return this.reader.require('screening_decision', scope, id, MODULE);
@@ -265,6 +268,48 @@ export class ScreeningDecisionsRepository {
 
   list(scope: ProjectScope, query: ScopedListQuery) {
     return this.reader.list('screening_decision', scope, query);
+  }
+
+  async create(
+    scope: ProjectScope,
+    input: {
+      readonly id: string;
+      readonly sourceId: string;
+      readonly decision: 'include' | 'exclude' | 'unresolved';
+      readonly reason: string | null;
+      readonly method: 'deterministic' | 'llm' | 'human';
+      readonly aiExecutionId: string | null;
+      readonly decidedBy: string;
+      readonly decidedAt: Date;
+      readonly runId?: string;
+    },
+  ): Promise<ScopedRow> {
+    return this.store.insert('screening_decision', scope, {
+      id: input.id,
+      sourceId: input.sourceId,
+      decision: input.decision,
+      reason: input.reason,
+      method: input.method,
+      aiExecutionId: input.aiExecutionId,
+      decidedBy: input.decidedBy,
+      decidedAt: input.decidedAt,
+      ...(input.runId !== undefined ? { runId: input.runId } : {}),
+    });
+  }
+
+  /** Append-only supersession: only superseded_by_decision_id may change. */
+  async markSuperseded(
+    scope: ProjectScope,
+    decisionId: string,
+    successorId: string,
+  ): Promise<ScopedRow> {
+    return this.reader.update(
+      'screening_decision',
+      scope,
+      decisionId,
+      { supersededByDecisionId: successorId },
+      MODULE,
+    );
   }
 }
 

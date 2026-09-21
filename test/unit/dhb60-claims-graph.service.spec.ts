@@ -332,6 +332,47 @@ class GraphSpine implements EvidenceSpinePort {
   async listEvidenceForExecution() {
     return [];
   }
+  async listEvidenceForProject(projectId: string) {
+    return [...this.evidence.values()].filter((row) => row.projectId === projectId);
+  }
+  async listClaimsForProject(projectId: string) {
+    return [...this.claims.values()].filter((row) => row.projectId === projectId);
+  }
+  async persistSynthesizedClaim(input: {
+    id: string;
+    projectId: string;
+    text: string;
+    aiExecutionId: string;
+    evidenceLinks: readonly {
+      id: string;
+      evidenceId: string;
+      stance: EvidenceClaimLinkRecord['stance'];
+    }[];
+  }) {
+    const claim = await this.createClaim({
+      id: input.id,
+      projectId: input.projectId,
+      text: input.text,
+      coverageAnnotation: {
+        method: 'llm',
+        aiExecutionId: input.aiExecutionId,
+        synthesized: true,
+      },
+    });
+    const links: EvidenceClaimLinkRecord[] = [];
+    for (const link of input.evidenceLinks) {
+      links.push(
+        await this.linkEvidenceClaim({
+          id: link.id,
+          evidenceId: link.evidenceId,
+          claimId: input.id,
+          stance: link.stance,
+          weight: '1',
+        }),
+      );
+    }
+    return { claim, evidenceLinks: links };
+  }
   async findExtractionSet(): Promise<ExtractionSetRecord | null> {
     return null;
   }

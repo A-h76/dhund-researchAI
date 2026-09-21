@@ -147,6 +147,8 @@ export interface EvidenceSpinePort {
   listArgumentClaims(argumentId: string): Promise<readonly ArgumentClaimLinkRecord[]>;
   listArgumentsForClaim(claimId: string): Promise<readonly ArgumentClaimLinkRecord[]>;
   findEvidence(evidenceId: string, projectId: string): Promise<EvidenceRecord | null>;
+  listEvidenceForProject(projectId: string): Promise<readonly EvidenceRecord[]>;
+  listClaimsForProject(projectId: string): Promise<readonly ClaimRecord[]>;
   listEvidenceForExecution(aiExecutionId: string): Promise<readonly EvidenceRecord[]>;
   findExtractionSet(stepId: string): Promise<ExtractionSetRecord | null>;
   persistExtractionSet(input: {
@@ -170,5 +172,19 @@ export interface EvidenceSpinePort {
     claimLinkId: string | null;
     correlationId: string;
   }): Promise<StanceLabelRecord>;
+  persistSynthesizedClaim(input: {
+    id: string;
+    projectId: string;
+    text: string;
+    aiExecutionId: string;
+    evidenceLinks: readonly {
+      id: string;
+      evidenceId: string;
+      stance: StoredEvidenceStance;
+    }[];
+  }): Promise<{
+    readonly claim: ClaimRecord;
+    readonly evidenceLinks: readonly EvidenceClaimLinkRecord[];
+  }>;
   listClaimLinks(claimId: string): Promise<readonly EvidenceClaimLinkRecord[]>;
 }

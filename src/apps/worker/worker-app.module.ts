@@ -36,6 +36,8 @@ import { ExtractionCellProcessor } from './extraction-cell.processor';
 import { StanceJobConsumer } from './stance-job.consumer';
 import { StanceProcessor } from './stance.processor';
 import { StanceService } from './stance.service';
+import { SynthesisProcessor } from './synthesis.processor';
+import { SynthesisService } from './synthesis.service';
 import { WorkerBootstrapService } from './worker-bootstrap.service';
 
 @Module({
@@ -67,6 +69,8 @@ import { WorkerBootstrapService } from './worker-bootstrap.service';
     StanceService,
     StanceJobConsumer,
     StanceProcessor,
+    SynthesisService,
+    SynthesisProcessor,
     ResearchRunTickProcessor,
     ResearchArtifactGenerateProcessor,
     ExtractionCellProcessor,

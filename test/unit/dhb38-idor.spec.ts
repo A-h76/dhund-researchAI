@@ -66,7 +66,7 @@ function repos(
     conversation: new ConversationsRepository(reader, store),
     message: new MessagesRepository(reader, store),
     research_artifact: new ResearchArtifactsRepository(reader, store),
-    screening_decision: new ScreeningDecisionsRepository(reader),
+    screening_decision: new ScreeningDecisionsRepository(reader, store),
     external_record: new ExternalRecordsRepository(reader),
     source: new SourcesRepository(reader, store),
   };

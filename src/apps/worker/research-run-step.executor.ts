@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { EVIDENCE_EXTRACT_STEP_TYPE } from '../../evidence/extract.constants';
+import { SYNTHESIS_PROMPT_VERSION } from '../../evidence/synthesis.constants';
 import { requestExtractJob } from '../../ingestion/request-extract';
 import {
   RESEARCH_RUN_STORE,
@@ -7,6 +8,7 @@ import {
   type ResearchRunStore,
 } from '../../l0/ports';
 import { OutboxWriterService } from '../../platform/events';
+import { generateId } from '../../platform/ids/uuid-v7';
 import { JobEnqueueService, requireCorrelationId } from '../../platform/logging';
 import { RuntimeRole } from '../../platform/runtime/role';
 import { isResearchRunStepType } from '../../orchestration/presets/research-run-dag';
@@ -125,6 +127,18 @@ export class ResearchRunStepExecutor {
         case 'evidence-extract': {
           await this.extract.execute(toEvidencePayload(payload), options);
           await this.succeed(payload, running, null, null);
+          break;
+        }
+        case 'synthesis': {
+          const claimId = generateId();
+          const jobId = await this.enqueue.enqueue('synthesis', {
+            orgId: payload.orgId,
+            projectId: payload.projectId,
+            runId: payload.runId,
+            claimId,
+            promptVersion: SYNTHESIS_PROMPT_VERSION,
+          });
+          await this.succeed(payload, running, jobId, null);
           break;
         }
         default: {

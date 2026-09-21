@@ -12,6 +12,8 @@ import { ResearchArtifactGenerateService } from './research-artifact-generate.se
 import { ResearchRunMetrics } from './research-run.metrics';
 import { ResearchRunPlannerService } from './research-run-planner.service';
 import { ResearchRunTransitionService } from './research-run-transition.service';
+import { ScreeningMetrics } from './screening.metrics';
+import { ScreeningStubService } from './screening-stub.service';
 import { ORCHESTRATION_REPOS } from './scoped-repos';
 
 const RESEARCH_RUN_PROVIDERS = [
@@ -28,13 +30,20 @@ const RESEARCH_RUN_PROVIDERS = [
 
 @Module({
   imports: [PlatformModule, IngestionModule, RetrievalModule, EvidenceModule],
-  providers: [...ORCHESTRATION_REPOS, ...RESEARCH_RUN_PROVIDERS],
+  providers: [
+    ...ORCHESTRATION_REPOS,
+    ...RESEARCH_RUN_PROVIDERS,
+    ScreeningMetrics,
+    ScreeningStubService,
+  ],
   exports: [
     IngestionModule,
     RetrievalModule,
     EvidenceModule,
     ...ORCHESTRATION_REPOS,
     ...RESEARCH_RUN_PROVIDERS,
+    ScreeningMetrics,
+    ScreeningStubService,
   ],
 })
 export class OrchestrationModule {}
