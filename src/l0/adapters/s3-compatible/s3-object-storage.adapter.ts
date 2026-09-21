@@ -131,6 +131,23 @@ export class S3ObjectStorageAdapter implements ObjectStorageService, OnModuleDes
     }
   }
 
+  async putObject(key: string, body: Buffer, contentType?: string): Promise<void> {
+    const client = await this.requireClient();
+    try {
+      await client.send(
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+          Body: body,
+          ContentLength: body.byteLength,
+          ...(contentType !== undefined ? { ContentType: contentType } : {}),
+        }),
+      );
+    } catch (error) {
+      throw new L0OperationError('Object put failed', error);
+    }
+  }
+
   async headObject(key: string): Promise<ObjectStorageStat | null> {
     const client = await this.requireClient();
     try {

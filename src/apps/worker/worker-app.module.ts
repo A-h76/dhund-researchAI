@@ -6,6 +6,7 @@ import {
   provideRuntimeRole,
 } from '../../platform/config';
 import { ChunkModule } from '../../ingestion/chunk.module';
+import { ConnectorsModule } from '../../connectors/connectors.module';
 import { EmbedModule } from '../../ai/embed/embed.module';
 import { ExtractModule } from '../../ingestion/extract.module';
 import { EvidenceModule } from '../../evidence/evidence.module';
@@ -14,6 +15,8 @@ import { PlatformModule } from '../../platform/platform.module';
 import { RetrievalModule } from '../../retrieval/retrieval.module';
 import { RuntimeRole } from '../../platform/runtime/role';
 import { ChunkProcessor } from './chunk.processor';
+import { ConnectorFetchProcessor } from './connector-fetch.processor';
+import { DiscoverySearchProcessor } from './discovery-search.processor';
 import { EmbedBackfillProcessor } from './embed-backfill.processor';
 import { EmbedProcessor } from './embed.processor';
 import { ExtractProcessor } from './extract.processor';
@@ -42,6 +45,7 @@ import { WorkerBootstrapService } from './worker-bootstrap.service';
     EmbedModule,
     RetrievalModule,
     EvidenceModule,
+    ConnectorsModule,
   ],
   providers: [
     provideRuntimeRole(RuntimeRole.Worker),
@@ -58,6 +62,8 @@ import { WorkerBootstrapService } from './worker-bootstrap.service';
     StanceService,
     StanceJobConsumer,
     StanceProcessor,
+    ConnectorFetchProcessor,
+    DiscoverySearchProcessor,
     ReaperProcessor,
     OutboxRelayProcessor,
     OrphanSweepProcessor,

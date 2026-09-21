@@ -51,6 +51,13 @@ export class MemoryObjectStorage implements ObjectStorageService {
     return `memory://get/${key}`;
   }
 
+  async putObject(key: string, body: Buffer, _contentType?: string): Promise<void> {
+    if (this.failPuts) {
+      throw new L0ConnectionError('Object storage connection failed');
+    }
+    this.objects.set(key, { body, lastModified: new Date() });
+  }
+
   async headObject(key: string): Promise<ObjectStorageStat | null> {
     if (this.failReads) {
       throw new L0ConnectionError('Object storage connection failed');

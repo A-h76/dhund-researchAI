@@ -35,6 +35,7 @@ import {
 } from './parse-upload-request';
 import { assertPdfMagicBytes, storedFilenameFromKey } from './upload-validation';
 import { UploadsMetrics, type UploadRejectionClass } from './uploads.metrics';
+import { requestExtractJob } from './request-extract';
 
 const MODULE = 'ingestion';
 
@@ -300,7 +301,7 @@ export class UploadsService {
     documentVersionId: string,
     contentHash: string,
   ): Promise<void> {
-    await this.enqueue.enqueue('extract', {
+    await requestExtractJob(this.enqueue, {
       orgId: session.orgId,
       projectId: session.projectId,
       documentVersionId,

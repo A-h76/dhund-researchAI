@@ -24,6 +24,8 @@ export interface ObjectStorageService {
     contentLength?: number,
   ): Promise<string>;
   getPresignedGetUrl(key: string, expiresInSeconds?: number): Promise<string>;
+  /** Server-side put for connector-fetched bytes (not client uploads). */
+  putObject(key: string, body: Buffer, contentType?: string): Promise<void>;
   headObject(key: string): Promise<ObjectStorageStat | null>;
   getObjectBytes(key: string, maxBytes: number): Promise<Buffer | null>;
   delete(key: string): Promise<void>;
