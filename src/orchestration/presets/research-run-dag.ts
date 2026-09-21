@@ -1,7 +1,12 @@
 import { createHash } from 'node:crypto';
 import { canonicalJson } from '../../platform/queues/canonical-json';
 
-export const RESEARCH_RUN_STEP_TYPES = ['retrieve', 'admit', 'evidence-extract'] as const;
+export const RESEARCH_RUN_STEP_TYPES = [
+  'retrieve',
+  'admit',
+  'evidence-extract',
+  'synthesis',
+] as const;
 
 export type ResearchRunStepType = (typeof RESEARCH_RUN_STEP_TYPES)[number];
 

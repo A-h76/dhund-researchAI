@@ -333,6 +333,15 @@ class InMemorySpine implements EvidenceSpinePort {
   async listEvidenceForExecution(aiExecutionId: string) {
     return [...this.evidence.values()].filter((row) => row.aiExecutionId === aiExecutionId);
   }
+  async listEvidenceForProject(projectId: string) {
+    return [...this.evidence.values()].filter((row) => row.projectId === projectId);
+  }
+  async listClaimsForProject() {
+    return [];
+  }
+  async persistSynthesizedClaim(): Promise<never> {
+    throw new Error('unused');
+  }
   async findExtractionSet(stepId: string) {
     return this.extractionSets.get(stepId) ?? null;
   }
