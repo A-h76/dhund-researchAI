@@ -1,3 +1,5 @@
+export * from './connector-cache.port';
+export * from './connector-spine.port';
 export * from './ai-execution-ledger.port';
 export * from './audit-event.port';
 export * from './breach-list.port';

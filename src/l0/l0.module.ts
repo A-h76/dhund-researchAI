@@ -66,9 +66,13 @@ import { PrismaRetrievalTraceAdapter } from './adapters/prisma/prisma-retrieval-
 import { PrismaMessageEvidenceBindingAdapter } from './adapters/prisma/prisma-message-evidence-binding.adapter';
 import { PrismaEvidenceSpineAdapter } from './adapters/prisma/prisma-evidence-spine.adapter';
 import { PrismaCitationProjectionAdapter } from './adapters/prisma/prisma-citation-projection.adapter';
+import { PrismaConnectorCacheAdapter } from './adapters/prisma/prisma-connector-cache.adapter';
+import { PrismaConnectorSpineAdapter } from './adapters/prisma/prisma-connector-spine.adapter';
 import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
 import { CITATION_PROJECTION } from './ports/citation-projection.port';
 import { EVIDENCE_SPINE } from './ports/evidence-spine.port';
+import { CONNECTOR_CACHE_STORE } from './ports/connector-cache.port';
+import { CONNECTOR_SPINE_STORE } from './ports/connector-spine.port';
 
 @Module({
   providers: [
@@ -95,6 +99,8 @@ import { EVIDENCE_SPINE } from './ports/evidence-spine.port';
     PrismaMessageEvidenceBindingAdapter,
     PrismaEvidenceSpineAdapter,
     PrismaCitationProjectionAdapter,
+    PrismaConnectorCacheAdapter,
+    PrismaConnectorSpineAdapter,
     PrismaIdentityLookupAdapter,
     PdfjsParseAdapter,
     RedisAccessContextInvalidator,
@@ -129,6 +135,8 @@ import { EVIDENCE_SPINE } from './ports/evidence-spine.port';
     { provide: MESSAGE_EVIDENCE_BINDING, useExisting: PrismaMessageEvidenceBindingAdapter },
     { provide: EVIDENCE_SPINE, useExisting: PrismaEvidenceSpineAdapter },
     { provide: CITATION_PROJECTION, useExisting: PrismaCitationProjectionAdapter },
+    { provide: CONNECTOR_CACHE_STORE, useExisting: PrismaConnectorCacheAdapter },
+    { provide: CONNECTOR_SPINE_STORE, useExisting: PrismaConnectorSpineAdapter },
     { provide: IDENTITY_LOOKUP, useExisting: PrismaIdentityLookupAdapter },
     { provide: PDF_PARSE_SERVICE, useExisting: PdfjsParseAdapter },
     {
@@ -168,6 +176,8 @@ import { EVIDENCE_SPINE } from './ports/evidence-spine.port';
     MESSAGE_EVIDENCE_BINDING,
     EVIDENCE_SPINE,
     CITATION_PROJECTION,
+    CONNECTOR_CACHE_STORE,
+    CONNECTOR_SPINE_STORE,
     IDENTITY_LOOKUP,
     PDF_PARSE_SERVICE,
     ACCESS_CONTEXT_INVALIDATOR,
