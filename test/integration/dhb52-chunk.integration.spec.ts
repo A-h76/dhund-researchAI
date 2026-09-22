@@ -116,11 +116,15 @@ async function waitFor<T>(
 
       const orgId = generateId();
       const projectId = generateId();
+      const userId = generateId();
       const documentId = generateId();
       const documentVersionId = generateId();
       const storageKey = `${orgId}/${projectId}/docs/paper.pdf`;
       const contentHash = 'a'.repeat(64);
 
+      await prisma.user.create({
+        data: { id: userId, email: `dhb52-${userId}@example.com`, displayName: 'DHB-52' },
+      });
       await prisma.organization.create({
         data: { id: orgId, kind: 'TEAM', name: 'DHB-52 Chunk' },
       });
@@ -309,7 +313,7 @@ async function waitFor<T>(
             id: sessionId,
             projectId: targetProject,
             orgId,
-            initiatedBy: generateId(),
+            initiatedBy: userId,
             filename: `paper-${suffix}.pdf`,
             sizeBytes: 4,
             mimeType: 'application/pdf',
