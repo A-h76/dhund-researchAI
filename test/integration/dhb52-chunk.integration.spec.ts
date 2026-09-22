@@ -19,6 +19,7 @@ import { PrismaUploadSessionAdapter } from '../../src/l0/adapters/prisma/prisma-
 import { RedisCacheAdapter } from '../../src/l0/adapters/redis/redis-cache.adapter';
 import { RedisCounterAdapter } from '../../src/l0/adapters/redis/redis-counter.adapter';
 import { RedisLeaseAdapter } from '../../src/l0/adapters/redis/redis-lease.adapter';
+import { L0Module } from '../../src/l0/l0.module';
 import type { L0ConnectionConfig } from '../../src/l0/ports/connection-config.port';
 import { DocumentTransitionError } from '../../src/l0/ports/document-state';
 import {
@@ -158,7 +159,7 @@ async function waitFor<T>(
       });
 
       moduleRef = await Test.createTestingModule({
-        imports: [LoggerModule, QueuesModule, ReliabilityModule, ConcurrencyModule],
+        imports: [LoggerModule, L0Module, QueuesModule, ReliabilityModule, ConcurrencyModule],
         providers: [
           ProcessorRegistry,
           ChunkMetrics,

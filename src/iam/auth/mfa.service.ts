@@ -209,13 +209,16 @@ export class MfaService {
   ): Promise<void> {
     const codeHash = hashRecoveryCode(recoveryCode);
     const now = new Date();
-    await this.outbox.withTransaction(async (tx) => {
-      const outcome = await this.mfa.consumeRecoveryCode(tx, userId, codeHash, now);
-      if (outcome !== 'consumed') {
-        throw new DomainError(ErrorCode.MfaRecoveryInvalid, { module: 'iam' });
+    const outcome = await this.outbox.withTransaction(async (tx) => {
+      const result = await this.mfa.consumeRecoveryCode(tx, userId, codeHash, now);
+      if (result === 'consumed') {
+        await after(tx);
       }
-      await after(tx);
+      return result;
     });
+    if (outcome !== 'consumed') {
+      throw new DomainError(ErrorCode.MfaRecoveryInvalid, { module: 'iam' });
+    }
   }
 }
 
