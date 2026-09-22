@@ -255,6 +255,10 @@ class ProjectionWorld implements CitationProjectionPort {
     return record;
   }
 
+  async listCitations(projectId: string): Promise<readonly CitationRecord[]> {
+    return this.citations.filter((row) => row.projectId === projectId);
+  }
+
   async findWriting(writingId: string): Promise<WritingRecord | null> {
     return this.writings.get(writingId) ?? null;
   }

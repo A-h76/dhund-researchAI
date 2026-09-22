@@ -41,6 +41,7 @@ export interface CreateCitationInput {
 
 export interface CitationProjectionPort {
   createCitation(input: CreateCitationInput): Promise<CitationRecord>;
+  listCitations(projectId: string): Promise<readonly CitationRecord[]>;
   findWriting(writingId: string): Promise<WritingRecord | null>;
   listBindingsForSentence(input: {
     writingId: string;
