@@ -28,6 +28,11 @@ export interface ChatStreamSink {
 }
 
 export class NoopChatStreamSink implements ChatStreamSink {
-  emitToken(): void {}
-  emitComplete(): void {}
+  emitToken(event: MessageTokenEvent): void {
+    void event;
+  }
+
+  emitComplete(event: MessageCompleteEvent): void {
+    void event;
+  }
 }
