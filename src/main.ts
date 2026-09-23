@@ -60,6 +60,7 @@ async function logBoot(
 async function bootstrapApi(version: string): Promise<void> {
   const app = await NestFactory.create(ApiAppModule, {
     bufferLogs: true,
+    rawBody: true,
   });
   app.useLogger(app.get(Logger));
   await app.init();

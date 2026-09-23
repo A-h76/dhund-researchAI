@@ -5,6 +5,7 @@ import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { ApiRootController } from '../../src/apps/api/api-root.controller';
 import { CapabilityProbeController } from '../../src/apps/api/capability-probe.controller';
 import { HealthController } from '../../src/apps/api/health.controller';
+import { StripeWebhookController } from '../../src/billing/stripe-webhook.controller';
 import { AuthController } from '../../src/iam/auth.controller';
 import {
   REQUIRE_AUTH_KEY,
@@ -27,6 +28,7 @@ const HTTP_CONTROLLERS = [
   ApiRootController,
   HealthController,
   CapabilityProbeController,
+  StripeWebhookController,
   AuthController,
   DocumentAccessController,
   DocumentsController,
@@ -42,6 +44,7 @@ const EXPECTED_CONTROLLER_FILES = [
   'src/apps/api/api-root.controller.ts',
   'src/apps/api/capability-probe.controller.ts',
   'src/apps/api/health.controller.ts',
+  'src/billing/stripe-webhook.controller.ts',
   'src/iam/auth.controller.ts',
   'src/ingestion/document-access.controller.ts',
   'src/ingestion/documents.controller.ts',
@@ -67,6 +70,7 @@ const PUBLIC_ROUTES = new Set([
   'POST /v1/auth/password/reset-request',
   'POST /v1/auth/password/reset',
   'POST /v1/auth/mfa/verify',
+  'POST /webhooks/stripe',
 ]);
 
 interface CoveredRoute {

@@ -32,6 +32,7 @@ export * from './retrieval-trace.port';
 export * from './identity-lookup.port';
 export * from './pdf-parse.port';
 export * from './message-evidence-binding.port';
+export * from './billing.port';
 export * from './pubsub.port';
 export * from './query-observer.port';
 export * from './counter.port';

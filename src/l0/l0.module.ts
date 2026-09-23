@@ -65,6 +65,8 @@ import { PrismaEvidenceLookupAdapter } from './adapters/prisma/prisma-evidence-l
 import { PrismaRetrievalTraceAdapter } from './adapters/prisma/prisma-retrieval-trace.adapter';
 import { PrismaMessageEvidenceBindingAdapter } from './adapters/prisma/prisma-message-evidence-binding.adapter';
 import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
+import { PrismaBillingAdapter } from './adapters/prisma/prisma-billing.adapter';
+import { BILLING_STORE } from './ports/billing.port';
 
 @Module({
   providers: [
@@ -89,6 +91,7 @@ import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
     PrismaEvidenceLookupAdapter,
     PrismaRetrievalTraceAdapter,
     PrismaMessageEvidenceBindingAdapter,
+    PrismaBillingAdapter,
     PrismaIdentityLookupAdapter,
     PdfjsParseAdapter,
     RedisAccessContextInvalidator,
@@ -121,6 +124,7 @@ import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
     { provide: EVIDENCE_LOOKUP, useExisting: PrismaEvidenceLookupAdapter },
     { provide: RETRIEVAL_TRACE, useExisting: PrismaRetrievalTraceAdapter },
     { provide: MESSAGE_EVIDENCE_BINDING, useExisting: PrismaMessageEvidenceBindingAdapter },
+    { provide: BILLING_STORE, useExisting: PrismaBillingAdapter },
     { provide: IDENTITY_LOOKUP, useExisting: PrismaIdentityLookupAdapter },
     { provide: PDF_PARSE_SERVICE, useExisting: PdfjsParseAdapter },
     {
@@ -158,6 +162,7 @@ import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
     EVIDENCE_LOOKUP,
     RETRIEVAL_TRACE,
     MESSAGE_EVIDENCE_BINDING,
+    BILLING_STORE,
     IDENTITY_LOOKUP,
     PDF_PARSE_SERVICE,
     ACCESS_CONTEXT_INVALIDATOR,

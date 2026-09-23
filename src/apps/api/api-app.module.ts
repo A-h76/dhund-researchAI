@@ -18,6 +18,7 @@ import {
 import { CsrfMiddleware } from '../../platform/http';
 import { RuntimeRole } from '../../platform/runtime/role';
 import { PlatformModule } from '../../platform/platform.module';
+import { BillingModule } from '../../billing/billing.module';
 import { IamModule } from '../../iam/iam.module';
 import { IngestionModule } from '../../ingestion/ingestion.module';
 import { ProjectsModule } from '../../projects/projects.module';
@@ -33,6 +34,7 @@ import { NoopProcessorReadiness } from './noop-processor-readiness';
 @Module({
   imports: [
     PlatformModule,
+    BillingModule,
     AiModule,
     IamModule,
     ProjectsModule,

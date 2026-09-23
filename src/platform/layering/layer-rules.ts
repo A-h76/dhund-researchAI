@@ -1,6 +1,7 @@
 export const LAYER_ORDER = [
   'l0',
   'platform',
+  'billing',
   'iam',
   'projects',
   'ingestion',
@@ -16,7 +17,7 @@ const LAYER_INDEX = new Map<LayerName, number>(
   LAYER_ORDER.map((name, index) => [name, index]),
 );
 
-const LAYER_SEGMENT = /[/\\](l0|platform|iam|projects|ingestion|retrieval|evidence|orchestration|ai)[/\\]/;
+const LAYER_SEGMENT = /[/\\](l0|platform|billing|iam|projects|ingestion|retrieval|evidence|orchestration|ai)[/\\]/;
 
 export function layerFromPath(filePath: string): LayerName | null {
   const match = filePath.match(LAYER_SEGMENT);
