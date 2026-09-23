@@ -43,6 +43,19 @@ export class PrismaCitationProjectionAdapter implements CitationProjectionPort {
     }
   }
 
+  async listCitations(projectId: string): Promise<readonly CitationRecord[]> {
+    await this.ensureConnected();
+    try {
+      const rows = await this.client().citation.findMany({
+        where: { projectId },
+        orderBy: { createdAt: 'asc' },
+      });
+      return rows.map(toCitation);
+    } catch (error) {
+      throw new L0OperationError('Citation list failed', error);
+    }
+  }
+
   async findWriting(writingId: string): Promise<WritingRecord | null> {
     await this.ensureConnected();
     try {

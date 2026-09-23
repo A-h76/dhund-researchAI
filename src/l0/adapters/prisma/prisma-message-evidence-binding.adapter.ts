@@ -35,6 +35,13 @@ export class PrismaMessageEvidenceBindingAdapter implements MessageEvidenceBindi
           'Message evidence binding rejected: evidence missing or cross-project',
         );
       }
+      const writingClash = await this.client().writingSentenceBinding.findFirst({
+        where: { projectId: scope.projectId, evidenceId: { in: evidenceIds } },
+        select: { id: true },
+      });
+      if (writingClash !== null) {
+        throw new L0OperationError('Writing and message evidence bindings are disjoint');
+      }
       for (const row of rows) {
         if (row.projectId !== scope.projectId) {
           throw new L0OperationError(

@@ -5,10 +5,16 @@ import type {
 } from '../../src/l0/ports/message-evidence-binding.port';
 import type { ProjectScope } from '../../src/l0/ports/scoped-store.port';
 import { L0OperationError } from '../../src/l0/ports/errors';
+import { BindingOccupancy, bindingKey } from './binding-occupancy';
 
 export class MemoryMessageEvidenceBindings implements MessageEvidenceBindingStore {
   readonly rows: StoredMessageEvidenceBinding[] = [];
   readonly liveEvidence = new Set<string>();
+  readonly occupancy: BindingOccupancy;
+
+  constructor(occupancy?: BindingOccupancy) {
+    this.occupancy = occupancy ?? new BindingOccupancy();
+  }
 
   seedEvidence(projectId: string, evidenceId: string): void {
     this.liveEvidence.add(`${projectId}:${evidenceId}`);
@@ -25,6 +31,11 @@ export class MemoryMessageEvidenceBindings implements MessageEvidenceBindingStor
       if (!this.liveEvidence.has(`${scope.projectId}:${row.evidenceId}`)) {
         throw new L0OperationError('evidence missing or cross-project');
       }
+      const key = bindingKey(scope.projectId, row.evidenceId);
+      if (this.occupancy.writing.has(key)) {
+        throw new L0OperationError('Writing and message evidence bindings are disjoint');
+      }
+      this.occupancy.message.add(key);
       this.rows.push({ ...row });
     }
     return rows.map((row) => ({ ...row }));

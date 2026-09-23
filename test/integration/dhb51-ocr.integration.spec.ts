@@ -33,6 +33,7 @@ import { PrismaExtractStoreAdapter } from '../../src/l0/adapters/prisma/prisma-e
 import { RedisCacheAdapter } from '../../src/l0/adapters/redis/redis-cache.adapter';
 import { RedisCounterAdapter } from '../../src/l0/adapters/redis/redis-counter.adapter';
 import { RedisLeaseAdapter } from '../../src/l0/adapters/redis/redis-lease.adapter';
+import { L0Module } from '../../src/l0/l0.module';
 import type { L0ConnectionConfig } from '../../src/l0/ports/connection-config.port';
 import {
   CACHE_SERVICE,
@@ -193,7 +194,7 @@ async function waitFor<T>(
       const executeSpy = jest.spyOn(gateway, 'execute');
 
       moduleRef = await Test.createTestingModule({
-        imports: [LoggerModule, QueuesModule, ReliabilityModule, ConcurrencyModule],
+        imports: [LoggerModule, L0Module, QueuesModule, ReliabilityModule, ConcurrencyModule],
         providers: [
           ProcessorRegistry,
           ExtractMetrics,

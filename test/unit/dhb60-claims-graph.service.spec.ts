@@ -8,7 +8,6 @@ import type {
   EvidenceRecord,
   EvidenceSpinePort,
   ExtractionSetRecord,
-  PersistExtractedEvidenceInput,
   StanceLabelRecord,
 } from '../../src/l0/ports/evidence-spine.port';
 import { DomainError } from '../../src/platform/errors/domain-error';
@@ -335,15 +334,7 @@ class GraphSpine implements EvidenceSpinePort {
   async findExtractionSet(): Promise<ExtractionSetRecord | null> {
     return null;
   }
-  async persistExtractionSet(_input: {
-    stepId: string;
-    runId: string;
-    inputFingerprint: string;
-    correlationId: string;
-    aiExecutionId: string;
-    omittedLocatorCount: number;
-    evidence: readonly PersistExtractedEvidenceInput[];
-  }): Promise<ExtractionSetRecord> {
+  async persistExtractionSet(): Promise<ExtractionSetRecord> {
     throw new Error('unused');
   }
   async findStanceLabel(): Promise<StanceLabelRecord | null> {

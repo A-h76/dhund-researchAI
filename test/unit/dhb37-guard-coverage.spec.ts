@@ -4,7 +4,9 @@ import { RequestMethod } from '@nestjs/common';
 import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { ApiRootController } from '../../src/apps/api/api-root.controller';
 import { CapabilityProbeController } from '../../src/apps/api/capability-probe.controller';
+import { CitationExportController } from '../../src/apps/api/citation-export.controller';
 import { HealthController } from '../../src/apps/api/health.controller';
+import { WritingSentenceBindingsController } from '../../src/apps/api/writing-sentence-bindings.controller';
 import { AuthController } from '../../src/iam/auth.controller';
 import {
   REQUIRE_AUTH_KEY,
@@ -13,6 +15,7 @@ import {
 } from '../../src/iam/authorization/metadata';
 import { DocumentAccessController } from '../../src/ingestion/document-access.controller';
 import { DocumentsController } from '../../src/ingestion/documents.controller';
+import { LibraryController } from '../../src/ingestion/library.controller';
 import { MembershipsController } from '../../src/projects/memberships.controller';
 import { OrgsController } from '../../src/projects/orgs.controller';
 import { ProjectsController } from '../../src/projects/projects.controller';
@@ -27,9 +30,12 @@ const HTTP_CONTROLLERS = [
   ApiRootController,
   HealthController,
   CapabilityProbeController,
+  CitationExportController,
+  WritingSentenceBindingsController,
   AuthController,
   DocumentAccessController,
   DocumentsController,
+  LibraryController,
   UploadsController,
   OrgsController,
   ProjectsController,
@@ -41,10 +47,13 @@ const HTTP_CONTROLLERS = [
 const EXPECTED_CONTROLLER_FILES = [
   'src/apps/api/api-root.controller.ts',
   'src/apps/api/capability-probe.controller.ts',
+  'src/apps/api/citation-export.controller.ts',
   'src/apps/api/health.controller.ts',
+  'src/apps/api/writing-sentence-bindings.controller.ts',
   'src/iam/auth.controller.ts',
   'src/ingestion/document-access.controller.ts',
   'src/ingestion/documents.controller.ts',
+  'src/ingestion/library.controller.ts',
   'src/ingestion/uploads.controller.ts',
   'src/orchestration/conversations.controller.ts',
   'src/projects/memberships.controller.ts',
@@ -67,6 +76,7 @@ const PUBLIC_ROUTES = new Set([
   'POST /v1/auth/password/reset-request',
   'POST /v1/auth/password/reset',
   'POST /v1/auth/mfa/verify',
+  'GET /v1/writing/:writingId/sentence-bindings/:hash',
 ]);
 
 interface CoveredRoute {

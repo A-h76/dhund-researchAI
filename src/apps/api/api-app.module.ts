@@ -30,6 +30,7 @@ import { ApiRootController } from './api-root.controller';
 import { CapabilityProbeController } from './capability-probe.controller';
 import { HealthController } from './health.controller';
 import { NoopProcessorReadiness } from './noop-processor-readiness';
+import { CitationExportController } from './citation-export.controller';
 import { WritingSentenceBindingsController } from './writing-sentence-bindings.controller';
 
 @Module({
@@ -50,6 +51,7 @@ import { WritingSentenceBindingsController } from './writing-sentence-bindings.c
     HealthController,
     CapabilityProbeController,
     WritingSentenceBindingsController,
+    CitationExportController,
   ],
   providers: [
     provideRuntimeRole(RuntimeRole.Api),

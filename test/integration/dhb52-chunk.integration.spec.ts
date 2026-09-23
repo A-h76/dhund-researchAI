@@ -19,6 +19,7 @@ import { PrismaUploadSessionAdapter } from '../../src/l0/adapters/prisma/prisma-
 import { RedisCacheAdapter } from '../../src/l0/adapters/redis/redis-cache.adapter';
 import { RedisCounterAdapter } from '../../src/l0/adapters/redis/redis-counter.adapter';
 import { RedisLeaseAdapter } from '../../src/l0/adapters/redis/redis-lease.adapter';
+import { L0Module } from '../../src/l0/l0.module';
 import type { L0ConnectionConfig } from '../../src/l0/ports/connection-config.port';
 import { DocumentTransitionError } from '../../src/l0/ports/document-state';
 import {
@@ -115,11 +116,15 @@ async function waitFor<T>(
 
       const orgId = generateId();
       const projectId = generateId();
+      const userId = generateId();
       const documentId = generateId();
       const documentVersionId = generateId();
       const storageKey = `${orgId}/${projectId}/docs/paper.pdf`;
       const contentHash = 'a'.repeat(64);
 
+      await prisma.user.create({
+        data: { id: userId, email: `dhb52-${userId}@example.com`, displayName: 'DHB-52' },
+      });
       await prisma.organization.create({
         data: { id: orgId, kind: 'TEAM', name: 'DHB-52 Chunk' },
       });
@@ -158,7 +163,7 @@ async function waitFor<T>(
       });
 
       moduleRef = await Test.createTestingModule({
-        imports: [LoggerModule, QueuesModule, ReliabilityModule, ConcurrencyModule],
+        imports: [LoggerModule, L0Module, QueuesModule, ReliabilityModule, ConcurrencyModule],
         providers: [
           ProcessorRegistry,
           ChunkMetrics,
@@ -308,7 +313,7 @@ async function waitFor<T>(
             id: sessionId,
             projectId: targetProject,
             orgId,
-            initiatedBy: generateId(),
+            initiatedBy: userId,
             filename: `paper-${suffix}.pdf`,
             sizeBytes: 4,
             mimeType: 'application/pdf',

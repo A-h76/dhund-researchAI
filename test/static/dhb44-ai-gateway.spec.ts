@@ -50,6 +50,7 @@ describe('DHB-44 AI gateway static checks', () => {
       // Layer-local copies asserted equal to AI policy; those layers cannot import ai/.
       'src/ingestion/chunk.constants.ts',
       'src/l0/ports/hnsw.constants.ts',
+      'src/retrieval/embed-identity.ts',
     ]);
     const forbiddenPatterns = [
       /\bvoyage-4\b/,

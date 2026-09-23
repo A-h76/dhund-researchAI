@@ -66,8 +66,12 @@ import { PrismaRetrievalTraceAdapter } from './adapters/prisma/prisma-retrieval-
 import { PrismaMessageEvidenceBindingAdapter } from './adapters/prisma/prisma-message-evidence-binding.adapter';
 import { PrismaEvidenceSpineAdapter } from './adapters/prisma/prisma-evidence-spine.adapter';
 import { PrismaCitationProjectionAdapter } from './adapters/prisma/prisma-citation-projection.adapter';
+import { PrismaLibraryAdapter } from './adapters/prisma/prisma-library.adapter';
+import { PrismaWritingStoreAdapter } from './adapters/prisma/prisma-writing-store.adapter';
 import { PdfjsParseAdapter } from './adapters/pdfjs/pdfjs-parse.adapter';
 import { CITATION_PROJECTION } from './ports/citation-projection.port';
+import { LIBRARY_STORE } from './ports/library.port';
+import { WRITING_STORE } from './ports/writing-store.port';
 import { EVIDENCE_SPINE } from './ports/evidence-spine.port';
 
 @Module({
@@ -95,6 +99,8 @@ import { EVIDENCE_SPINE } from './ports/evidence-spine.port';
     PrismaMessageEvidenceBindingAdapter,
     PrismaEvidenceSpineAdapter,
     PrismaCitationProjectionAdapter,
+    PrismaLibraryAdapter,
+    PrismaWritingStoreAdapter,
     PrismaIdentityLookupAdapter,
     PdfjsParseAdapter,
     RedisAccessContextInvalidator,
@@ -129,6 +135,8 @@ import { EVIDENCE_SPINE } from './ports/evidence-spine.port';
     { provide: MESSAGE_EVIDENCE_BINDING, useExisting: PrismaMessageEvidenceBindingAdapter },
     { provide: EVIDENCE_SPINE, useExisting: PrismaEvidenceSpineAdapter },
     { provide: CITATION_PROJECTION, useExisting: PrismaCitationProjectionAdapter },
+    { provide: LIBRARY_STORE, useExisting: PrismaLibraryAdapter },
+    { provide: WRITING_STORE, useExisting: PrismaWritingStoreAdapter },
     { provide: IDENTITY_LOOKUP, useExisting: PrismaIdentityLookupAdapter },
     { provide: PDF_PARSE_SERVICE, useExisting: PdfjsParseAdapter },
     {
@@ -168,6 +176,8 @@ import { EVIDENCE_SPINE } from './ports/evidence-spine.port';
     MESSAGE_EVIDENCE_BINDING,
     EVIDENCE_SPINE,
     CITATION_PROJECTION,
+    LIBRARY_STORE,
+    WRITING_STORE,
     IDENTITY_LOOKUP,
     PDF_PARSE_SERVICE,
     ACCESS_CONTEXT_INVALIDATOR,
