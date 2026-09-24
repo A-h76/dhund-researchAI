@@ -1,4 +1,5 @@
 import { DomainError, ErrorCode } from '../platform/errors';
+import { pickDeclared } from '../platform/http/declared-body';
 
 const MODULE = 'ingestion';
 
@@ -14,7 +15,7 @@ export function parseDocumentPatch(body: unknown): { title: string } {
   if (typeof body !== 'object' || body === null || Array.isArray(body)) {
     throw malformed();
   }
-  const record = body as Record<string, unknown>;
+  const record = pickDeclared(body as Record<string, unknown>, ['title']);
   if (typeof record.title !== 'string') {
     throw invalid();
   }

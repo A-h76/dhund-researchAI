@@ -16,6 +16,7 @@ export function buildTestAppConfig(
     hnswEfSearch: 80,
     redisUrl: 'redis://localhost:6379',
     featureFlags: Object.freeze({ research_runs: false }),
+    corsAllowedOrigins: Object.freeze([]),
     argon2: Object.freeze({
       memoryCost: 65536,
       timeCost: 3,

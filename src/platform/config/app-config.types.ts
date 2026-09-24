@@ -33,5 +33,6 @@ export interface AppConfig {
   };
   readonly email?: EmailConfig;
   readonly featureFlags: Readonly<Record<string, boolean>>;
+  readonly corsAllowedOrigins: readonly string[];
   readonly loadedKeyNames: readonly string[];
 }

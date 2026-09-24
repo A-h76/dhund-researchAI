@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { SLOW_QUERY_THRESHOLD_MS } from '../../l0/ports/query-observer.port';
 import type { QueueName } from '../queues/queue-names';
 import { AlertingService } from './alerting.service';
+import type { RateLimitClass } from '../http/rate-limit-class';
 import {
   assertSafeLabels,
   type IngestionKind,
@@ -118,6 +119,23 @@ export class MetricsSurface {
 
   recordIngestion(kind: IngestionKind, count: number): void {
     this.push('ingestion', 'throughput', count, { kind });
+  }
+
+  recordRateLimitHit(rateClass: RateLimitClass): void {
+    this.push('api', 'rate_limit_hits', 1, { rateClass });
+  }
+
+  recordRedisOutage(rateClass: RateLimitClass): void {
+    this.push('api', 'redis_outage', 1, { rateClass });
+    this.alerting.signal('redis_outage');
+  }
+
+  recordCorsRejection(): void {
+    this.push('api', 'cors_rejections', 1, { event: 'reject' });
+  }
+
+  recordValidationFailure(route: string): void {
+    this.push('api', 'validation_failures', 1, { route });
   }
 
   recordBrokenProvenance(count: number): void {
