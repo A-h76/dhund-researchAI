@@ -1,4 +1,5 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
+import { MetricsSurface } from '../../platform/observability/metrics-surface';
 import type { AiExecutionLedgerPort } from '../../l0/ports/ai-execution-ledger.port';
 import { AI_EXECUTION_LEDGER } from '../../l0/ports/tokens';
 import { generateId } from '../../platform/ids/uuid-v7';
@@ -27,6 +28,7 @@ export class GatewayService implements IGatewayService {
     private readonly promptAssembler: PromptAssembler,
     private readonly adapterRegistry: AdapterRegistry,
     private readonly logger: PlatformLogger,
+    @Optional() private readonly metrics?: MetricsSurface,
   ) {}
 
   async execute(
@@ -73,6 +75,12 @@ export class GatewayService implements IGatewayService {
     }));
 
     const latencyMs = Date.now() - started;
+    this.metrics?.recordAi({
+      capability: request.capability,
+      costMicros: outcome.costMicros,
+      latencyMs,
+      tokens: outcome.tokensIn + outcome.tokensOut,
+    });
     const retrievalTraceId =
       request.capability === 'CHAT' ? request.retrievalTraceId : undefined;
 

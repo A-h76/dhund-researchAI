@@ -4,8 +4,18 @@ import type { SlowQueryEvent } from './ports/query-observer.port';
 type CorrelationIdReader = () => string | undefined;
 type SlowQueryHandler = (event: SlowQueryEvent) => void;
 
+export interface QueueJobObservation {
+  readonly queue: string;
+  readonly waitMs: number;
+  readonly processMs: number;
+  readonly retry: number;
+}
+
+type QueueJobHandler = (event: QueueJobObservation) => void;
+
 let readCorrelationId: CorrelationIdReader | undefined;
-let onSlowQuery: SlowQueryHandler | undefined;
+const slowQueryHandlers: SlowQueryHandler[] = [];
+let onQueueJob: QueueJobHandler | undefined;
 
 /**
  * Platform registers observability hooks without L0 importing platform (layering).
@@ -14,13 +24,26 @@ export function registerQueryObservability(options: {
   readCorrelationId?: CorrelationIdReader;
   onSlowQuery?: SlowQueryHandler;
 }): void {
-  readCorrelationId = options.readCorrelationId;
-  onSlowQuery = options.onSlowQuery;
+  if (options.readCorrelationId !== undefined) {
+    readCorrelationId = options.readCorrelationId;
+  }
+  if (options.onSlowQuery !== undefined) {
+    slowQueryHandlers.push(options.onSlowQuery);
+  }
+}
+
+export function registerQueueObservation(handler: QueueJobHandler): void {
+  onQueueJob = handler;
 }
 
 export function resetQueryObservabilityForTests(): void {
   readCorrelationId = undefined;
-  onSlowQuery = undefined;
+  slowQueryHandlers.length = 0;
+  onQueueJob = undefined;
+}
+
+export function emitQueueJob(event: QueueJobObservation): void {
+  onQueueJob?.(event);
 }
 
 export function emitSlowQuery(event: {
@@ -37,5 +60,7 @@ export function emitSlowQuery(event: {
   };
 
   logSlowQuery(payload);
-  onSlowQuery?.(payload);
+  for (const handler of slowQueryHandlers) {
+    handler(payload);
+  }
 }

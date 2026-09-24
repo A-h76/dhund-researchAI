@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { PlatformLogger } from '../platform/logging';
+import { MetricsSurface } from '../platform/observability/metrics-surface';
 
 export type ExtractFailureCause =
   | 'invalid_pdf'
@@ -27,10 +28,14 @@ export class ExtractMetrics {
     parse: 0,
   };
 
-  constructor(private readonly logger: PlatformLogger) {}
+  constructor(
+    private readonly logger: PlatformLogger,
+    @Optional() private readonly surface?: MetricsSurface,
+  ) {}
 
   recordSuccess(pages: number, durationMs: number): void {
     this.pagesParsed += pages;
+    this.surface?.recordIngestion('extract', pages);
     this.parseLatencyMs += durationMs;
     this.logger.info({
       module: 'ingestion',

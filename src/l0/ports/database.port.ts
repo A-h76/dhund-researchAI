@@ -6,6 +6,7 @@ export interface AppliedMigrationRecord {
 
 export interface DatabasePoolInfo {
   readonly configuredSize: number;
+  readonly inUse: number;
 }
 
 export interface DatabaseService {

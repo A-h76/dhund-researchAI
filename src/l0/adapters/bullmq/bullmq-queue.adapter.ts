@@ -6,6 +6,7 @@ import {
   type L0ConnectionConfig,
 } from '../../ports/connection-config.port';
 import { logAdapterLifecycle } from '../adapter-logger';
+import { emitQueueJob } from '../../observability-bridge';
 import { L0ConnectionError, L0OperationError } from '../../ports/errors';
 import type {
   QueueBackoffPolicy,
@@ -215,12 +216,30 @@ export class BullmqQueueAdapter implements QueueService, OnModuleDestroy {
       const worker = new Worker(
         queueName,
         async (job) => {
-          await handler({
-            id: job.id ?? queueName,
-            data: asJobData(job.data),
-            attemptsMade: job.attemptsMade,
-            attempts: job.opts.attempts ?? 1,
-          });
+          const started = Date.now();
+          const enqueuedAt = typeof job.timestamp === 'number' ? job.timestamp : started;
+          try {
+            await handler({
+              id: job.id ?? queueName,
+              data: asJobData(job.data),
+              attemptsMade: job.attemptsMade,
+              attempts: job.opts.attempts ?? 1,
+            });
+            emitQueueJob({
+              queue: queueName,
+              waitMs: Math.max(0, started - enqueuedAt),
+              processMs: Date.now() - started,
+              retry: job.attemptsMade,
+            });
+          } catch (error) {
+            emitQueueJob({
+              queue: queueName,
+              waitMs: Math.max(0, started - enqueuedAt),
+              processMs: Date.now() - started,
+              retry: job.attemptsMade + 1,
+            });
+            throw error;
+          }
         },
         { connection },
       );

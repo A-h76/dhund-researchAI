@@ -5,6 +5,7 @@ import { LexicalSearch } from './lexical-search';
 import { RetrievalMetrics } from './retrieval.metrics';
 import { RETRIEVAL_SERVICE } from './retrieval.port';
 import { RetrievalService } from './retrieval.service';
+import { MergeApprovalService } from './merge-approval.service';
 import { TrigramIdentityLookup } from './trigram-identity';
 
 @Module({
@@ -13,6 +14,7 @@ import { TrigramIdentityLookup } from './trigram-identity';
     AnnSearch,
     LexicalSearch,
     TrigramIdentityLookup,
+    MergeApprovalService,
     RetrievalMetrics,
     RetrievalService,
     { provide: RETRIEVAL_SERVICE, useExisting: RetrievalService },
@@ -21,6 +23,7 @@ import { TrigramIdentityLookup } from './trigram-identity';
     AnnSearch,
     LexicalSearch,
     TrigramIdentityLookup,
+    MergeApprovalService,
     RetrievalMetrics,
     RetrievalService,
     RETRIEVAL_SERVICE,

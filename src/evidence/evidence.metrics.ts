@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { PlatformLogger } from '../platform/logging';
+import { MetricsSurface } from '../platform/observability/metrics-surface';
 import type { LocatorRejectionReason } from './locator';
 
 export type EvidenceTypeValue = 'body_grounded' | 'metadata_only';
@@ -26,7 +27,10 @@ export class EvidenceMetrics {
     human: 0,
   };
 
-  constructor(private readonly logger: PlatformLogger) {}
+  constructor(
+    private readonly logger: PlatformLogger,
+    @Optional() private readonly surface?: MetricsSurface,
+  ) {}
 
   recordCreated(type: EvidenceTypeValue, method: ExtractionMethodValue): void {
     this.created += 1;
@@ -42,6 +46,7 @@ export class EvidenceMetrics {
 
   recordRejection(reason: LocatorRejectionReason): void {
     this.locatorRejections += 1;
+    this.surface?.recordBrokenProvenance(1);
     this.logger.warn({
       module: 'evidence',
       message: 'evidence.locator_rejected',

@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import type { RetrievalArm } from '../l0/ports';
 import { PlatformLogger } from '../platform/logging';
+import { MetricsSurface } from '../platform/observability/metrics-surface';
 import {
   FILTERED_RECALL_SHORTFALL_THRESHOLD,
   filteredRecallDropRate,
@@ -46,7 +47,10 @@ export class RetrievalMetrics {
   private retrieved = 0;
   private surviving = 0;
 
-  constructor(private readonly logger: PlatformLogger) {}
+  constructor(
+    private readonly logger: PlatformLogger,
+    @Optional() private readonly surface?: MetricsSurface,
+  ) {}
 
   recordVectorQuery(input: { readonly hitCount: number; readonly efSearch: number }): void {
     this.vectorQueries += 1;
@@ -107,6 +111,7 @@ export class RetrievalMetrics {
         throw new Error(`unknown retrieval stage ${String(exhaustive)}`);
       }
     }
+    this.surface?.recordRetrieval({ stage, latencyMs });
     this.logger.info({
       module: 'retrieval',
       message: 'retrieval.stage.latency',
@@ -148,6 +153,7 @@ export class RetrievalMetrics {
     this.shortfall += shortfall;
     this.retrieved += retrievedCount;
     this.surviving += survivingCount;
+    this.surface?.recordRetrievalShortfall(shortfall);
     this.logger.info({
       module: 'retrieval',
       message: 'retrieval.filtered_recall_shortfall',

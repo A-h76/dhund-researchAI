@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { PlatformLogger } from '../platform/logging';
+import { MetricsSurface } from '../platform/observability/metrics-surface';
 
 export type ChunkFailureCause =
   | 'version_missing'
@@ -38,7 +39,10 @@ export class ChunkMetrics {
     forbidden_transition: 0,
   };
 
-  constructor(private readonly logger: PlatformLogger) {}
+  constructor(
+    private readonly logger: PlatformLogger,
+    @Optional() private readonly surface?: MetricsSurface,
+  ) {}
 
   recordSuccess(input: {
     readonly chunkCount: number;
@@ -49,6 +53,7 @@ export class ChunkMetrics {
     readonly staleDetected: number;
   }): void {
     this.chunksCreated += input.createdCount;
+    this.surface?.recordIngestion('chunk', input.createdCount);
     this.durationMs += input.durationMs;
     this.documentsChunked += 1;
     this.chunksPerDocument.push(input.chunkCount);

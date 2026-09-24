@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { PlatformLogger } from '../../platform/logging';
+import { MetricsSurface } from '../../platform/observability/metrics-surface';
 
 export type EmbedFailureCause =
   | 'chunk_missing'
@@ -46,7 +47,10 @@ export class EmbedMetrics {
     write: 0,
   };
 
-  constructor(private readonly logger: PlatformLogger) {}
+  constructor(
+    private readonly logger: PlatformLogger,
+    @Optional() private readonly surface?: MetricsSurface,
+  ) {}
 
   recordRequest(input: {
     readonly textCount: number;
@@ -75,6 +79,7 @@ export class EmbedMetrics {
     readonly modelVersion: string;
   }): void {
     this.embeddingsWritten += input.written;
+    this.surface?.recordIngestion('embed', input.written);
     this.embeddingsSkipped += input.skipped;
     this.logger.info({
       module: 'ai.embed',

@@ -59,6 +59,7 @@ describe('AuthTokensService', () => {
   let appended: ReturnType<typeof capturingOutbox>['appended'];
   let metrics: AuthTokenMetrics;
   let lines: unknown[];
+  let audits: Array<{ action: string; correlationId: string; scope: Record<string, unknown> }>;
 
   beforeEach(() => {
     sessions = new MemorySessionStore();
@@ -87,6 +88,7 @@ describe('AuthTokensService', () => {
     };
     const { logger, lines: captured } = capturingLogger();
     lines = captured;
+    audits = [];
     metrics = new AuthTokenMetrics(logger);
     const { outbox, appended: rows } = capturingOutbox();
     appended = rows;
@@ -107,6 +109,15 @@ describe('AuthTokensService', () => {
       hasher,
       metrics,
       logger,
+      {
+        append: async (input) => {
+          audits.push({
+            action: input.action,
+            correlationId: input.correlationId,
+            scope: input.scope,
+          });
+        },
+      },
     );
   });
 
@@ -306,6 +317,13 @@ describe('AuthTokensService', () => {
     expect(JSON.stringify(appended)).not.toContain(NEW_PASSWORD);
     expect(JSON.stringify(lines)).not.toContain(token);
     expect(JSON.stringify(lines)).not.toContain(NEW_PASSWORD);
+    expect(audits).toEqual([
+      expect.objectContaining({
+        action: 'iam.password.reset',
+        correlationId: 'cor-reset',
+        scope: expect.objectContaining({ target: userId, actor: userId }),
+      }),
+    ]);
   });
 
   it('does not mark email verified when the flag write fails after consume', async () => {

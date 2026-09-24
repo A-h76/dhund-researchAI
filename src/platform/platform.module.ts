@@ -6,6 +6,7 @@ import { ConfigModule } from './config/config.module';
 import { EventsModule } from './events/events.module';
 import { LoggerModule } from './logging/logger.module';
 import { PersistenceModule } from './persistence/persistence.module';
+import { ObservabilityModule } from './observability/observability.module';
 import { QueuesModule } from './queues/queues.module';
 import { ReliabilityModule } from './reliability/reliability.module';
 
@@ -14,6 +15,7 @@ import { ReliabilityModule } from './reliability/reliability.module';
     ConfigModule,
     L0Module,
     LoggerModule,
+    ObservabilityModule,
     BootstrapModule,
     QueuesModule,
     ReliabilityModule,
@@ -25,6 +27,7 @@ import { ReliabilityModule } from './reliability/reliability.module';
     ConfigModule,
     L0Module,
     LoggerModule,
+    ObservabilityModule,
     BootstrapModule,
     QueuesModule,
     ReliabilityModule,

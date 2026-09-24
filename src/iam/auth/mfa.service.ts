@@ -1,9 +1,11 @@
 import { randomBytes } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  AUDIT_EVENT,
   MFA_STORE,
   OUTBOX_SERVICE,
   SESSION_STORE,
+  type AuditEventPort,
   type MfaStore,
   type OutboxPort,
   type OutboxTransaction,
@@ -12,6 +14,8 @@ import {
 import { APP_CONFIG, type FrozenAppConfig } from '../../platform/config';
 import { DomainError, ErrorCode } from '../../platform/errors';
 import { generateId } from '../../platform/ids/uuid-v7';
+import { requireCorrelationId } from '../../platform/logging/correlation-context';
+import { auditedAppendInput } from '../../platform/observability/audit-action';
 import { generateRecoveryCodes, hashRecoveryCode } from '../mfa/recovery-code';
 import { encodeBase32, otpauthUrl, verifyTotp } from '../mfa/totp';
 import { unwrapTotpSecret, wrapTotpSecret } from '../mfa/totp-wrap';
@@ -48,6 +52,7 @@ export class MfaService {
     private readonly challenges: MfaChallengeService,
     private readonly auth: AuthService,
     private readonly metrics: MfaMetrics,
+    @Inject(AUDIT_EVENT) private readonly audit: AuditEventPort,
   ) {
     if (config.totpWrapKey === undefined) {
       throw new Error('Missing TOTP wrap-key configuration');
@@ -91,6 +96,7 @@ export class MfaService {
       await this.mfa.enableTotp(tx, userId, enabledAt);
       await this.mfa.replaceRecoveryCodes(tx, userId, hashedRecoveryInserts(recoveryCodes));
     });
+    await this.auditMfa(userId, 'iam.mfa.enabled');
 
     return { recoveryCodes };
   }
@@ -105,12 +111,14 @@ export class MfaService {
       await this.outbox.withTransaction(async (tx) => {
         await this.mfa.disableTotp(tx, userId);
       });
+      await this.auditMfa(userId, 'iam.mfa.disabled');
       return;
     }
 
     await this.consumeRecoveryThen(userId, factor.recoveryCode!, async (tx) => {
       await this.mfa.disableTotp(tx, userId);
     });
+    await this.auditMfa(userId, 'iam.mfa.disabled');
   }
 
   async issueRecovery(
@@ -126,6 +134,7 @@ export class MfaService {
     await this.outbox.withTransaction(async (tx) => {
       await this.mfa.replaceRecoveryCodes(tx, userId, hashedRecoveryInserts(recoveryCodes));
     });
+    await this.auditMfa(userId, 'iam.mfa.recovery_rotated');
     return { recoveryCodes };
   }
 
@@ -168,6 +177,20 @@ export class MfaService {
     const pair = await this.auth.issueSession(identity);
     this.metrics.recordSuccess();
     return pair;
+  }
+
+  private async auditMfa(userId: string, action: string): Promise<void> {
+    await this.audit.append(
+      auditedAppendInput({
+        id: generateId(),
+        actorType: 'user',
+        actorId: userId,
+        action,
+        target: userId,
+        correlationId: requireCorrelationId(),
+        scope: { userId },
+      }),
+    );
   }
 
   private async requireBearer(authorization: string | undefined) {

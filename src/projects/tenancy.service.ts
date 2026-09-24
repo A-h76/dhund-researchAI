@@ -19,6 +19,7 @@ import { DomainError, ErrorCode, notFound } from '../platform/errors';
 import { OutboxWriterService } from '../platform/events';
 import { generateId, isUuid } from '../platform/ids/uuid-v7';
 import { requireCorrelationId } from '../platform/logging/correlation-context';
+import { auditedAppendInput } from '../platform/observability/audit-action';
 import {
   forbidden,
   TenancyAuthorizer,
@@ -396,31 +397,37 @@ export class TenancyService {
         });
       }
     });
-    await this.audit.append({
-      id: generateId(),
-      actorType: 'user',
-      actorId: actorUserId,
-      action: 'projects.project.deleted',
-      correlationId: requireCorrelationId(),
-      scope: {
-        actorUserId,
-        orgId: project.orgId,
-        projectId: project.id,
-      },
-    });
-    if (options.breakGlass === true) {
-      await this.audit.append({
+    await this.audit.append(
+      auditedAppendInput({
         id: generateId(),
         actorType: 'user',
         actorId: actorUserId,
-        action: 'projects.break_glass.used',
+        action: 'projects.project.deleted',
+        target: project.id,
         correlationId: requireCorrelationId(),
         scope: {
           actorUserId,
           orgId: project.orgId,
           projectId: project.id,
         },
-      });
+      }),
+    );
+    if (options.breakGlass === true) {
+      await this.audit.append(
+        auditedAppendInput({
+          id: generateId(),
+          actorType: 'user',
+          actorId: actorUserId,
+          action: 'projects.break_glass.used',
+          target: project.id,
+          correlationId: requireCorrelationId(),
+          scope: {
+            actorUserId,
+            orgId: project.orgId,
+            projectId: project.id,
+          },
+        }),
+      );
     }
   }
 
@@ -431,20 +438,23 @@ export class TenancyService {
     role: string,
     project: ProjectRecord,
   ): Promise<void> {
-    await this.audit.append({
-      id: generateId(),
-      actorType: 'user',
-      actorId: actorUserId,
-      action,
-      correlationId: requireCorrelationId(),
-      scope: {
-        actorUserId,
-        targetUserId,
-        role,
-        orgId: project.orgId,
-        projectId: project.id,
-      },
-    });
+    await this.audit.append(
+      auditedAppendInput({
+        id: generateId(),
+        actorType: 'user',
+        actorId: actorUserId,
+        action,
+        target: targetUserId,
+        correlationId: requireCorrelationId(),
+        scope: {
+          actorUserId,
+          targetUserId,
+          role,
+          orgId: project.orgId,
+          projectId: project.id,
+        },
+      }),
+    );
   }
 }
 

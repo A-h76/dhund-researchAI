@@ -1,6 +1,7 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { QUEUE_SERVICE, type QueueService } from '../../l0/ports';
 import { PlatformLogger } from '../logging/platform-logger.service';
+import { MetricsSurface } from '../observability/metrics-surface';
 import { dlqNameFor, type QueueName } from './queue-names';
 
 export interface QueueMetricsSnapshot {
@@ -17,6 +18,7 @@ export class QueueMetricsService {
   constructor(
     @Inject(QUEUE_SERVICE) private readonly queueService: QueueService,
     private readonly logger: PlatformLogger,
+    @Optional() private readonly metrics?: MetricsSurface,
   ) {}
 
   async snapshot(queueName: QueueName): Promise<QueueMetricsSnapshot> {
@@ -31,6 +33,12 @@ export class QueueMetricsService {
       delayed: counts.delayed,
       dlqWaiting: dlqCounts.waiting,
     };
+
+    this.metrics?.recordQueueDepth({
+      queue: queueName,
+      depth: metrics.waiting + metrics.active + metrics.delayed,
+      dlq: metrics.dlqWaiting,
+    });
 
     this.logger.info({
       module: 'queues',

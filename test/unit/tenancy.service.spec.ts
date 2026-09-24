@@ -197,6 +197,12 @@ describe('DHB-36 tenancy service', () => {
     );
 
     expect(invalidated).toEqual([targetId, targetId, targetId]);
+    expect(audits.map((row) => row.action)).toEqual([
+      'projects.membership.added',
+      'projects.membership.role_changed',
+      'projects.membership.removed',
+    ]);
+    expect(audits.every((row) => row.scope.target === targetId)).toBe(true);
   });
 
   it('allows org OWNER break-glass delete without project membership', async () => {

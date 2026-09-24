@@ -6,6 +6,7 @@ import {
   type QueueService,
 } from '../../l0/ports';
 import { generateId } from '../../platform/ids/uuid-v7';
+import { auditedAppendInput } from '../../platform/observability/audit-action';
 import { JobEnqueueService, requireCorrelationId } from '../../platform/logging';
 import { deriveJobId } from '../../platform/queues/deterministic-job-id';
 import {
@@ -58,23 +59,26 @@ export class EmbedBackfillAdminService {
   }
 
   private async appendAudit(request: EmbedBackfillRequest): Promise<void> {
-    await this.audit.append({
-      id: generateId(),
-      actorType: 'user',
-      actorId: request.operatorId,
-      action: EMBED_BACKFILL_AUDIT_ACTION,
-      scope: {
-        orgId: request.orgId,
-        operator: request.operatorId,
+    await this.audit.append(
+      auditedAppendInput({
+        id: generateId(),
+        actorType: 'user',
+        actorId: request.operatorId,
+        action: EMBED_BACKFILL_AUDIT_ACTION,
+        target: request.batchId,
+        correlationId: requireCorrelationId(),
         scope: {
-          allProjects: request.scope.allProjects,
-          projects: [...request.scope.projects],
-          documentIds: [...request.scope.documentIds],
+          orgId: request.orgId,
+          operator: request.operatorId,
+          scope: {
+            allProjects: request.scope.allProjects,
+            projects: [...request.scope.projects],
+            documentIds: [...request.scope.documentIds],
+          },
+          modelVersion: request.modelVersion,
+          batchId: request.batchId,
         },
-        modelVersion: request.modelVersion,
-        batchId: request.batchId,
-      },
-      correlationId: requireCorrelationId(),
-    });
+      }),
+    );
   }
 }

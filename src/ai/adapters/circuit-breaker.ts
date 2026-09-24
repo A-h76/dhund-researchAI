@@ -1,4 +1,5 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
+import { AlertingService } from '../../platform/observability/alerting.service';
 import { PlatformLogger } from '../../platform/logging/platform-logger.service';
 import type { PolicyProvider } from '../policy/policy.types';
 import { SystemAdapterClock, type AdapterClock } from './clock';
@@ -29,6 +30,7 @@ export class ProviderCircuitBreaker {
     readonly provider: PolicyProvider,
     private readonly clock: AdapterClock,
     private readonly logger?: PlatformLogger,
+    private readonly onOpen?: () => void,
   ) {}
 
   getState(): CircuitState {
@@ -108,10 +110,10 @@ export class ProviderCircuitBreaker {
     this.openedAtMs = this.clock.now();
     this.probeInFlight = false;
     if (!wasOpen) {
+      this.onOpen?.();
       this.logger?.info({
         module: 'ai.adapters',
         message: 'ai.circuit.opened',
-        provider: this.provider,
         consecutiveFailures: this.consecutiveFailures,
       });
     }
@@ -132,13 +134,16 @@ export class ProviderCircuitBreakerRegistry {
   private readonly breakers = new Map<PolicyProvider, ProviderCircuitBreaker>();
   private readonly clock: AdapterClock;
   private readonly logger: PlatformLogger | undefined;
+  private readonly alerting: AlertingService | undefined;
 
   constructor(
     @Optional() @Inject(ADAPTER_CLOCK) clock?: AdapterClock,
     @Optional() logger?: PlatformLogger,
+    @Optional() alerting?: AlertingService,
   ) {
     this.clock = clock ?? new SystemAdapterClock();
     this.logger = logger;
+    this.alerting = alerting;
   }
 
   get(provider: PolicyProvider): ProviderCircuitBreaker {
@@ -146,7 +151,9 @@ export class ProviderCircuitBreakerRegistry {
     if (existing !== undefined) {
       return existing;
     }
-    const created = new ProviderCircuitBreaker(provider, this.clock, this.logger);
+    const created = new ProviderCircuitBreaker(provider, this.clock, this.logger, () => {
+      this.alerting?.signal('circuit_open');
+    });
     this.breakers.set(provider, created);
     return created;
   }

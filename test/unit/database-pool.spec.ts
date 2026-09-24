@@ -59,6 +59,6 @@ describe('database pool configuration (DHB-28)', () => {
       databasePoolSize: 7,
     });
 
-    expect(adapter.getPoolInfo()).toEqual({ configuredSize: 7 });
+    expect(adapter.getPoolInfo()).toEqual({ configuredSize: 7, inUse: 0 });
   });
 });

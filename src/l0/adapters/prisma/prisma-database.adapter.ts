@@ -24,6 +24,7 @@ export class PrismaDatabaseAdapter implements DatabaseService, OnModuleDestroy {
   private readonly poolSize: number;
   private connected = false;
   private slowQueryCount = 0;
+  private inFlight = 0;
 
   constructor(
     @Inject(L0_CONNECTION_CONFIG) connectionConfig: L0ConnectionConfig,
@@ -46,9 +47,11 @@ export class PrismaDatabaseAdapter implements DatabaseService, OnModuleDestroy {
       query: {
         $allOperations: async ({ operation, model, args, query }) => {
           const started = Date.now();
+          this.inFlight += 1;
           try {
             return await query(args);
           } finally {
+            this.inFlight = Math.max(0, this.inFlight - 1);
             const durationMs = Date.now() - started;
             if (isSlowQuery(durationMs)) {
               this.slowQueryCount += 1;
@@ -65,7 +68,7 @@ export class PrismaDatabaseAdapter implements DatabaseService, OnModuleDestroy {
   }
 
   getPoolInfo(): DatabasePoolInfo {
-    return { configuredSize: this.poolSize };
+    return { configuredSize: this.poolSize, inUse: this.inFlight };
   }
 
   getSlowQueryCount(): number {

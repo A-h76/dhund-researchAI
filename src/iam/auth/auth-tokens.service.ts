@@ -1,9 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import {
+  AUDIT_EVENT,
   AUTH_TOKEN_STORE,
   EMAIL_SERVICE,
   OUTBOX_SERVICE,
   SESSION_STORE,
+  type AuditEventPort,
   type AuthTokenPurpose,
   type AuthTokenStore,
   type ConsumeOutcome,
@@ -15,6 +17,7 @@ import { DomainError, ErrorCode } from '../../platform/errors';
 import { OutboxWriterService } from '../../platform/events';
 import { generateId } from '../../platform/ids/uuid-v7';
 import { PlatformLogger, requireCorrelationId } from '../../platform/logging';
+import { auditedAppendInput } from '../../platform/observability/audit-action';
 import { PASSWORD_HASHER, type PasswordHasher } from '../password/password-hasher';
 import { PasswordPolicy } from '../password/password-policy';
 import { hashAuthToken } from '../tokens/auth-token';
@@ -49,6 +52,7 @@ export class AuthTokensService {
     @Inject(PASSWORD_HASHER) private readonly hasher: PasswordHasher,
     private readonly metrics: AuthTokenMetrics,
     private readonly logger: PlatformLogger,
+    @Inject(AUDIT_EVENT) private readonly audit: AuditEventPort,
   ) {}
 
   async afterRegister(userId: string, email: string): Promise<void> {
@@ -178,6 +182,20 @@ export class AuthTokensService {
       }
       return outcome;
     });
+
+    if (result.status === 'consumed') {
+      await this.audit.append(
+        auditedAppendInput({
+          id: generateId(),
+          actorType: 'user',
+          actorId: result.token.userId,
+          action: 'iam.password.reset',
+          target: result.token.userId,
+          correlationId: requireCorrelationId(),
+          scope: { userId: result.token.userId },
+        }),
+      );
+    }
 
     this.finishConsume(result);
   }

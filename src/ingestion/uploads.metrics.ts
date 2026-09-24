@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { PlatformLogger } from '../platform/logging';
+import { MetricsSurface } from '../platform/observability/metrics-surface';
 
 export type UploadRejectionClass =
   | 'invalid_file_type'
@@ -28,7 +29,10 @@ export class UploadsMetrics {
   private expired = 0;
   private rejected = 0;
 
-  constructor(private readonly logger: PlatformLogger) {}
+  constructor(
+    private readonly logger: PlatformLogger,
+    @Optional() private readonly surface?: MetricsSurface,
+  ) {}
 
   recordCreated(): void {
     this.created += 1;
@@ -40,6 +44,7 @@ export class UploadsMetrics {
 
   recordCompleted(): void {
     this.completed += 1;
+    this.surface?.recordIngestion('upload', 1);
     this.logger.info({
       module: 'ingestion',
       message: 'upload.session.completed',

@@ -4,6 +4,7 @@ import type { AuditEventPort } from '../../l0/ports/audit-event.port';
 import { DomainError } from '../../platform/errors/domain-error';
 import { ErrorCode } from '../../platform/errors/error-codes';
 import { generateId } from '../../platform/ids/uuid-v7';
+import { auditedAppendInput } from '../../platform/observability/audit-action';
 import { PlatformLogger } from '../../platform/logging/platform-logger.service';
 import type { GatewayContext, GatewayRequest } from '../gateway/gateway.types';
 import { BoundaryMetrics } from './boundary-metrics';
@@ -52,19 +53,22 @@ export class GatewayDataBoundary implements IDataBoundaryCheck {
     reason: BoundaryRefusalReason,
   ): Promise<void> {
     try {
-      await this.audit.append({
-        id: generateId(),
-        actorType: 'system',
-        action: DATA_BOUNDARY_REFUSED_ACTION,
-        correlationId: ctx.correlationId,
-        scope: {
-          orgId: ctx.orgId,
-          capability: request.capability,
-          reason,
-          ...(ctx.projectId !== undefined ? { projectId: ctx.projectId } : {}),
-          ...(ctx.researchRunId !== undefined ? { researchRunId: ctx.researchRunId } : {}),
-        },
-      });
+      await this.audit.append(
+        auditedAppendInput({
+          id: generateId(),
+          actorType: 'system',
+          action: DATA_BOUNDARY_REFUSED_ACTION,
+          target: ctx.projectId ?? ctx.orgId,
+          correlationId: ctx.correlationId,
+          scope: {
+            orgId: ctx.orgId,
+            capability: request.capability,
+            reason,
+            ...(ctx.projectId !== undefined ? { projectId: ctx.projectId } : {}),
+            ...(ctx.researchRunId !== undefined ? { researchRunId: ctx.researchRunId } : {}),
+          },
+        }),
+      );
     } catch {
       this.logger.warn({
         module: 'ai.gateway',
