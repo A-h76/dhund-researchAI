@@ -10,9 +10,23 @@ import {
 } from '@nestjs/websockets';
 import { Server, type Socket } from 'socket.io';
 import { isUuid } from '../../platform/ids/uuid-v7';
+import { decideCors } from '../../platform/http/cors-policy';
+import { getAppConfig } from '../../platform/config/config.runtime';
 import { MetricsSurface } from '../../platform/observability/metrics-surface';
 
-@WebSocketGateway({ cors: true })
+@WebSocketGateway({
+  cors: {
+    origin: (
+      origin: string | undefined,
+      callback: (error: Error | null, allow?: boolean) => void,
+    ) => {
+      const allowed =
+        decideCors(origin, getAppConfig().corsAllowedOrigins) !== 'reject';
+      callback(null, allowed);
+    },
+    credentials: true,
+  },
+})
 export class ApiEventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;

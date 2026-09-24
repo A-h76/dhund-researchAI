@@ -2,6 +2,7 @@ import {
   Catch,
   HttpException,
   Injectable,
+  Optional,
   type ArgumentsHost,
   type ExceptionFilter,
 } from '@nestjs/common';
@@ -25,9 +26,11 @@ import {
   containsSensitiveKey,
   sanitizeForLog,
 } from './leakage-guard';
+import { MetricsSurface } from '../observability/metrics-surface';
 
 interface HttpRequestLike {
   headers?: Record<string, unknown>;
+  url?: string;
 }
 
 interface HttpResponseLike {
@@ -39,7 +42,10 @@ interface HttpResponseLike {
 @Injectable()
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
-  constructor(private readonly logger: PlatformLogger) {}
+  constructor(
+    private readonly logger: PlatformLogger,
+    @Optional() private readonly metrics?: MetricsSurface,
+  ) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     if (host.getType() !== 'http') {
@@ -53,6 +59,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       getCorrelationId() ??
       resolveCorrelationId(readCorrelationHeader(request.headers));
     const mapped = mapException(exception);
+    if (
+      this.metrics !== undefined &&
+      (mapped.code === ErrorCode.ValidationError || mapped.code === ErrorCode.MalformedRequest)
+    ) {
+      this.metrics.recordValidationFailure(metricRoute(request.url));
+    }
     const envelope = toEnvelope(mapped, correlationId);
 
     this.logger.error({
@@ -88,6 +100,18 @@ interface MappedError {
   userMessage: string;
   module: string;
   serverDetail: unknown;
+}
+
+function metricRoute(path: string | undefined): string {
+  const bare = (path ?? '/').split('?')[0] ?? '/';
+  const collapsed = bare.replace(
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+    ':id',
+  );
+  if (containsForbiddenLeak(collapsed) || collapsed.length > 120) {
+    return 'redacted';
+  }
+  return collapsed;
 }
 
 function mapException(exception: unknown): MappedError {

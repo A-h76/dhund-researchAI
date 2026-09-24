@@ -7,6 +7,7 @@ export const ALERT_TRIGGERS = [
   'error_rate_spike',
   'circuit_open',
   'broken_provenance',
+  'redis_outage',
 ] as const;
 
 export type AlertTrigger = (typeof ALERT_TRIGGERS)[number];

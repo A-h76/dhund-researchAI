@@ -8,6 +8,8 @@ import {
   ARGON2_PARALLELISM,
   ARGON2_TIME_COST,
 } from './credential-config';
+import { parseAllowedOrigins } from '../http/cors-policy';
+import { assertEncryptedTransit } from '../http/transit-encryption';
 import {
   parseLogLevel,
   parsePort,
@@ -110,6 +112,15 @@ export function loadAndValidateConfig(
   const totpWrapKey = parseTotpWrapKey(secrets, role);
   track('AUTH_TOTP_WRAP_KEY', secrets.getSecret('AUTH_TOTP_WRAP_KEY'));
 
+  const corsRaw = secrets.getSecret('CORS_ALLOWED_ORIGINS');
+  track('CORS_ALLOWED_ORIGINS', corsRaw);
+  const corsAllowedOrigins = parseAllowedOrigins(corsRaw);
+
+  if (secrets.getSecret('TRANSIT_TLS') === 'require') {
+    track('TRANSIT_TLS', 'require');
+    assertEncryptedTransit(databaseUrl, redisUrl);
+  }
+
   const featureFlags = parseFeatureFlags(secrets);
   for (const flagName of Object.keys(featureFlags)) {
     loadedKeyNames.push(`FEATURE_${flagName.toUpperCase()}`);
@@ -128,6 +139,7 @@ export function loadAndValidateConfig(
       parallelism: ARGON2_PARALLELISM,
     },
     featureFlags,
+    corsAllowedOrigins,
     loadedKeyNames: [...new Set(loadedKeyNames)].sort(),
     ...(jwt !== undefined ? { jwt } : {}),
     ...(totpWrapKey !== undefined ? { totpWrapKey } : {}),

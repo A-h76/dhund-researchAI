@@ -15,7 +15,7 @@ import {
   CorrelationMiddleware,
   HttpLoggingInterceptor,
 } from '../../platform/logging';
-import { CsrfMiddleware } from '../../platform/http';
+import { CsrfMiddleware, HttpHardeningMiddleware } from '../../platform/http';
 import { RuntimeRole } from '../../platform/runtime/role';
 import { PlatformModule } from '../../platform/platform.module';
 import { IamModule } from '../../iam/iam.module';
@@ -47,12 +47,13 @@ import { NoopProcessorReadiness } from './noop-processor-readiness';
     provideRuntimeRole(RuntimeRole.Api),
     { provide: PROCESSOR_READINESS, useClass: NoopProcessorReadiness },
     BootstrapValidationService,
+    HttpHardeningMiddleware,
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: HttpLoggingInterceptor },
   ],
 })
 export class ApiAppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(CorrelationMiddleware, CsrfMiddleware).forRoutes('*');
+    consumer.apply(CorrelationMiddleware, HttpHardeningMiddleware, CsrfMiddleware).forRoutes('*');
   }
 }
