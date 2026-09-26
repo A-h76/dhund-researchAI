@@ -4,7 +4,7 @@ import { join, relative } from 'node:path';
 const FIXTURES_ROOT = join(__dirname, '..', 'fixtures');
 
 /**
- * Test-corpus safeguard only. This does not inspect production documents
+ * Fixture safeguard only. This does not inspect production documents
  * and is not a declared-clinical refusal path.
  */
 const FORBIDDEN_FIXTURE =

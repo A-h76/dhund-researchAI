@@ -51,8 +51,7 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
   });
 
   it('performs MinIO presigned PUT/GET round trip', async () => {
-    const minio = await new GenericContainer('minio/minio:latest')
-      .withCommand(['server', '/data'])
+    const minio = await new GenericContainer('bitnamilegacy/minio:2025.7.23-debian-12-r5')
       .withEnvironment({
         MINIO_ROOT_USER: 'minioadmin',
         MINIO_ROOT_PASSWORD: 'minioadmin',
@@ -103,8 +102,7 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
   });
 
   it('enforces key namespace, TTL expiry, maxContentLength, and object reads', async () => {
-    const minio = await new GenericContainer('minio/minio:latest')
-      .withCommand(['server', '/data'])
+    const minio = await new GenericContainer('bitnamilegacy/minio:2025.7.23-debian-12-r5')
       .withEnvironment({
         MINIO_ROOT_USER: 'minioadmin',
         MINIO_ROOT_PASSWORD: 'minioadmin',

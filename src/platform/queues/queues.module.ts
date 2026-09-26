@@ -8,6 +8,6 @@ import { QueueMetricsService } from './queue-metrics';
 @Module({
   imports: [L0Module, LoggerModule],
   providers: [DlqService, DlqReplayService, QueueMetricsService],
-  exports: [DlqService, DlqReplayService, QueueMetricsService],
+  exports: [DlqService, DlqReplayService, QueueMetricsService, L0Module],
 })
 export class QueuesModule {}
