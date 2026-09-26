@@ -2,6 +2,7 @@ import { APP_FILTER } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { WritingSentenceBindingsController } from '../../src/apps/api/writing-sentence-bindings.controller';
+import { AccessAuthGuard } from '../../src/iam/authorization/access-auth.guard';
 import { SentenceProjectionService } from '../../src/evidence/sentence-projection.service';
 import { notFound } from '../../src/platform/errors/domain-error';
 import { ErrorCode } from '../../src/platform/errors/error-codes';
@@ -28,7 +29,10 @@ describe('DHB-61 sentence-bindings HTTP security', () => {
         },
         { provide: APP_FILTER, useClass: GlobalExceptionFilter },
       ],
-    }).compile();
+    })
+      .overrideGuard(AccessAuthGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
     const app = moduleRef.createNestApplication();
     await app.init();
     await app.listen(0, '127.0.0.1');

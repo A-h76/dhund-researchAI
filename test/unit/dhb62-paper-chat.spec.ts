@@ -102,7 +102,7 @@ describe('DHB-62 Paper Chat', () => {
     bindings.seedEvidence(projectId, evidenceId);
     ledger = new InMemoryLedger();
     sink = new RecordingSink();
-    retrieve = jest.fn(async (_input) => ({
+    retrieve = jest.fn(async () => ({
       understoodQuery: 'glioma',
       vectorHits: [],
       ftsHits: [],

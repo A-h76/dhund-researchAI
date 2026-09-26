@@ -1,5 +1,6 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { SentenceProjectionService } from '../../evidence/sentence-projection.service';
+import { RequireAuth } from '../../iam/authorization/require-auth';
 import { DomainError } from '../../platform/errors/domain-error';
 import { ErrorCode } from '../../platform/errors/error-codes';
 
@@ -8,6 +9,7 @@ export class WritingSentenceBindingsController {
   constructor(private readonly projection: SentenceProjectionService) {}
 
   @Get(':writingId/sentence-bindings/:hash')
+  @RequireAuth()
   project(
     @Param('writingId') writingId: string,
     @Param('hash') hash: string,
