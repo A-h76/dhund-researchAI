@@ -28,6 +28,8 @@ export * from './hnsw-ef-search';
 export * from './retrieval-index.port';
 export * from './retrieval-eligibility';
 export * from './evidence-lookup.port';
+export * from './evidence-spine.port';
+export * from './citation-projection.port';
 export * from './retrieval-trace.port';
 export * from './identity-lookup.port';
 export * from './pdf-parse.port';

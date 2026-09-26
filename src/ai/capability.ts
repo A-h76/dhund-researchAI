@@ -7,6 +7,7 @@ export const AI_CAPABILITIES = [
   'STANCE',
   'SYNTHESIS',
   'OCR',
+  'EVIDENCE_EXTRACT',
   'AUTOCOMPLETE',
 ] as const;
 
