@@ -22,10 +22,10 @@ export class PrismaOutboxAdapter implements OutboxPort {
         return work(handle);
       });
     } catch (error) {
-      if (error instanceof L0OperationError) {
-        throw error;
+      if (isPrismaClientError(error)) {
+        throw new L0OperationError('Outbox transaction failed', error);
       }
-      throw new L0OperationError('Outbox transaction failed', error);
+      throw error;
     }
   }
 
@@ -172,4 +172,14 @@ export class PrismaOutboxAdapter implements OutboxPort {
       attemptCount: row.attemptCount,
     };
   }
+}
+
+function isPrismaClientError(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError ||
+    error instanceof Prisma.PrismaClientUnknownRequestError ||
+    error instanceof Prisma.PrismaClientRustPanicError ||
+    error instanceof Prisma.PrismaClientInitializationError ||
+    error instanceof Prisma.PrismaClientValidationError
+  );
 }

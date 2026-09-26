@@ -51,7 +51,7 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
   });
 
   it('performs MinIO presigned PUT/GET round trip', async () => {
-    const minio = await new GenericContainer('minio/minio:latest')
+    const minio = await new GenericContainer('quay.io/minio/minio:latest')
       .withCommand(['server', '/data'])
       .withEnvironment({
         MINIO_ROOT_USER: 'minioadmin',
@@ -103,7 +103,7 @@ const integrationEnabled = process.env.RUN_INTEGRATION_TESTS === 'true';
   });
 
   it('enforces key namespace, TTL expiry, maxContentLength, and object reads', async () => {
-    const minio = await new GenericContainer('minio/minio:latest')
+    const minio = await new GenericContainer('quay.io/minio/minio:latest')
       .withCommand(['server', '/data'])
       .withEnvironment({
         MINIO_ROOT_USER: 'minioadmin',
