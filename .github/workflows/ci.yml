@@ -195,10 +195,18 @@ jobs:
             sleep 1
           done
           DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/dhund npx prisma migrate deploy
+          openssl genpkey -algorithm ED25519 -outform PEM -out /tmp/dhund-ci-jwt.pem
+          chmod 644 /tmp/dhund-ci-jwt.pem
+          TOTP_WRAP_KEY="$(openssl rand -base64 32 | tr -d '\n')"
           docker run -d --name dhund-api-smoke --network dhund-api-smoke -p 3000:3000 \
             -e DATABASE_URL=postgresql://postgres:postgres@dhund-postgres-api-smoke:5432/dhund \
             -e REDIS_URL=redis://dhund-redis-api-smoke:6379 \
-            dhund-research-ai:ci --role=api
+            -e AUTH_JWT_KID=ci-smoke \
+            -e AUTH_TOTP_WRAP_KEY="$TOTP_WRAP_KEY" \
+            -v /tmp/dhund-ci-jwt.pem:/run/jwt.pem:ro \
+            --entrypoint sh \
+            dhund-research-ai:ci \
+            -c 'export AUTH_JWT_PRIVATE_KEY="$(cat /run/jwt.pem)"; exec node dist/main.js --role=api'
           ready=0
           for i in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:3000/health >/dev/null 2>&1; then
@@ -217,3 +225,4 @@ jobs:
           curl -fsS http://127.0.0.1:3000/health
           docker rm -f dhund-api-smoke dhund-redis-api-smoke dhund-postgres-api-smoke
           docker network rm dhund-api-smoke || true
+          rm -f /tmp/dhund-ci-jwt.pem
