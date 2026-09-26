@@ -18,6 +18,10 @@
     "test:ci": "jest --ci --coverage --forceExit",
     "test:integration": "cross-env RUN_INTEGRATION_TESTS=true jest --config jest.integration.config.ts --runInBand --forceExit",
     "test:migrate": "cross-env RUN_INTEGRATION_TESTS=true jest --config jest.integration.config.ts --runInBand --forceExit --testPathPattern=migrate-gate",
+    "test:load-bearing": "jest --ci --forceExit --testPathPattern=architecture/load-bearing",
+    "test:architecture": "jest --ci --forceExit --testPathPattern=architecture/boundary",
+    "test:migration-order": "jest --ci --forceExit --testPathPattern=architecture/migration-gate",
+    "test:idor-gate": "jest --ci --forceExit --testPathPattern=idor-gate",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

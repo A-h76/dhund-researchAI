@@ -7,6 +7,131 @@ on:
     branches: [main]
 
 jobs:
+  gate-load-bearing:
+    name: gate-load-bearing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: §11a.2a test 1 — provider SDK import
+        run: npm run test:load-bearing -- --testNamePattern="11a\\.2a test 1"
+      - name: §11a.2a test 4 — ai_executions row
+        if: always()
+        run: npm run test:load-bearing -- --testNamePattern="11a\\.2a test 4"
+      - name: Record gate result
+        if: always()
+        run: |
+          {
+            echo "### gate-load-bearing"
+            echo "status=${{ job.status }}"
+            echo "sha=${{ github.sha }}"
+            echo "Tests 1 and 4 of section 11a.2a. A failure blocks the architecture boundary suite."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  gate-architecture:
+    name: gate-architecture
+    needs: gate-load-bearing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Architecture boundary suite
+        run: npm run test:architecture
+      - name: Record gate result
+        if: always()
+        run: |
+          {
+            echo "### gate-architecture"
+            echo "status=${{ job.status }}"
+            echo "sha=${{ github.sha }}"
+            echo "Single-owner, gateway isolation tests 2–3, import direction, guard coverage, schema, vocabulary, fixture lint."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  gate-migration:
+    name: gate-migration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Migration order 001–020
+        run: npm run test:migration-order
+      - name: Apply migrations on disposable Postgres
+        run: |
+          docker network create dhund-migrate-gate || true
+          docker run -d --name dhund-postgres-migrate-gate --network dhund-migrate-gate \
+            -e POSTGRES_PASSWORD=postgres -e POSTGRES_USER=postgres -e POSTGRES_DB=dhund \
+            -p 5433:5432 \
+            pgvector/pgvector:pg16
+          ready=0
+          for i in $(seq 1 30); do
+            if docker exec dhund-postgres-migrate-gate pg_isready -U postgres >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo "Disposable Postgres did not become ready"
+            exit 1
+          fi
+          echo "First migrate deploy:"
+          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5433/dhund npx prisma migrate deploy
+          echo "Second migrate deploy (must be no-op):"
+          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5433/dhund npx prisma migrate deploy
+          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5433/dhund npx prisma migrate status
+      - name: Remove disposable Postgres
+        if: always()
+        run: |
+          docker rm -f dhund-postgres-migrate-gate || true
+          docker network rm dhund-migrate-gate || true
+      - name: Record gate result
+        if: always()
+        run: |
+          {
+            echo "### gate-migration"
+            echo "status=${{ job.status }}"
+            echo "sha=${{ github.sha }}"
+            echo "Out-of-order or failing migrations 001–020 block the deploy."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  gate-idor:
+    name: gate-idor
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Cross-tenant IDOR matrix
+        run: npm run test:idor-gate
+      - name: Record gate result
+        if: always()
+        run: |
+          {
+            echo "### gate-idor"
+            echo "status=${{ job.status }}"
+            echo "sha=${{ github.sha }}"
+            echo "A cross-tenant 200 or 403-with-data blocks the deploy."
+          } >> "$GITHUB_STEP_SUMMARY"
+
   verify:
     runs-on: ubuntu-latest
 
@@ -32,27 +157,6 @@ jobs:
 
       - name: L0 integration tests (Testcontainers)
         run: npm run test:integration
-
-      - name: Prisma migration gate (disposable Postgres)
-        run: |
-          docker network create dhund-migrate-gate || true
-          docker run -d --name dhund-postgres-migrate-gate --network dhund-migrate-gate \
-            -e POSTGRES_PASSWORD=postgres -e POSTGRES_USER=postgres -e POSTGRES_DB=dhund \
-            -p 5433:5432 \
-            pgvector/pgvector:pg16
-          for i in $(seq 1 30); do
-            if docker exec dhund-postgres-migrate-gate pg_isready -U postgres >/dev/null 2>&1; then
-              break
-            fi
-            sleep 1
-          done
-          echo "First migrate deploy:"
-          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5433/dhund npx prisma migrate deploy
-          echo "Second migrate deploy (must be no-op):"
-          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5433/dhund npx prisma migrate deploy
-          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5433/dhund npx prisma migrate status
-          docker rm -f dhund-postgres-migrate-gate
-          docker network rm dhund-migrate-gate || true
 
       - name: Build Docker image
         run: docker build -t dhund-research-ai:ci .

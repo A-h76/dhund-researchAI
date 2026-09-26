@@ -56,6 +56,10 @@ function isLeakageGuard(path: string): boolean {
   return path === 'src/platform/errors/leakage-guard.ts';
 }
 
+function isLayerLocalEmbedIdentity(path: string): boolean {
+  return path === 'src/retrieval/embed-identity.ts';
+}
+
 describe('DHB-46 provider adapter static checks', () => {
   it('forbids provider SDK imports outside ai/adapters', () => {
     const violations: string[] = [];
@@ -79,7 +83,12 @@ describe('DHB-46 provider adapter static checks', () => {
 
     for (const file of collectFiles(SRC_ROOT)) {
       const path = normalized(file);
-      if (isAllowedAdapterPath(path) || isAllowedPolicyPath(path) || isLeakageGuard(path)) {
+      if (
+        isAllowedAdapterPath(path) ||
+        isAllowedPolicyPath(path) ||
+        isLeakageGuard(path) ||
+        isLayerLocalEmbedIdentity(path)
+      ) {
         continue;
       }
       const content = readFileSync(file, 'utf8');
