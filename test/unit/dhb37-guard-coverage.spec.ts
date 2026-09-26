@@ -5,6 +5,7 @@ import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { ApiRootController } from '../../src/apps/api/api-root.controller';
 import { CapabilityProbeController } from '../../src/apps/api/capability-probe.controller';
 import { HealthController } from '../../src/apps/api/health.controller';
+import { WritingSentenceBindingsController } from '../../src/apps/api/writing-sentence-bindings.controller';
 import { AuthController } from '../../src/iam/auth.controller';
 import {
   REQUIRE_AUTH_KEY,
@@ -27,6 +28,7 @@ const HTTP_CONTROLLERS = [
   ApiRootController,
   HealthController,
   CapabilityProbeController,
+  WritingSentenceBindingsController,
   AuthController,
   DocumentAccessController,
   DocumentsController,
@@ -42,6 +44,7 @@ const EXPECTED_CONTROLLER_FILES = [
   'src/apps/api/api-root.controller.ts',
   'src/apps/api/capability-probe.controller.ts',
   'src/apps/api/health.controller.ts',
+  'src/apps/api/writing-sentence-bindings.controller.ts',
   'src/iam/auth.controller.ts',
   'src/ingestion/document-access.controller.ts',
   'src/ingestion/documents.controller.ts',
@@ -249,6 +252,13 @@ describe('DHB-37 HTTP guard coverage', () => {
         (route) =>
           route.path === '/v1/projects/:projectId/retrieval/search' &&
           route.projectRole === 'VIEWER',
+      ),
+    ).toBe(true);
+    expect(
+      routes.some(
+        (route) =>
+          route.path === '/v1/writing/:writingId/sentence-bindings/:hash' &&
+          route.requireAuth,
       ),
     ).toBe(true);
   });
